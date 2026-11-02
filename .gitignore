@@ -1,0 +1,15 @@
+.tools/
+**/bin/
+**/obj/
+artifacts/
+*.user
+docs/reference.webp
+docs/reference-behavior.md
+docs/package-behavior-evidence.md
+docs/parity-status.md
+*.dmg
+*.log
+diagnostics*.json
+.vs/
+.idea/
+.DS_Store

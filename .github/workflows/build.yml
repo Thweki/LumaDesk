@@ -1,0 +1,29 @@
+name: Windows build
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Core tests
+        run: dotnet run --project tests/LumaDesk.Tests -c Release
+      - name: Color contract tests
+        run: dotnet run --project tests/LumaDesk.ColorTests -c Release
+      - name: Virtual driver protocol tests (no install)
+        run: dotnet run --project tests/LumaDesk.VirtualTests -c Release
+      - name: Build portable app
+        shell: pwsh
+        run: ./build.ps1 -Portable
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LumaDesk-win-x64
+          path: artifacts/LumaDesk-win-x64/

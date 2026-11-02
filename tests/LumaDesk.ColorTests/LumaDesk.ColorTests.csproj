@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0-windows</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
+  <ItemGroup><PackageReference Include="System.Management" Version="8.0.0"/></ItemGroup>
+  <ItemGroup>
+    <Compile Include="../../src/LumaDesk/Models.cs" Link="Models.cs"/>
+    <Compile Include="../../src/LumaDesk/Native.cs" Link="Native.cs"/>
+    <Compile Include="../../src/LumaDesk/DpiNative.cs" Link="DpiNative.cs"/>
+    <Compile Include="../../src/LumaDesk/DpiService.cs" Link="DpiService.cs"/>
+    <Compile Include="../../src/LumaDesk/DisplayService.cs" Link="DisplayService.cs"/>
+    <Compile Include="../../src/LumaDesk/AdvancedColorService.cs" Link="AdvancedColorService.cs"/>
+  </ItemGroup>
+</Project>
