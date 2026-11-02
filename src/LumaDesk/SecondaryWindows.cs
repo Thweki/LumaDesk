@@ -28,6 +28,8 @@ internal sealed class QuickWindow : Window
     private readonly bool dismissOnDeactivate;
     private int keepOpenCount;
     private bool dismissRequested, forceDismissRequested, closed;
+    private readonly PopupPlacement placement;
+    private double preferredHeight = 620;
     internal bool IsBackdropActive { get; private set; }
     private readonly Dictionary<string, string> dpiErrors = new();
     private readonly Dictionary<string, TextBlock> errorViews = new();
@@ -42,6 +44,7 @@ internal sealed class QuickWindow : Window
         var surface = new Border { CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(1), BorderBrush = Ui.Brush("#24000000"), Background = Ui.Brush("#F3F3F3"), Child = new ScrollViewer { Content = body } };
         surface.SizeChanged += (_, _) => surface.Clip = new RectangleGeometry(new Rect(0, 0, surface.ActualWidth, surface.ActualHeight), 12, 12);
         Content = surface; WindowEffects.ConfigurePopup(this, surface, active => IsBackdropActive = active);
+        placement = new PopupPlacement(this, () => preferredHeight);
         Deactivated += (_, _) => { if (this.dismissOnDeactivate) { dismissRequested = true; ScheduleDismiss(); } };
         Activated += (_, _) => { if (!forceDismissRequested) dismissRequested = false; };
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { dismissRequested = forceDismissRequested = true; e.Handled = true; TryDismiss(); } };
@@ -69,11 +72,7 @@ internal sealed class QuickWindow : Window
     {
         if (!closed && dismissRequested && !dpiBusy && keepOpenCount == 0 && (forceDismissRequested || !IsActive)) Close();
     }
-    public void PositionNearTray()
-    {
-        var area = SystemParameters.WorkArea;
-        Height = Math.Min(Height, area.Height - 24); Left = area.Right - Width - 12; Top = area.Bottom - Height - 12;
-    }
+    public void PositionNearTray() => placement.Position();
     public void Render()
     {
         // The transaction refreshes display discovery before its task completes. Keep
@@ -157,7 +156,8 @@ internal sealed class QuickWindow : Window
         }
         body.Children.Add(footer);
         body.Measure(new System.Windows.Size(Width - 18, double.PositiveInfinity));
-        Height = Math.Clamp(body.DesiredSize.Height + 2, 180, 620);
+        preferredHeight = Math.Clamp(body.DesiredSize.Height + 2, 180, 620);
+        Height = preferredHeight;
         if (IsVisible) PositionNearTray();
     }
     private static Border CompactLine() { var line = Ui.Line(); line.Margin = new Thickness(0, 4, 0, 4); return line; }

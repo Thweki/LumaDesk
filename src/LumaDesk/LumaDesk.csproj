@@ -9,7 +9,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/app.ico</ApplicationIcon>
     <AssemblyName>LumaDesk</AssemblyName>
-    <Version>0.3.0</Version>
+    <Version>0.3.1</Version>
   </PropertyGroup>
   <ItemGroup><PackageReference Include="System.Management" Version="8.0.0"/></ItemGroup>
   <ItemGroup><InternalsVisibleTo Include="LumaDesk.UiTests"/></ItemGroup>

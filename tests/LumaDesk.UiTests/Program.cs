@@ -3,10 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -84,6 +86,7 @@ internal static class Program
                 Check(Descendants<Slider>(quick).Where(s => System.Windows.Automation.AutomationProperties.GetName(s) == "亮度").All(s => s.IsEnabled), "Combined quick brightness remains usable on software-only screens");
                 Check(quick.Height < 620 && Descendants<ScrollViewer>(quick).First().ScrollableHeight == 0, "Compact three-screen quick panel sizes to content without blank height or scrolling");
                 Snapshot(quick, "quick-panel.png"); quick.Close();
+                await TestQuickPlacementAsync(window);
                 TestQuickDisclosure(window);
                 await TestQuickDpiAsync(window);
                 await TestQuickModesAsync(window);
@@ -201,6 +204,64 @@ internal static class Program
             quick.Close(); window.Displays = real; window.Preferences.QuickCollapsedDisplays = new HashSet<string>(savedCollapsed, StringComparer.OrdinalIgnoreCase); window.Preferences.QuickMoreDisplayId = savedMore; window.SavePreferences(); window.Show();
         }
     }
+    private static async Task TestQuickPlacementAsync(MainWindow window)
+    {
+        var work = new Native.Rect { Left = -2560, Top = -200, Right = 0, Bottom = 1200 };
+        foreach (double scale in new[] { 1.0, 1.25, 1.5, 2.0, 3.0, 1.0 })
+        {
+            var rect = PopupPlacement.Calculate(work, 360, 482, scale, scale);
+            Check(rect.Right == -(int)Math.Round(12 * scale) && rect.Bottom == 1200 - (int)Math.Round(12 * scale) &&
+                rect.Left >= work.Left && rect.Top >= work.Top && rect.Right - rect.Left == (int)Math.Round(360 * scale),
+                $"Popup stays inside negative-origin work area and preserves edge gap at {scale * 100}%");
+        }
+        var tiny = PopupPlacement.Calculate(new Native.Rect { Right = 320, Bottom = 240 }, 360, 620, 3, 3);
+        Check(tiny.Left == 36 && tiny.Top == 36 && tiny.Right == 284 && tiny.Bottom == 204, "Oversized popup fits small work area at high DPI");
+        var quick = new QuickWindow(window, dismissOnDeactivate: false);
+        try
+        {
+            quick.Render(); quick.Show(); await Task.Delay(80);
+            var hwnd = new WindowInteropHelper(quick).Handle;
+            var anchor = new Native.MonitorInfo { Size = Marshal.SizeOf<Native.MonitorInfo>() };
+            Native.GetMonitorInfo(Native.MonitorFromWindow(hwnd, 2), ref anchor);
+            var monitors = new List<Native.MonitorInfo>();
+            Native.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr monitor, IntPtr dc, ref Native.Rect rect, IntPtr data) =>
+            {
+                var info = new Native.MonitorInfo { Size = Marshal.SizeOf<Native.MonitorInfo>() };
+                if (Native.GetMonitorInfo(monitor, ref info)) monitors.Add(info);
+                return true;
+            }, IntPtr.Zero);
+            void CheckAnchor(string name)
+            {
+                Native.GetWindowRect(hwnd, out var rect);
+                var dpi = VisualTreeHelper.GetDpi(quick);
+                Check(Math.Abs(anchor.Work.Right - rect.Right - Math.Round(12 * dpi.DpiScaleX)) <= 1 &&
+                    Math.Abs(anchor.Work.Bottom - rect.Bottom - Math.Round(12 * dpi.DpiScaleY)) <= 1 &&
+                    rect.Left >= anchor.Work.Left && rect.Top >= anchor.Work.Top, name);
+            }
+            CheckAnchor("Opened popup is anchored using physical monitor coordinates");
+            int dpiEvents = 0;
+            quick.DpiChanged += (_, _) => dpiEvents++;
+            foreach (var monitor in monitors.Concat(monitors))
+            {
+                // Exercise real WPF per-monitor DPI messages without changing any display settings.
+                Native.SetWindowPos(hwnd, IntPtr.Zero, monitor.Work.Left + 40, monitor.Work.Top + 40, 0, 0, 0x0015);
+                await Task.Delay(100);
+                CheckAnchor("OS relocation/DPI transition returns popup to original monitor: " + monitor.Device);
+            }
+            if (window.Displays.Select(d => d.DpiScale.CurrentPercent).Distinct().Count() > 1)
+                Check(dpiEvents > 0, "Placement regression exercises actual mixed-DPI window transitions");
+            var toggle = Descendants<Button>(quick).First(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b).StartsWith("quick-more-toggle-"));
+            Click(toggle); await Task.Delay(80); CheckAnchor("Expanded popup retains bottom-right anchor");
+            toggle = Descendants<Button>(quick).First(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b).StartsWith("quick-more-toggle-"));
+            Click(toggle); await Task.Delay(80); CheckAnchor("Collapsed popup retains bottom-right anchor");
+            Native.GetWindowRect(hwnd, out var stable);
+            await Task.Delay(200);
+            Native.GetWindowRect(hwnd, out var after);
+            Check(stable.Left == after.Left && stable.Top == after.Top && stable.Right == after.Right && stable.Bottom == after.Bottom,
+                "Placement settles without a reposition/resize feedback loop");
+        }
+        finally { quick.Close(); window.Preferences.QuickMoreDisplayId = null; }
+    }
     private static async Task TestQuickDpiAsync(MainWindow window)
     {
         var real = window.Displays;
@@ -234,6 +295,13 @@ internal static class Program
             Check(ReferenceEquals(slider, FindDpi(2)) && slider.IsEnabled, "Pending live DPI retains an enabled stable drag control");
             slider.Value = 2; slider.Value = 1; await Task.Delay(100);
             Check(calls == 1, "Slow DPI write queues only the latest subsequent target");
+            var popupHandle = new WindowInteropHelper(quick).Handle;
+            Native.GetWindowRect(popupHandle, out var pinned);
+            quick.Left -= 64; quick.Top -= 48;
+            await Task.Delay(80);
+            Native.GetWindowRect(popupHandle, out var repinned);
+            Check(pinned.Left == repinned.Left && pinned.Top == repinned.Top && ReferenceEquals(slider, FindDpi(2)),
+                "Popup corrects OS drift during a pending drag without rebuilding the active slider");
             hold.SetResult(true); hold = null; await Task.Delay(180); quick.UpdateLayout();
             Check(calls == 2 && second.DpiScale.CurrentPercent == 125 && ReferenceEquals(slider, FindDpi(2)), "Latest queued target is applied without replacing the active thumb");
             EndDrag(slider); await Task.Delay(60);
