@@ -9,14 +9,39 @@ using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Threading;
 
 namespace LumaDesk;
 
-internal sealed class DisplayService
+internal sealed partial class DisplayService
 {
-    // All DDC operations are serialized. Physical handles live only within one operation.
-    private readonly object gate = new();
-    public Task<List<DisplayInfo>> ScanAsync() => Task.Run(() => { lock (gate) return Scan(); });
+    // Serialize each monitor's traffic without putting unrelated monitors behind a slow DDC call.
+    private readonly ConcurrentDictionary<string, object> gates = new(StringComparer.OrdinalIgnoreCase);
+    private int activeWrites;
+    internal bool IsWriting => Volatile.Read(ref activeWrites) > 0;
+    private object Gate(DisplayInfo d) => gates.GetOrAdd(d.Id, _ => new object());
+    public async Task<List<DisplayInfo>> ScanAsync()
+    {
+        var watch = Stopwatch.StartNew();
+        var displays = await Task.Run(Scan);
+        await Task.WhenAll(displays.Select(d => Task.Run(() =>
+        {
+            try { lock (Gate(d)) WithDisplay(d, handle =>
+            {
+                d.Brightness = ReadPercent(handle, 0x10, d);
+                d.Contrast = ReadPercent(handle, 0x12, d);
+                d.Volume = ReadPercent(handle, 0x62, d);
+                d.HasDdc = d.Brightness.HasValue || d.Contrast.HasValue || d.Volume.HasValue;
+                return true;
+            }); }
+            catch (Exception ex) { Storage.Log("Monitor probe: " + d.Name + ": " + ex.Message); }
+        })));
+        await Task.Run(() => ReadWmiBrightness(displays));
+        if (watch.ElapsedMilliseconds > 1000) Storage.Log("Display scan: " + watch.ElapsedMilliseconds + " ms");
+        return displays;
+    }
     private List<DisplayInfo> Scan()
     {
         var result = new List<DisplayInfo>();
@@ -59,18 +84,9 @@ internal sealed class DisplayService
             modes.Add(display.Current);
             display.Modes = DisplayRules.NormalizeModes(modes);
             DpiService.Inspect(display);
-            WithPhysical(monitor, handle =>
-            {
-                display.Brightness = ReadPercent(handle, 0x10, display);
-                display.Contrast = ReadPercent(handle, 0x12, display);
-                display.Volume = ReadPercent(handle, 0x62, display);
-                display.HasDdc = display.Brightness.HasValue || display.Contrast.HasValue || display.Volume.HasValue;
-                return true;
-            });
             result.Add(display);
             return true;
         }, IntPtr.Zero);
-        ReadWmiBrightness(result);
         return result.OrderByDescending(d => d.Primary).ThenBy(d => d.Device).Select((d, i) => { d.Number = i + 1; return d; }).ToList();
     }
     private static int? ReadPercent(IntPtr handle, byte code, DisplayInfo display)
@@ -87,20 +103,20 @@ internal sealed class DisplayService
         try { return operation(handles[0].Handle); }
         finally { Native.DestroyPhysicalMonitors(count, handles); }
     }
-    public Task SetPercentAsync(DisplayInfo display, byte code, int value) => Task.Run(() =>
+    public async Task SetPercentAsync(DisplayInfo display, byte code, int value, CancellationToken cancellation = default)
     {
-        lock (gate)
+        Interlocked.Increment(ref activeWrites);
+        var watch = Stopwatch.StartNew();
+        try
         {
-            ValidateIdentity(display.Device, display.Id);
-            if (code == 0x10 && display.HasWmi) { SetWmi(display, value); return; }
-            bool found = false, ok = false;
-            Native.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr monitor, IntPtr hdc, ref Native.Rect rect, IntPtr data) =>
+            await Task.Run(() =>
             {
-                var info = new Native.MonitorInfo { Size = Marshal.SizeOf<Native.MonitorInfo>() };
-                if (Native.GetMonitorInfo(monitor, ref info) && info.Device == display.Device)
+                lock (Gate(display))
                 {
-                    found = true;
-                    ok = WithPhysical(monitor, handle =>
+                    cancellation.ThrowIfCancellationRequested();
+                    ValidateIdentity(display.Device, display.Id);
+                    if (code == 0x10 && display.HasWmi) { SetWmi(display, value); return; }
+                    bool ok = WithDisplay(display, handle =>
                     {
                         if (!display.VcpMaximums.TryGetValue(code, out var max))
                         {
@@ -109,13 +125,16 @@ internal sealed class DisplayService
                         }
                         return Native.SetVCPFeature(handle, code, DisplayRules.ToHardware(value, max));
                     });
-                    return false;
+                    if (!ok) throw new InvalidOperationException(L.T("sea3ca6fb16"));
                 }
-                return true;
-            }, IntPtr.Zero);
-            if (!found || !ok) throw new InvalidOperationException(L.T("sea3ca6fb16"));
+            });
         }
-    });
+        finally
+        {
+            Interlocked.Decrement(ref activeWrites);
+            if (watch.ElapsedMilliseconds > 500) Storage.Log($"DDC {display.Name} VCP {code:X2}: {watch.ElapsedMilliseconds} ms");
+        }
+    }
     private static void ReadWmiBrightness(List<DisplayInfo> displays)
     {
         try
@@ -161,19 +180,21 @@ internal sealed class DisplayService
         if (!Native.EnumDisplaySettings(device, -1, ref mode)) throw new InvalidOperationException(L.T("s51258258c0"));
         return mode;
     }
-    public static Native.DevMode FindMode(DisplayInfo display, DisplayMode selected, uint orientation)
+    public static Native.DevMode FindMode(DisplayInfo display, DisplayMode selected, uint orientation, bool exactOutput = false)
     {
         if (orientation > 3) throw new InvalidOperationException(L.T("s2f4ed799c1"));
         ValidateIdentity(display.Device, display.Id);
         var original = CurrentMode(display.Device);
         var mode = original;
         bool found = false;
-        if (!DisplayRules.Supports(display, selected)) throw new InvalidOperationException(L.T("s94d7c908e4"));
+        if (!exactOutput && !DisplayRules.Supports(display, selected)) throw new InvalidOperationException(L.T("s94d7c908e4"));
         for (int i = 0; i < 4096; i++)
         {
             var candidate = Native.DevMode.Create();
             if (!Native.EnumDisplaySettings(display.Device, i, ref candidate)) break;
-            if (candidate.Width == selected.Width && candidate.Height == selected.Height && candidate.Frequency == selected.Frequency && candidate.BitsPerPel == 32) { mode = candidate; found = true; break; }
+            uint width = candidate.Width, height = candidate.Height;
+            if (exactOutput && (orientation % 2) != (candidate.Orientation % 2)) (width, height) = (height, width);
+            if (width == selected.Width && height == selected.Height && candidate.Frequency == selected.Frequency && candidate.BitsPerPel == 32) { mode = candidate; found = true; break; }
         }
         if (!found) throw new InvalidOperationException(L.T("sfa7b26c529"));
         mode.X = original.X; mode.Y = original.Y;

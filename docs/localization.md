@@ -1,7 +1,7 @@
 # Language resources / 多语言
 
 LumaDesk embeds five JSON catalogs: `zh-Hans`, `zh-Hant`, `en`, `ja`, and `ko`.
-All 417 keys are present in each catalog, including dialogs, errors and tray menus.
+All 489 keys are present in each catalog, including dialogs, errors and tray menus.
 
 On a fresh start, `auto` reads the current Windows display language via .NET's
 `CurrentUICulture`. Chinese script/region variants resolve to Hans or Hant;

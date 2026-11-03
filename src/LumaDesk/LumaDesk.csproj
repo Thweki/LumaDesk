@@ -13,7 +13,7 @@
     <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
   </PropertyGroup>
   <ItemGroup><PackageReference Include="System.Management" Version="8.0.0"/></ItemGroup>
-  <ItemGroup><InternalsVisibleTo Include="LumaDesk.UiTests"/></ItemGroup>
+  <ItemGroup><InternalsVisibleTo Include="LumaDesk.UiTests"/><InternalsVisibleTo Include="LumaDesk.WorkflowTests"/></ItemGroup>
   <ItemGroup><Resource Include="Assets/app.ico"/><Resource Include="Assets/brand.png"/></ItemGroup>
   <ItemGroup><EmbeddedResource Include="Localization/*.json" LogicalName="LumaDesk.Localization.%(Filename).json"/><EmbeddedResource Include="Assets/logo.png" LogicalName="LumaDesk.Assets.logo.png"/></ItemGroup>
 </Project>

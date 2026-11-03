@@ -17,13 +17,13 @@ public partial class MainWindow
         if (modePending || scanning) throw new InvalidOperationException(L.T("s92f637408f"));
         modePending = true;
         try { var devices = Displays.ToList(); await Task.Run(() => LayoutService.Apply(devices, placements)); }
-        finally { modePending = false; await RefreshAsync(); }
+        finally { modePending = false; await RefreshAsync(sceneRefresh: sceneBusy); }
     }
     internal async Task ChangeTopologyAsync(bool extend)
     {
         if (modePending || scanning) throw new InvalidOperationException(L.T("s92f637408f"));
         modePending = true;
         try { await Task.Run(() => LayoutService.SetTopology(extend)); }
-        finally { modePending = false; await RefreshAsync(); }
+        finally { modePending = false; await RefreshAsync(sceneRefresh: sceneBusy); }
     }
 }

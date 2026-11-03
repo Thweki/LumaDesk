@@ -7,10 +7,17 @@ An open-source Windows display manager with a compact Fluent-style tray panel.
 ![Quick panel](docs/images/quick-panel-en.png)
 
 - Adjust combined hardware/software brightness and per-display DPI while dragging.
+- Select a screen from its desktop layout, without visible numbers or display names. Locate briefly marks the physical screen. Brightness and scaling stay visible; More settings expands the other controls and stays expanded when switching screens.
+- Link brightness lets you check multiple displays and adjust brightness only. Unchecked sync-group members are excluded; Done restores single-display controls. Selecting displays never changes their brightness.
 - Manage resolution, refresh rate, orientation, HDR and ICC profiles in the app.
 - Arrange displays, set the main display, extend or duplicate the desktop.
 - Install the signed VirtualDrivers driver and manage virtual displays.
-- Use picture in picture, brightness synchronization, presets and keyboard shortcuts.
+- Save screen setups (brightness, mode, scaling, readable HDR/ICC state and layout), apply them in one click, and undo the last switch.
+- Sync brightness in groups; configurable shortcuts target the screen under the pointer by default and show a brightness indicator.
+- Restore brightness after reconnect/wake for screens adjusted here. Optional scene schedules, power and connection triggers default off.
+- Switch monitor-reported inputs, favorite output modes, rename/reorder screens, hide scaling controls and pin the panel.
+- Input switching handles a detected digital-input firmware encoding mismatch and verifies readback. Ignored writes and unverified disconnections are reported separately.
+- Follow the system light/dark theme. Picture in picture supports region selection and frame-rate choices with background capture.
 - The quick panel stays anchored through DPI changes and closes when you click outside it.
 - The monochrome halo tray icon follows the Windows taskbar theme.
 
@@ -24,6 +31,9 @@ kept independently of the UI language.
 
 Click the tray icon for the quick panel, double-click for settings, or right-click
 for the menu. Enable **Start with Windows** in Application settings if desired.
+Save and apply presets without configuring rules. Extra options stay collapsed.
+See [workflow and command-line notes](docs/workflows.md) for automation, partial
+results and the current-session undo behavior.
 
 ## Requirements and limitations
 

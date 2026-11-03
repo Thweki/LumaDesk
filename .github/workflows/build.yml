@@ -20,6 +20,8 @@ jobs:
         run: dotnet run --project tests/LumaDesk.ColorTests -c Release
       - name: Virtual driver protocol tests (no install)
         run: dotnet run --project tests/LumaDesk.VirtualTests -c Release
+      - name: Scene, automation and command tests (no hardware writes)
+        run: dotnet run --project tests/LumaDesk.WorkflowTests -c Release
       - name: Build portable app
         if: success()
         shell: pwsh

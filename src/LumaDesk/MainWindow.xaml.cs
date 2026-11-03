@@ -38,14 +38,15 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        ThemeService.Apply(Preferences.Theme);
         InitializeComponent();
         Ui.ConfigureWindow(this);
         HelpSwitch.IsChecked = Preferences.ShowHelp;
         DpiChanged += (_, _) => Dispatcher.BeginInvoke(FitToMonitor);
         AddNavigation("displays", L.T("s1a13ea5910"), "\uE7F4"); AddNavigation("groups", L.T("s563a1990f3"), "\uE8A9"); AddNavigation("application", L.T("s63c73c4730"), "\uE713"); AddNavigation("quick", L.T("s770544f702"), "\uE8A5"); AddNavigation("keyboard", L.T("s864200bbb2"), "\uE765"); AddNavigation("presets", L.T("sf1de1e2621"), "\uE734"); AddNavigation("about", L.T("s52d25a9e30"), "\uE946");
         LanguageLabel.Text = L.NativeName(L.Language);
-        hotplugTimer.Tick += (_, _) => { hotplugTimer.Stop(); if (!modePending) _ = RefreshAsync(); };
-        Loaded += async (_, _) => { FitToMonitor(); SetupTray(); await RefreshAsync(); };
+        hotplugTimer.Tick += async (_, _) => { hotplugTimer.Stop(); await RestoreAfterConnectionAsync(); };
+        Loaded += async (_, _) => { FitToMonitor(); SetupTray(); await RefreshAsync(); StartAutomation(); StartCommands(); };
         SourceInitialized += (_, _) =>
         {
             hwnd = new WindowInteropHelper(this).Handle;
@@ -56,7 +57,7 @@ public partial class MainWindow : Window
         Closing += (_, e) =>
         {
             if (!exiting && Preferences.CloseToTray) { e.Cancel = true; Hide(); return; }
-            if (modePending) { e.Cancel = true; return; }
+            if (modePending || sceneBusy) { e.Cancel = true; return; }
             ShutdownResources();
         };
     }
@@ -74,19 +75,19 @@ public partial class MainWindow : Window
         MinWidth = Math.Min(860, availableWidth); MinHeight = Math.Min(650, availableHeight);
         Width = Math.Min(Width, availableWidth); Height = Math.Min(Height, availableHeight);
     }
-    internal void Status(string message, bool error = false) { StatusLabel.Text = message; StatusLabel.Foreground = Ui.Brush(error ? "#B45136" : "#777F8E"); Storage.Log(message); }
+    internal void Status(string message, bool error = false) { StatusLabel.ToolTip = message; StatusLabel.Text = message; StatusLabel.Foreground = ThemeService.Brush(error ? "#B45136" : "#777F8E", true); Storage.Log(message); }
     internal async Task RunAsync(Func<Task> action)
     {
         try { await action(); } catch (Exception ex) { Status(ex.Message, true); MessageBox.Show(this, ex.Message, L.T("s79be13bdf0"), MessageBoxButton.OK, MessageBoxImage.Warning); }
     }
-    internal async Task RefreshAsync()
+    internal async Task RefreshAsync(bool sceneRefresh = false)
     {
-        if (scanning || modePending) return;
+        if (scanning || modePending || (sceneBusy && !sceneRefresh)) return;
         scanning = true; Status(L.T("s117b82fa19"));
         try
         {
             var next = await Service.ScanAsync();
-            foreach (var display in next) display.Dimming = Displays.FirstOrDefault(d => d.Id == display.Id)?.Dimming ?? 0;
+            foreach (var display in next) { display.Dimming = Displays.FirstOrDefault(d => d.Id == display.Id)?.Dimming ?? 0; ApplyAlias(display); }
             Displays = next;
             foreach (var id in dimWindows.Keys.ToArray())
             {
@@ -216,7 +217,14 @@ public partial class MainWindow : Window
     {
         var stack = new StackPanel(); var amount = Ui.Text(value.HasValue ? value + "%" : L.T("s7c53786065"), 12, "#7C8594"); stack.Children.Add(Ui.Row(Ui.Labels(label, help), amount));
         var slider = new Slider { Value = value ?? 0, Maximum = maximum, IsEnabled = value.HasValue, Margin = new Thickness(0, compact ? 1 : 8, 0, 0), Height = compact ? 22 : 28 }; System.Windows.Automation.AutomationProperties.SetName(slider, label);
-        int confirmed = value ?? 0; bool updating = false, failed = false; IDisposable? keepOpen = null;
+        int confirmed = value ?? 0; bool updating = false, failed = false, dragging = false; IDisposable? keepOpen = null;
+        void HoldPopup() => keepOpen ??= (Window.GetWindow(slider) as QuickWindow)?.KeepOpen();
+        void ReleasePopup() { keepOpen?.Dispose(); keepOpen = null; }
+        void RefreshPopup()
+        {
+            if (!failed && slider.IsLoaded && !dragging && !slider.IsMouseCaptureWithin && !slider.IsKeyboardFocusWithin)
+                (Window.GetWindow(slider) as QuickWindow)?.Render();
+        }
         var writer = new LatestValueWriter(changed, (requested, error) =>
         {
             failed = error != null;
@@ -228,45 +236,55 @@ public partial class MainWindow : Window
                 updating = true; slider.Value = confirmed; updating = false;
                 amount.Text = L.T("s28ee45284a") + confirmed + "%"; amount.ToolTip = error.Message;
             }
-        }, idle: () => { keepOpen?.Dispose(); keepOpen = null; if (!failed && slider.IsLoaded && !slider.IsMouseCaptureWithin && !slider.IsKeyboardFocusWithin) quick?.Render(); });
+        }, idle: () => { if (!dragging) ReleasePopup(); RefreshPopup(); });
         slider.ValueChanged += (_, _) =>
         {
             amount.Text = Math.Round(slider.Value) + "%";
-            if (!updating) { keepOpen ??= (Window.GetWindow(slider) as QuickWindow)?.KeepOpen(); writer.Request((int)Math.Round(slider.Value)); }
+            if (!updating) { HoldPopup(); writer.Request((int)Math.Round(slider.Value)); }
         };
-        slider.Unloaded += (_, _) => { writer.Stop(); keepOpen?.Dispose(); keepOpen = null; };
+        slider.Unloaded += (_, _) => { dragging = false; writer.Stop(); ReleasePopup(); };
+        slider.AddHandler(System.Windows.Controls.Primitives.Thumb.DragStartedEvent, new System.Windows.Controls.Primitives.DragStartedEventHandler((_, _) =>
+        {
+            dragging = true; HoldPopup();
+        }));
         slider.AddHandler(System.Windows.Controls.Primitives.Thumb.DragCompletedEvent, new System.Windows.Controls.Primitives.DragCompletedEventHandler(async (_, _) =>
         {
+            dragging = false;
             await writer.WhenIdle;
-            if (!failed && slider.IsLoaded) quick?.Render();
+            if (!dragging && !writer.IsActive) ReleasePopup();
+            RefreshPopup();
         }));
+        slider.LostKeyboardFocus += (_, _) => Dispatcher.BeginInvoke(new Action(RefreshPopup));
         stack.Children.Add(slider); return stack;
     }
     internal async Task ChangeBrightness(DisplayInfo display, int value)
     {
-        var targets = Preferences.SyncBrightness ? Displays.Where(d => d.Brightness.HasValue).ToList() : new List<DisplayInfo> { display };
+        if (sceneBusy) throw new InvalidOperationException(L.T("s92f637408f"));
+        var targets = BrightnessTargets(display).Where(d => d.Brightness.HasValue).ToList();
+        foreach (var target in targets) CancelReconnect(target.Id);
         var failed = new List<string>();
         foreach (var d in targets)
         {
-            try { await Service.SetPercentAsync(d, 0x10, value); d.Brightness = value; }
+            try { await Service.SetPercentAsync(d, 0x10, value); d.Brightness = value; RememberBrightness(d); }
             catch (Exception ex) { failed.Add(d.Name); Storage.Log(ex.Message); }
         }
         if (failed.Count > 0) throw new InvalidOperationException(L.T("s9dda1f404b") + string.Join("、", failed) + L.T("s2707d07bb1"));
         Status(Preferences.SyncBrightness ? L.F("s350bc664da", targets.Count, value) : L.F("se52b079aa1", display.Name, value));
     }
-    internal void SetDimming(DisplayInfo display, int value)
+    internal void SetDimming(DisplayInfo display, int value, bool restoring = false)
     {
+        if (!restoring) CancelReconnect(display.Id);
         value = Math.Clamp(value, 0, 85);
         if (value > 0) DisplayService.ValidateIdentity(display.Device, display.Id);
         if (value == 0) { if (dimWindows.Remove(display.Id, out var existing)) existing.Close(); }
         else { if (!dimWindows.TryGetValue(display.Id, out var overlay)) { overlay = new DimWindow(); dimWindows[display.Id] = overlay; overlay.Show(); } overlay.Position(display); overlay.Opacity = value / 100.0; }
-        display.Dimming = value; Status(L.F("s0d96fd5b34", display.Name, value));
+        display.Dimming = value; RememberBrightness(display); Status(L.F("s0d96fd5b34", display.Name, value));
     }
-    internal async Task ChangeModeAsync(DisplayInfo display, DisplayMode mode, uint orientation, Window? dialogOwner = null)
+    internal async Task ChangeModeAsync(DisplayInfo display, DisplayMode mode, uint orientation, Window? dialogOwner = null, bool exactOutput = false)
     {
         if (modePending) throw new InvalidOperationException(L.T("s70da07b61e"));
         if (mode == display.Current && orientation == display.Orientation) { Status(L.T("sd75d70fe93")); return; }
-        var original = DisplayService.CurrentMode(display.Device); var target = DisplayService.FindMode(display, mode, orientation);
+        var original = DisplayService.CurrentMode(display.Device); var target = DisplayService.FindMode(display, mode, orientation, exactOutput);
         DisplayService.ApplyMode(display.Device, target, true, display.Id);
         string recovery = ModeRecovery.Prepare(display.Device, display.Id, original); modePending = true; ModeLease? lease = null;
         try
@@ -289,16 +307,10 @@ public partial class MainWindow : Window
         finally
         {
             if (lease?.Pending == true) { try { lease.Revert(); File.Delete(recovery); } catch (Exception ex) { Storage.Log("Rollback: " + ex); } }
-            modePending = false; await RefreshAsync();
+            modePending = false; await RefreshAsync(sceneRefresh: sceneBusy);
         }
     }
-    private void RenderGroups()
-    {
-        Heading(L.T("s563a1990f3"), L.T("s745fafa566"));
-        var content = new StackPanel(); content.Children.Add(Ui.Row(Ui.Labels(L.T("s48aa89296c"), Help(L.T("sd07a88c978"))), Toggle(Preferences.SyncBrightness, v => { Preferences.SyncBrightness = v; Save(); })));
-        foreach (var d in Displays) { content.Children.Add(Ui.Line()); content.Children.Add(Ui.Row(Ui.Labels(d.Name, d.BrightnessMethod), Ui.Badge(d.Brightness.HasValue ? L.T("s514cc3b3d2") : L.T("s8fb81ba8f3"), d.Brightness.HasValue ? "#007A8A" : "#9298A2"))); }
-        PageContent.Children.Add(Ui.Card(content)); PageContent.Children.Add(Ui.Card(Ui.Labels(L.T("s4365f944a0"), L.T("s7fee042e4f"))));
-    }
+    private void RenderGroups() => RenderDisplayGroups();
     private CheckBox Toggle(bool value, Action<bool> changed) { var toggle = new CheckBox { IsChecked = value }; toggle.Click += (_, _) => changed(toggle.IsChecked == true); return toggle; }
     internal void SavePreferences() => Save();
     private void Save() { try { Storage.Save(Preferences); } catch (Exception ex) { Status(L.T("s888403f2f3") + ex.Message, true); } }
@@ -313,6 +325,7 @@ public partial class MainWindow : Window
         var content = new StackPanel(); content.Children.Add(Ui.Row(Ui.Labels(L.T("s78d94f90d2"), Help(L.T("s95e8d6a9f6"))), Toggle(Preferences.CloseToTray, v => { Preferences.CloseToTray = v; Save(); })));
         content.Children.Add(Ui.Line()); content.Children.Add(Ui.Row(Ui.Labels(L.T("sde38b92ad2"), Help(L.T("sea9af1c6cc"))), Toggle(IsStartupEnabled(), SetStartup)));
         content.Children.Add(Ui.Line()); content.Children.Add(Ui.Row(Ui.Labels(L.T("s6b753d5905"), L.T("sab00c1067a")), Toggle(Preferences.ShowHelp, v => { Preferences.ShowHelp = v; HelpSwitch.IsChecked = v; Save(); Render(); }))); PageContent.Children.Add(Ui.Card(content));
+        AddApplicationOptions();
         PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Labels(L.T("s9167ee8b67"), Help(L.T("s22b00c690a"))), Ui.Button(L.T("s2cbe04030d"), ExportDiagnostics))));
         PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Labels(L.T("s320388530e"), L.T("sde4f02c8c4")), Ui.Button(L.T("se90c12bb08"), ResetDimming))));
     }
@@ -322,48 +335,9 @@ public partial class MainWindow : Window
         try { using var key = Registry.CurrentUser.CreateSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Run"); if (enabled) key.SetValue("LumaDesk", "\"" + Environment.ProcessPath + "\" --tray"); else key.DeleteValue("LumaDesk", false); Status(enabled ? L.T("sd68c305919") : L.T("s01f73d5d98")); }
         catch (Exception ex) { Status(ex.Message, true); Render(); }
     }
-    private void RenderMenu()
-    {
-        Heading(L.T("s770544f702"), L.T("s25f74e4b56"));
-        PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Labels(L.T("saf91a997fb"), Help(L.T("s7b0dc62b8f"))), Ui.Button(L.T("s57fc4bf70b"), ShowQuick, true))));
-        PageContent.Children.Add(Ui.Card(Ui.Labels(L.T("sae6b362957"), L.T("s53d83ca77a"))));
-    }
-    private void RenderKeyboard()
-    {
-        Heading(L.T("s864200bbb2"), L.T("sd279db6ddf"));
-        PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Labels(L.T("sc6a591a792"), Help(L.T("sb77c0d335e"))), Toggle(Preferences.Hotkeys, v => { Preferences.Hotkeys = v; Save(); ConfigureHotkeys(); }))));
-        var shortcuts = new StackPanel(); shortcuts.Children.Add(Ui.Row(Ui.Text(L.T("s768e8a9c2a")), Ui.Badge("Ctrl + Alt + ↑"))); shortcuts.Children.Add(Ui.Line()); shortcuts.Children.Add(Ui.Row(Ui.Text(L.T("s970eb36fb3")), Ui.Badge("Ctrl + Alt + ↓"))); shortcuts.Children.Add(Ui.Line()); shortcuts.Children.Add(Ui.Row(Ui.Text(L.T("s8e6dbec08e")), Ui.Badge("Ctrl + Alt + 0"))); PageContent.Children.Add(Ui.Card(shortcuts));
-    }
-    private void RenderPresets()
-    {
-        Heading(L.T("s0b2fca3986"), L.T("s0ab652ed8d"));
-        var name = new TextBox { Text = L.T("s3cbfca23b6"), MaxLength = 40, MinWidth = 200, Margin = new Thickness(0, 0, 12, 0) };
-        PageContent.Children.Add(Ui.Card(Ui.Row(name, Ui.Button(L.T("sce211a5a47"), () =>
-        {
-            string label = name.Text.Trim(); if (label.Length == 0) { Status(L.T("s2c09021a16"), true); return; }
-            if (Displays.Count == 0) { Status(L.T("se46fa4e5ef"), true); return; }
-            if (Preferences.Presets.Any(p => p.Name.Equals(label, StringComparison.OrdinalIgnoreCase))) { Status(L.T("s1f09d8e896"), true); return; }
-            Preferences.Presets.Add(new Preset { Name = label, Displays = Displays.Select(d => new PresetDisplay { Id = d.Id, Brightness = d.Brightness, Dimming = d.Dimming }).ToList() }); Save(); Render(); Status(L.T("sa0d6e1ed82"));
-        }, true))));
-        if (Preferences.Presets.Count == 0) PageContent.Children.Add(Ui.Card(Ui.Labels(L.T("s502f445e9e"), L.T("sd76248be1e"))));
-        foreach (var preset in Preferences.Presets.ToList())
-        {
-            var actions = new StackPanel { Orientation = Orientation.Horizontal }; actions.Children.Add(Ui.Button(L.T("s63c73c4730"), () => _ = RunAsync(() => ApplyPresetAsync(preset))));
-            var remove = Ui.Button(L.T("s2f9daa8289"), () => { Preferences.Presets.Remove(preset); Save(); Render(); }); remove.Margin = new Thickness(8, 0, 0, 0); actions.Children.Add(remove);
-            PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Labels(preset.Name, L.F("sb91b8e2562", preset.Displays.Count)), actions)));
-        }
-    }
-    private async Task ApplyPresetAsync(Preset preset)
-    {
-        var failures = new List<string>(); int count = 0;
-        foreach (var saved in preset.Displays)
-        {
-            var d = Displays.FirstOrDefault(d => d.Id == saved.Id); if (d == null) { failures.Add(L.T("se14b0dad1d")); continue; }
-            try { if (saved.Brightness.HasValue && d.Brightness.HasValue) { await Service.SetPercentAsync(d, 0x10, saved.Brightness.Value); d.Brightness = saved.Brightness.Value; } SetDimming(d, saved.Dimming); count++; }
-            catch (Exception ex) { failures.Add(d.Name); Storage.Log(ex.Message); }
-        }
-        quick?.Render(); Status(L.F("sa40a67f8f2", preset.Name, count) + (failures.Count > 0 ? L.T("s65c957e688") + string.Join("、", failures) : ""), failures.Count > 0);
-    }
+    private void RenderMenu() => RenderPanelPreferences();
+    private void RenderKeyboard() => RenderShortcuts();
+    private void RenderPresets() => RenderScenes();
     private void RenderAbout()
     {
         Heading("LumaDesk for Windows", L.F("s50a0683450", AppBrand.Version));
@@ -383,35 +357,30 @@ public partial class MainWindow : Window
     internal void ShowDisplay(DisplayInfo display) { selectedId = display.Id; page = "displays"; Render(); ShowSettings(); }
     internal void ShowQuick()
     {
+        if (sceneBusy) return;
         if (quick == null) { quick = new QuickWindow(this); quick.Closed += (_, _) => quick = null; }
         quick.Render(); quick.Show(); quick.PositionNearTray(); quick.Activate();
     }
     internal void OpenPip(DisplayInfo display) { var pip = new PipWindow(display); pipWindows.Add(pip); pip.Closed += (_, _) => pipWindows.Remove(pip); pip.Show(); }
     private void ResetDimming() { foreach (var d in Displays) SetDimming(d, 0); Render(); quick?.Render(); Status(L.T("s4499bbc369")); }
-    private void ConfigureHotkeys()
-    {
-        if (hwnd == IntPtr.Zero) return;
-        for (int i = 1; i <= 3; i++) Native.UnregisterHotKey(hwnd, i);
-        if (!Preferences.Hotkeys) return;
-        bool up = Native.RegisterHotKey(hwnd, 1, 0x4003, 0x26), down = Native.RegisterHotKey(hwnd, 2, 0x4003, 0x28), reset = Native.RegisterHotKey(hwnd, 3, 0x4003, 0x30);
-        if (!up || !down || !reset) Status(L.T("sbf5ac2034f"), true);
-    }
     private IntPtr WindowProc(IntPtr h, int msg, IntPtr w, IntPtr l, ref bool handled)
     {
         if (msg is 0x1a or 0x31a) Dispatcher.BeginInvoke(() =>
         {
+            ThemeService.Apply(Preferences.Theme);
             bool light = TrayIcon.UseLightGlyph();
             if (tray == null || light == lightTrayGlyph) return;
             var replacement = TrayIcon.Create(light);
             var previous = tray.Icon; tray.Icon = replacement; lightTrayGlyph = light; previous?.Dispose();
         });
-        if (msg == 0x7e || msg == 0x219 || msg == 0x2e0 || msg == 0x1a) { hotplugTimer.Stop(); hotplugTimer.Start(); }
+        if (msg == 0x7e || msg == 0x219 || msg == 0x2e0 || msg == 0x1a || (msg == 0x218 && (w.ToInt32() == 7 || w.ToInt32() == 18))) {
+            if (msg == 0x218) resumeBrightness = true;
+            hotplugTimer.Stop(); hotplugTimer.Start();
+        }
         if (msg == 0x312)
         {
             handled = true;
-            if (w.ToInt32() == 3) ResetDimming();
-            else if (Selected is { } d) _ = RunAsync(async () => { await ChangeCombinedBrightness(d, Math.Clamp(GetCombinedBrightness(d) + (w.ToInt32() == 1 ? 5 : -5), 0, 100)); Render(); quick?.Render(); });
-            else Status(L.T("s873e90682f"), true);
+            if (!sceneBusy && !modePending) HandleShortcut(w.ToInt32());
         }
         return IntPtr.Zero;
     }
@@ -427,8 +396,8 @@ public partial class MainWindow : Window
         var dialog = new SaveFileDialog { FileName = "lumadesk-diagnostics.json", Filter = "JSON|*.json" }; if (dialog.ShowDialog(this) != true) return;
         try { File.WriteAllText(dialog.FileName, JsonSerializer.Serialize(Displays, Storage.Json)); Status(L.T("sc23961bae6")); } catch (Exception ex) { Status(ex.Message, true); }
     }
-    private void ShutdownResources() { hotplugTimer.Stop(); for (int i = 1; i <= 3; i++) Native.UnregisterHotKey(hwnd, i); tray?.Dispose(); foreach (var window in dimWindows.Values) window.Close(); dimWindows.Clear(); foreach (var window in pipWindows.ToArray()) window.Close(); quick?.Close(); Save(); System.Windows.Application.Current.Shutdown(); }
-    internal void Quit() { if (modePending) return; exiting = true; Close(); }
+    private void ShutdownResources() { hotplugTimer.Stop(); StopAutomation(); commands?.Dispose(); UnregisterShortcuts(); brightnessOsd?.Close(); tray?.Dispose(); foreach (var window in dimWindows.Values) window.Close(); dimWindows.Clear(); foreach (var window in pipWindows.ToArray()) window.Close(); quick?.Close(); Save(); System.Windows.Application.Current.Shutdown(); }
+    internal void Quit() { if (modePending || sceneBusy) return; exiting = true; Close(); }
     private void MinimizeWindow(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void MaximizeWindow(object sender, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     private void CloseWindow(object sender, RoutedEventArgs e) => Close();

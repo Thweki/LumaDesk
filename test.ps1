@@ -9,6 +9,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Color tests failed.' }
 if ($LASTEXITCODE -ne 0) { throw 'Virtual display tests failed.' }
 & $sdk run --project (Join-Path $PSScriptRoot 'tests\LumaDesk.LocalizationTests') -c Release
 if ($LASTEXITCODE -ne 0) { throw 'Localization tests failed.' }
+& $sdk run --project (Join-Path $PSScriptRoot 'tests\LumaDesk.WorkflowTests') -c Release
+if ($LASTEXITCODE -ne 0) { throw 'Workflow tests failed.' }
 & $sdk run --project (Join-Path $PSScriptRoot 'tests\LumaDesk.UiTests') -c Release -- (Join-Path $PSScriptRoot 'artifacts\ui-tests')
 if ($LASTEXITCODE -ne 0) { throw 'UI tests failed.' }
 foreach ($language in @('en', 'zh-Hant', 'ja', 'ko')) {

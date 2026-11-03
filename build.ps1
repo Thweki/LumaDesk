@@ -1,9 +1,12 @@
-param([switch]$Portable)
+param([switch]$Portable, [string]$OutputDirectory)
 $ErrorActionPreference = 'Stop'
 $sdk = Join-Path $PSScriptRoot '.tools\dotnet\dotnet.exe'
 if (-not (Test-Path $sdk)) { $sdk = 'dotnet' }
 $project = Join-Path $PSScriptRoot 'src\LumaDesk\LumaDesk.csproj'
-$destination = Join-Path $PSScriptRoot 'artifacts\LumaDesk-win-x64'
+$destination = if ($OutputDirectory) {
+    if ([System.IO.Path]::IsPathRooted($OutputDirectory)) { [System.IO.Path]::GetFullPath($OutputDirectory) }
+    else { [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot $OutputDirectory)) }
+} else { Join-Path $PSScriptRoot 'artifacts\LumaDesk-win-x64' }
 & $sdk run --project (Join-Path $PSScriptRoot 'tools\IconBuilder') -c Release -- (Join-Path $PSScriptRoot 'src\LumaDesk\Assets\app.ico')
 if ($LASTEXITCODE -ne 0) { throw 'Icon generation failed.' }
 if ($Portable) {
@@ -18,7 +21,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'NOTICE') -Destination $destinat
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.en.md') -Destination $destination -Force
 $docDestination = Join-Path $destination 'docs'
 New-Item -ItemType Directory -Path $docDestination -Force | Out-Null
-foreach ($name in @('validation.md', 'color-hdr.md', 'display-layout.md', 'virtual-displays.md', 'localization.md')) {
+foreach ($name in @('validation.md', 'color-hdr.md', 'display-layout.md', 'virtual-displays.md', 'localization.md', 'workflows.md')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "docs\$name") -Destination $docDestination -Force
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\third-party') -Destination $docDestination -Recurse -Force

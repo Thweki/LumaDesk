@@ -75,14 +75,50 @@ public static class DpiRules
 }
 public sealed class Preset
 {
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Name { get; set; } = "";
     public List<PresetDisplay> Displays { get; set; } = new();
+    public bool OnConnect { get; set; }
+    public string? AtTime { get; set; }
+    public string? OnPower { get; set; }
+    public HotkeyBinding? Shortcut { get; set; }
 }
 public sealed class PresetDisplay
 {
     public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
     public int? Brightness { get; set; }
     public int Dimming { get; set; }
+    public DisplayMode? Mode { get; set; }
+    public uint? Orientation { get; set; }
+    public int? Dpi { get; set; }
+    public bool? Hdr { get; set; }
+    public bool? UserProfiles { get; set; }
+    public string? SdrProfile { get; set; }
+    public string? HdrProfile { get; set; }
+    public int? X { get; set; }
+    public int? Y { get; set; }
+    public bool? Primary { get; set; }
+}
+public sealed class HotkeyBinding
+{
+    public uint Modifiers { get; set; } = 3;
+    public uint Key { get; set; }
+}
+public sealed class DisplayPreference
+{
+    public string Alias { get; set; } = "";
+    public int Order { get; set; } = int.MaxValue;
+    public bool ShowScaling { get; set; } = true;
+    public int Offset { get; set; }
+    public int Minimum { get; set; }
+    public int Maximum { get; set; } = 100;
+    public List<DisplayMode> Favorites { get; set; } = new();
+}
+public sealed class DisplayGroup
+{
+    public string Name { get; set; } = "";
+    public List<string> Displays { get; set; } = new();
 }
 public sealed class Preferences
 {
@@ -93,10 +129,21 @@ public sealed class Preferences
     public bool ShowHelp { get; set; } = true;
     public HashSet<string> QuickCollapsedDisplays { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public string? QuickMoreDisplayId { get; set; }
+    public string? QuickSelectedDisplayId { get; set; }
     public List<Preset> Presets { get; set; } = new();
+    public List<DisplayGroup> Groups { get; set; } = new();
+    public Dictionary<string, DisplayPreference> DisplayOptions { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public bool RestoreBrightness { get; set; } = true;
+    public Dictionary<string, PresetDisplay> RememberedBrightness { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public HotkeyBinding BrightnessUp { get; set; } = new() { Key = 0x26 };
+    public HotkeyBinding BrightnessDown { get; set; } = new() { Key = 0x28 };
+    public HotkeyBinding ResetDimmingKey { get; set; } = new() { Key = 0x30 };
+    public string HotkeyTarget { get; set; } = "pointer";
+    public string Theme { get; set; } = "auto";
 }
 internal static class Storage
 {
+    private static readonly object logGate = new();
     public static string Folder => Environment.GetEnvironmentVariable("LUMADESK_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LumaDesk");
     public static readonly JsonSerializerOptions Json = new() { WriteIndented = true, IncludeFields = true };
     public static Preferences Load()
@@ -113,7 +160,17 @@ internal static class Storage
     }
     public static void Log(string message)
     {
-        try { Directory.CreateDirectory(Folder); File.AppendAllText(Path.Combine(Folder, "app.log"), $"{DateTime.Now:O} {message}\n"); } catch { }
+        try
+        {
+            lock (logGate)
+            {
+                Directory.CreateDirectory(Folder);
+                string path = Path.Combine(Folder, "app.log");
+                if (File.Exists(path) && new FileInfo(path).Length > 2 * 1024 * 1024) File.Move(path, Path.Combine(Folder, "app.previous.log"), true);
+                File.AppendAllText(path, $"{DateTime.Now:O} {message}\n");
+            }
+        }
+        catch { }
     }
 }
 public static class DisplayRules

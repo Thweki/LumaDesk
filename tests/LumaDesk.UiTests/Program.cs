@@ -16,7 +16,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
-internal static class Program
+internal static partial class Program
 {
     private static int checks;
     private static string output = "";
@@ -26,7 +26,7 @@ internal static class Program
         output = Path.GetFullPath(args.Length > 0 ? args[0] : "artifacts/ui-tests"); Directory.CreateDirectory(output);
         Environment.SetEnvironmentVariable("LUMADESK_DATA_DIR", Path.Combine(output, "isolated-settings"));
         string language = args.Length > 1 ? args[1] : "zh-Hans";
-        Storage.Save(new Preferences { Language = language, Hotkeys = false, CloseToTray = false });
+        Storage.Save(new Preferences { Language = language, Theme = "light", Hotkeys = false, CloseToTray = false });
         var app = new App { IntegrationTest = true }; app.InitializeComponent();
         var window = new MainWindow();
         window.Loaded += async (_, _) =>
@@ -89,16 +89,26 @@ internal static class Program
                 }
                 Click(navigation[5]); window.UpdateLayout();
                 var save = Descendants<Button>(window.PageContent).First(b => b.Content as string == "保存当前设置"); Click(save);
+                for (int i = 0; i < 150 && Storage.Load().Presets.Count == 0; i++) await Task.Delay(100);
                 Check(Storage.Load().Presets.Count == 1, "Preset save persists in isolated test profile");
+                Check(Storage.Load().Presets[0].Displays.All(d => d.Mode != null && d.X.HasValue && d.Primary.HasValue), "Saved scene includes output and placement for every screen");
+                Check(Storage.Load().Presets.All(p => !p.OnConnect && p.AtTime == null && p.OnPower == null), "Automatic scene switching defaults off");
+                Snapshot(window, "scenes.png");
+                foreach (var expander in Descendants<Expander>(window.PageContent).ToArray()) expander.IsExpanded = true;
+                window.UpdateLayout();
                 var delete = Descendants<Button>(window.PageContent).First(b => b.Content as string == "删除"); Click(delete);
                 Check(Storage.Load().Presets.Count == 0, "Preset deletion updates persistence");
                 var quick = new QuickWindow(window, dismissOnDeactivate: false); quick.Render(); quick.Show(); quick.UpdateLayout();
-                Check(Descendants<Slider>(quick).Count() == window.Displays.Count + window.Displays.Count(d => d.DpiScale.CanSet), "Quick panel defaults to brightness and direct DPI sliders");
+                Check(Descendants<Slider>(quick).Count() == 1 + (window.Displays.Single(d => d.Id == quick.SelectedDisplayId).DpiScale.CanSet ? 1 : 0), "Quick panel shows only the selected display's brightness and DPI sliders");
                 Check(Descendants<Slider>(quick).Where(s => System.Windows.Automation.AutomationProperties.GetName(s) == "亮度").All(s => s.IsEnabled), "Combined quick brightness remains usable on software-only screens");
-                Check(quick.Height < 620 && Descendants<ScrollViewer>(quick).First().ScrollableHeight == 0, "Compact three-screen quick panel sizes to content without blank height or scrolling");
+                Snapshot(quick, "quick-panel.png");
+                var quickScroll = Descendants<ScrollViewer>(quick).First();
+                Check(quick.Height < 620 && quickScroll.ScrollableHeight == 0, "Compact selected-screen panel sizes to content without blank height or scrolling");
                 Snapshot(quick, "quick-panel.png"); quick.Close();
                 await TestQuickPlacementAsync(window);
-                TestQuickDisclosure(window);
+                await TestQuickDisplayPickerAsync(window);
+                await TestMultiBrightnessAsync(window);
+                await TestInputSwitchUiAsync(window);
                 await TestQuickDpiAsync(window);
                 await TestQuickModesAsync(window);
                 if (window.Displays.Count > 1)
@@ -109,6 +119,7 @@ internal static class Program
                 }
                 await TestLayoutAsync(window);
                 await TestLiveBrightnessAndDismissAsync(window);
+                await TestBrightnessPopupLifetimeAsync(window);
                 var pip = new PipWindow(window.Displays[0]); pip.Show(); await Task.Delay(700);
                 Check(Descendants<System.Windows.Controls.Image>(pip).Single().Source != null, "PIP receives actual screen frames"); pip.Close();
                 // Validate empty and unsupported-device states with fixtures; no native writes.
@@ -122,6 +133,7 @@ internal static class Program
                 real[0].DpiScale = originalDpi;
                 Click(navigation[0]); window.Width = 860; window.Height = 650; window.UpdateLayout(); Snapshot(window, "minimum-window.png");
                 Check(window.ContentScroll.ViewportHeight > 200, "Minimum window retains scrollable controls");
+                await TestWorkflowUiAsync(window);
                 using (var icon = TrayIcon.Create()) using (var iconFile = File.Create(Path.Combine(output, "app.ico"))) icon.Save(iconFile);
                 File.WriteAllText(Path.Combine(output, "result.txt"), $"PASS: {checks} UI integration checks. No hardware settings were changed.\n");
                 Console.WriteLine($"{checks} UI checks passed.");
@@ -132,9 +144,43 @@ internal static class Program
         window.Show(); Dispatcher.Run(); return Environment.ExitCode;
     }
     private static void Check(bool test, string name) { if (!test) throw new Exception("FAIL " + name); checks++; Console.WriteLine("PASS " + name); }
+    private static async Task TestWorkflowUiAsync(MainWindow window)
+    {
+        var nav = window.Navigation.Children.OfType<Button>().ToArray();
+        Click(nav[3]); window.UpdateLayout();
+        Check(Descendants<TextBox>(window.PageContent).Count() == window.Displays.Count, "Panel preferences offer one simple name field per monitor");
+        var display = window.Displays[0]; var options = window.Options(display);
+        bool oldScaling = options.ShowScaling; options.ShowScaling = false;
+        var quick = new QuickWindow(window, dismissOnDeactivate: false); quick.Render(); quick.Show(); quick.UpdateLayout();
+        Check(!Descendants<Slider>(quick).Any(s => System.Windows.Automation.AutomationProperties.GetAutomationId(s) == "quick-dpi-slider-" + display.Number), "Scaling can be hidden without removing brightness");
+        quick.Close(); options.ShowScaling = oldScaling;
+        var other = new Window { Width = 100, Height = 100, ShowInTaskbar = false };
+        quick = new QuickWindow(window); quick.Render(); quick.Show(); quick.Activate(); quick.UpdateLayout();
+        Click(Descendants<Button>(quick).Single(b => b.Content as string == L.T("panel.pin")));
+        other.Show(); other.Activate(); await Task.Delay(120);
+        Check(quick.IsVisible, "Pinned quick panel remains open after losing focus");
+        quick.Close(); other.Close();
+        Click(nav[4]); window.UpdateLayout();
+        Check(Descendants<TextBox>(window.PageContent).Count() == 3 && window.Preferences.HotkeyTarget == "pointer", "Shortcuts have editable bindings and an intuitive pointer target");
+        Click(nav[0]); ThemeService.Apply("dark"); window.RefreshView(); window.UpdateLayout();
+        Check(ThemeService.Brush("#FFFFFF").Color.R < 80 && ThemeService.Brush("#242424", true).Color.R > 180, "Dark theme has dark surfaces and legible text");
+        Snapshot(window, "dark-overview.png");
+        quick = new QuickWindow(window, dismissOnDeactivate: false); quick.Render(); quick.Show(); quick.UpdateLayout(); Snapshot(quick, "dark-quick.png"); quick.Close();
+        Click(nav[2]); window.UpdateLayout(); Snapshot(window, "dark-application.png");
+        var themeBox = Descendants<ComboBox>(window.PageContent).Last(); themeBox.IsDropDownOpen = true; await Task.Delay(80);
+        Check(themeBox.IsDropDownOpen, "Themed combo opens and retains native selection behavior"); themeBox.IsDropDownOpen = false;
+        ThemeService.Apply("light"); window.RefreshView();
+        Check(ThemeService.Brush("#FFFFFF").Color.R == 255, "Theme returns to light without restarting");
+        var pip = new PipWindow(display); pip.Show(); await Task.Delay(180); pip.Close(); await Task.Delay(350);
+        Check(!pip.Capturing, "Closing PIP during capture drains the worker and releases buffers");
+        var invalid = await window.ExecuteCommand(new ControlCommand("brightness", "missing-screen", 50));
+        Check(!invalid.Success, "Unknown CLI display is rejected without hardware writes");
+        var state = await window.ExecuteCommand(new ControlCommand("list"));
+        Check(state.Success, "CLI status uses the live application's display state");
+    }
     private static async Task TestLocalizedUiAsync(MainWindow window, string language)
     {
-        string Text(string chinese) => L.T(L.Catalog("zh-Hans").Single(p => p.Value == chinese).Key);
+        string Text(string chinese) => L.T(L.Catalog("zh-Hans").First(p => p.Value == chinese).Key);
         Console.WriteLine("LANG selected=" + L.Language + " window=" + window.Language.IetfLanguageTag + " font=" + window.FontFamily.Source);
         Check(L.Language == language && window.Language.IetfLanguageTag.Equals(language, StringComparison.OrdinalIgnoreCase), "Window uses selected Windows UI language");
         Check(new[] { "window.minimize", "window.maximize", "window.close" }.All(key => Descendants<Button>(window).Any(b => System.Windows.Automation.AutomationProperties.GetName(b) == L.T(key))), "Window caption accessibility names are localized");
@@ -156,12 +202,15 @@ internal static class Program
         try
         {
             quick.Render(); quick.Show(); await Task.Delay(50); quick.UpdateLayout();
-            Check(Descendants<Slider>(quick).Count() == window.Displays.Count + window.Displays.Count(d => d.DpiScale.CanSet), "Localized quick panel keeps direct controls");
+            Check(Descendants<Slider>(quick).Count() == 1 + (window.Displays.Single(d => d.Id == quick.SelectedDisplayId).DpiScale.CanSet ? 1 : 0), "Localized quick panel keeps selected display controls");
             Check(Descendants<TextBlock>(quick).Any(t => t.Text == Text("亮度")), "Quick brightness label translated");
             Snapshot(quick, "quick-panel.png");
             var more = Descendants<Button>(quick).First(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b).StartsWith("quick-more-toggle-"));
             Click(more); quick.UpdateLayout(); Snapshot(quick, "quick-more.png");
             Check(Descendants<Button>(quick).Any(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b).StartsWith("quick-color-toggle-")), "Localized advanced controls available");
+            Click(Descendants<Button>(quick).Single(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b) == "quick-multi-toggle")); quick.UpdateLayout();
+            Check(quick.IsBrightnessMultiSelect && Descendants<Slider>(quick).Count() == 1 && Descendants<TextBlock>(quick).Any(t => t.Text == L.F("quick.multiCount", 1)), "Localized multi-select exposes brightness only");
+            Snapshot(quick, "quick-multi.png");
         }
         finally { quick.Close(); }
         using var dark = TrayIcon.Render(32, false); using var light = TrayIcon.Render(32, true);
@@ -194,6 +243,45 @@ internal static class Program
         Check(!popup.IsVisible, "Quick popup closes after losing focus once guarded work completes");
         outside.Close(); popup.Close();
     }
+    private static async Task TestBrightnessPopupLifetimeAsync(MainWindow window)
+    {
+        var real = window.Displays;
+        var display = new DisplayInfo { Id = "brightness-lifetime", Name = "Brightness fixture", Number = 1, Brightness = 50 };
+        window.Displays = new() { display }; window.Hide();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        int writes = 0; bool fail = false;
+        var popup = new QuickWindow(window, applyBrightness: async (d, value) => { writes++; await release.Task; if (fail) throw new InvalidOperationException("Brightness fixture failure"); d.Brightness = value; });
+        var outside = new Window { Width = 180, Height = 100, ShowInTaskbar = false };
+        try
+        {
+            popup.Render(); popup.Show(); popup.Activate(); popup.UpdateLayout();
+            var slider = Descendants<Slider>(popup).Single(); slider.Focus();
+            slider.RaiseEvent(new DragStartedEventArgs(0, 0) { RoutedEvent = Thumb.DragStartedEvent });
+            slider.Value = 65; await Task.Delay(100);
+            popup.Render();
+            Check(writes == 1 && popup.IsVisible && Descendants<Slider>(popup).Contains(slider), "Brightness write preserves the active popup and thumb");
+            release.SetResult(); await Task.Delay(100);
+            popup.Render();
+            Check(popup.IsVisible && Descendants<Slider>(popup).Contains(slider), "Finishing a write mid-drag does not rebuild or dismiss the brightness slider");
+            slider.RaiseEvent(new DragCompletedEventArgs(0, 0, false) { RoutedEvent = Thumb.DragCompletedEvent });
+            await Task.Delay(80); popup.Render();
+            Check(popup.IsVisible && Descendants<Slider>(popup).Contains(slider) && slider.IsKeyboardFocusWithin, "Release retains the focused brightness slider for continued adjustment");
+            // Exercise the real nonactivating dimming window without darkening any pixels.
+            var overlay = new DimWindow(); overlay.Show(); await Task.Delay(40); overlay.Close(); await Task.Delay(40);
+            Check(popup.IsVisible && popup.IsActive, "Creating and removing an invisible dimming layer preserves popup activation");
+            slider.Value = 70; await Task.Delay(100);
+            Check(writes == 2 && popup.IsVisible, "A second adjustment uses the same open brightness panel");
+            fail = true; slider.Value = 75; await Task.Delay(100);
+            Check(popup.IsVisible && slider.Value == 70, "Failed brightness write restores the last value without closing the panel");
+            outside.Show(); outside.Activate(); await Task.Delay(100);
+            Check(!popup.IsVisible, "Clicking another window still dismisses the brightness panel");
+            popup = new QuickWindow(window, applyBrightness: (_, _) => Task.CompletedTask); popup.Render(); popup.Show(); popup.Activate();
+            popup.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, PresentationSource.FromVisual(popup), Environment.TickCount, System.Windows.Input.Key.Escape) { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent });
+            await Task.Delay(40);
+            Check(!popup.IsVisible, "Escape still closes the panel after the brightness lifetime fix");
+        }
+        finally { release.TrySetResult(); await Task.Delay(50); popup.Close(); outside.Close(); window.Displays = real; window.Show(); }
+    }
     private static async Task TestLayoutAsync(MainWindow window)
     {
         var real = window.Displays;
@@ -217,49 +305,6 @@ internal static class Program
             Check(calls == 2 && Descendants<TextBlock>(layout).Any(t => t.Text == "测试：排列应用被拒绝"), "Layout errors remain visible in app and controls recover");
         }
         finally { hold.TrySetResult(); await Task.Delay(20); layout.Close(); window.Displays = real; window.Show(); }
-    }
-    private static void TestQuickDisclosure(MainWindow window)
-    {
-        var real = window.Displays;
-        var savedCollapsed = window.Preferences.QuickCollapsedDisplays.ToArray(); var savedMore = window.Preferences.QuickMoreDisplayId;
-        var first = new DisplayInfo { Number = 1, Id = "fixture-a", Name = "测试屏幕 Z", Current = new(2560,1440,144), DpiScale = DpiRules.FromRelative(0,0,3) };
-        var second = new DisplayInfo { Number = 2, Id = "fixture-b", Name = "测试屏幕 B", Current = new(3840,2160,60), DpiScale = DpiRules.FromRelative(0,1,2) };
-        window.Displays = new List<DisplayInfo> { first, second }; window.Preferences.QuickCollapsedDisplays.Clear(); window.Preferences.QuickMoreDisplayId = null; window.Hide();
-        QuickWindow quick = new(window, (_, _, _) => Task.CompletedTask, dismissOnDeactivate: false);
-        Button FindButton(string id) => Descendants<Button>(quick).Single(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b) == id);
-        bool Has(string id) => Descendants<FrameworkElement>(quick).Any(e => System.Windows.Automation.AutomationProperties.GetAutomationId(e) == id);
-        void Toggle(string id) { Click(FindButton(id)); quick.UpdateLayout(); }
-        try
-        {
-            quick.Render(); quick.Show(); quick.UpdateLayout();
-            Check(Descendants<Button>(quick).Select(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b)).Where(id => id.StartsWith("quick-device-header-")).SequenceEqual(new[] { "quick-device-header-2", "quick-device-header-1" }) && ReferenceEquals(window.Displays[0], first), "Quick displays sort by shown name without changing source order or device identity");
-            Check(Has("quick-device-header-1") && Has("quick-device-header-2") && !Descendants<TextBlock>(quick).Any(t => t.Text == "额外调暗" || t.Text == "画中画"), "Default quick device sections expose only brightness and resolution");
-            Toggle("quick-device-header-1");
-            Check(!Has("quick-dpi-slider-1") && Has("quick-dpi-slider-2") && Storage.Load().QuickCollapsedDisplays.Contains(first.Id), "Header click collapses only that display and persists stable ID");
-            quick.Close(); quick = new QuickWindow(window, (_, _, _) => Task.CompletedTask, dismissOnDeactivate: false); quick.Render(); quick.Show(); quick.UpdateLayout();
-            Check(!Has("quick-dpi-slider-1") && Has("quick-dpi-slider-2"), "Device collapse remains on reopening quick panel");
-            Toggle("quick-device-header-1");
-            Check(Has("quick-dpi-slider-1") && !Storage.Load().QuickCollapsedDisplays.Contains(first.Id), "Header expands display and persists expanded state");
-            Toggle("quick-more-toggle-1");
-            Check(Has("quick-more-content-1") && Descendants<TextBlock>(quick).Any(t => t.Text == "额外调暗") && Descendants<TextBlock>(quick).Any(t => t.Text == "画中画"), "Chevron reveals software dimming and PIP inline");
-            Toggle("quick-more-toggle-2");
-            Check(!Has("quick-more-content-1") && Has("quick-more-content-2") && Storage.Load().QuickMoreDisplayId == second.Id, "Opening another more section collapses previous section and persists selection");
-            quick.Close(); quick = new QuickWindow(window, (_, _, _) => Task.CompletedTask, dismissOnDeactivate: false); quick.Render(); quick.Show(); quick.UpdateLayout();
-            Check(!Has("quick-more-content-1") && Has("quick-more-content-2"), "Exclusive more section remains on reopening quick panel");
-            Toggle("quick-device-header-2");
-            Check(!Has("quick-more-content-2") && !Has("quick-dpi-slider-2"), "Collapsing device hides all its extra controls");
-            Toggle("quick-device-header-2");
-            Check(Has("quick-more-content-2"), "Reexpanded device remembers its more section");
-            Toggle("quick-more-toggle-2");
-            Check(!Has("quick-more-content-2") && Storage.Load().QuickMoreDisplayId == null, "Chevron can close the last expanded more section");
-            Toggle("quick-device-header-1"); window.Displays = new List<DisplayInfo> { first }; quick.Render(); quick.UpdateLayout();
-            Check(!Has("quick-device-header-1") && Has("quick-dpi-slider-1"), "Single display omits header and remains accessible despite saved collapsed state");
-            Check(!window.IsVisible, "Device disclosure controls never open main settings");
-        }
-        finally
-        {
-            quick.Close(); window.Displays = real; window.Preferences.QuickCollapsedDisplays = new HashSet<string>(savedCollapsed, StringComparer.OrdinalIgnoreCase); window.Preferences.QuickMoreDisplayId = savedMore; window.SavePreferences(); window.Show();
-        }
     }
     private static async Task TestQuickPlacementAsync(MainWindow window)
     {
@@ -343,13 +388,17 @@ internal static class Program
             quick.Render(); quick.Show(); quick.UpdateLayout();
             Check(!window.IsVisible && quick.IsVisible, "Quick panel works while main settings remains hidden");
             Check(!Descendants<Button>(quick).Any(b => b.Content as string == "应用缩放"), "Quick DPI slider needs no Apply button");
-            Check(Descendants<Slider>(quick).Count(s => System.Windows.Automation.AutomationProperties.GetAutomationId(s).StartsWith("quick-dpi-slider-")) == 2 && Descendants<TextBlock>(quick).Any(t => t.Text.Contains("测试：自定义缩放不可直接调整")) && !Descendants<Button>(quick).Any(b => (b.Content as string)?.Contains("Windows") == true), "Unsupported quick DPI remains in app without actionable slider or external settings");
+            SelectQuick(quick, 3);
+            Check(!Descendants<Slider>(quick).Any(s => System.Windows.Automation.AutomationProperties.GetAutomationId(s).StartsWith("quick-dpi-slider-")) && Descendants<TextBlock>(quick).Any(t => t.Text.Contains("测试：自定义缩放不可直接调整")) && !Descendants<Button>(quick).Any(b => (b.Content as string)?.Contains("Windows") == true), "Unsupported selected DPI remains in app without actionable slider or external settings");
+            SelectQuick(quick, 2);
             var slider = FindDpi(2); BeginDrag(slider); slider.Value = 0; await Task.Delay(150);
             Check(calls == 1 && !window.IsVisible, "DPI is applied while dragging, before pointer release");
             Check(Descendants<TextBlock>(quick).Any(t => t.Text == "看起来像约 2560 × 1440"), "Quick DPI slider previews logical dimensions immediately");
             Check(calls == 1 && ReferenceEquals(requestedDisplay, second) && requestedPercent == 150 && ReferenceEquals(requestedOwner, quick), "Live change applies exact display and supported percentage in quick window context");
             quick.Render(); quick.UpdateLayout();
             Check(ReferenceEquals(slider, FindDpi(2)) && slider.IsEnabled, "Pending live DPI retains an enabled stable drag control");
+            SelectQuick(quick, 1);
+            Check(quick.SelectedDisplayId == second.Id && ReferenceEquals(slider, FindDpi(2)), "Pending DPI prevents target switches and retains the active screen");
             slider.Value = 2; slider.Value = 1; await Task.Delay(100);
             Check(calls == 1, "Slow DPI write queues only the latest subsequent target");
             var popupHandle = new WindowInteropHelper(quick).Handle;
@@ -363,13 +412,13 @@ internal static class Program
             Check(calls == 2 && second.DpiScale.CurrentPercent == 125 && ReferenceEquals(slider, FindDpi(2)), "Latest queued target is applied without replacing the active thumb");
             EndDrag(slider); await Task.Delay(60);
             Check(FindDpi(2).IsEnabled && FindDpi(2).Value == 1 && !window.IsVisible, "Release keeps the confirmed live scale without opening settings");
-            slider = FindDpi(1); slider.Value = 2; await Task.Delay(10); slider.Value = 1; await Task.Delay(180);
+            SelectQuick(quick, 1); slider = FindDpi(1); slider.Value = 2; await Task.Delay(10); slider.Value = 1; await Task.Delay(180);
             Check(calls == 3 && ReferenceEquals(requestedDisplay, first) && requestedPercent == 150, "Fast keyboard input coalesces to latest supported step");
-            quick.UpdateLayout(); fail = true; slider = FindDpi(2); slider.Value = 2; await Task.Delay(420); quick.UpdateLayout();
+            SelectQuick(quick, 2); quick.UpdateLayout(); fail = true; slider = FindDpi(2); slider.Value = 2; await Task.Delay(420); quick.UpdateLayout();
             Check(calls == 4 && Descendants<TextBlock>(quick).Any(t => t.Text == "测试：缩放命令被拒绝") && FindDpi(2).Value == 1, "Quick failure is displayed inline and value reloads actual current scale");
             quick.Render(); quick.UpdateLayout();
             Check(Descendants<TextBlock>(quick).Any(t => t.Text == "测试：缩放命令被拒绝") && !window.IsVisible, "Inline failure survives discovery rerender without opening main settings");
-            fail = false; slider = FindDpi(1); BeginDrag(slider); slider.Value = 0; await Task.Delay(160); EndDrag(slider, true); await Task.Delay(60);
+            SelectQuick(quick, 1); fail = false; slider = FindDpi(1); BeginDrag(slider); slider.Value = 0; await Task.Delay(160); EndDrag(slider, true); await Task.Delay(60);
             Check(calls == 5 && first.DpiScale.CurrentPercent == 175, "Cancel keeps an already confirmed live setting without a stale queued command");
             slider = FindDpi(1); slider.Value = 1; quick.Close(); await Task.Delay(180);
             Check(calls == 6 && !quick.IsVisible && first.DpiScale.CurrentPercent == 150, "Closing waits for final live target then closes without losing adjustment");
@@ -415,7 +464,9 @@ internal static class Program
             quick.Render(); quick.UpdateLayout();
             Check(ReferenceEquals(modes, List("quick-output-list-1")) && !modes.IsEnabled, "Pending mode change disables controls and defers discovery rerender");
             modes.SelectedItem = slower;
-            var dpi = Descendants<Slider>(quick).Single(s => System.Windows.Automation.AutomationProperties.GetAutomationId(s) == "quick-dpi-slider-2"); dpi.Value = 0; await Task.Delay(400);
+            SelectQuick(quick, 2);
+            Check(quick.SelectedDisplayId == first.Id, "Pending output change prevents a display switch");
+            var dpi = Descendants<Slider>(quick).Single(s => System.Windows.Automation.AutomationProperties.GetAutomationId(s) == "quick-dpi-slider-1"); dpi.Value = 0; await Task.Delay(400);
             Check(calls == 1 && dpiCalls == 0, "Mode transaction blocks overlapping mode and DPI commands");
             hold.SetResult(true); await Task.Delay(100); hold = null; quick.UpdateLayout();
             Check(first.Current == smaller && Equals(List("quick-output-list-1").SelectedItem, smaller) && List("quick-output-list-1").IsEnabled, "Completed mode change selects actual current output");
@@ -428,7 +479,11 @@ internal static class Program
             fail = false; List("quick-output-list-1").SelectedItem = slower; quick.UpdateLayout();
             Toggle("quick-refresh-toggle-1"); List("quick-refresh-list-1").SelectedItem = current; quick.UpdateLayout();
             Check(calls == 4 && first.Current == current && Equals(requestedMode, current) && !Descendants<TextBlock>(quick).Any(t => t.Text == "测试：输出模式被拒绝"), "Refresh selection applies directly and successful mode change clears prior error");
-            Toggle("quick-more-toggle-2");
+            var rotation = Descendants<ComboBox>(quick).Single(c => System.Windows.Automation.AutomationProperties.GetAutomationId(c) == "quick-rotation-1");
+            rotation.SelectedIndex = 2; await Task.Delay(40);
+            Check(calls == 5 && ReferenceEquals(requestedDisplay, first) && requestedOrientation == 2 && requestedMode == current,
+                "Quick rotation uses the selected display and existing validated mode transaction");
+            SelectQuick(quick, 2);
             Check(!Has("quick-output-toggle-2") && !Has("quick-refresh-toggle-2") && !Descendants<TextBlock>(quick).Any(t => t.Text == "显示器音量"), "Unsupported display has no fabricated output, refresh or volume controls");
             Check(!window.IsVisible, "All quick mode operations leave main settings hidden");
         }

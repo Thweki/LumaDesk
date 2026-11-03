@@ -27,7 +27,7 @@ internal static class WindowEffects
         void Apply()
         {
             if (source == null) return;
-            int rounded = 2, light = 0;
+            int rounded = 2, light = ThemeService.Dark ? 1 : 0;
             Native.DwmSetWindowAttribute(source.Handle, 33, ref rounded, sizeof(int));
             Native.DwmSetWindowAttribute(source.Handle, 20, ref light, sizeof(int));
             bool enabled = OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22621) && !SystemParameters.HighContrast && TransparencyEnabled();

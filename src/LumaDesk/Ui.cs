@@ -15,9 +15,9 @@ internal static class Ui
         // Implicit Window styles do not match derived WPF window types.
         window.Style = (Style)System.Windows.Application.Current.FindResource(typeof(Window));
     }
-    public static SolidColorBrush Brush(string hex) => (SolidColorBrush)new BrushConverter().ConvertFromString(hex)!;
-    public static TextBlock Text(string text, double size = 13, string color = "#242424", bool bold = false) => new() { Text = text, FontSize = size, Foreground = Brush(color), FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal };
-    public static TextBlock Icon(string glyph, double size = 19, string color = "#007A8A") => new() { Text = glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = size, Foreground = Brush(color), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+    public static SolidColorBrush Brush(string hex) => ThemeService.Brush(hex);
+    public static TextBlock Text(string text, double size = 13, string color = "#242424", bool bold = false) => new() { Text = text, FontSize = size, Foreground = ThemeService.Brush(color, true), FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal };
+    public static TextBlock Icon(string glyph, double size = 19, string color = "#007A8A") => new() { Text = glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = size, Foreground = ThemeService.Brush(color, true), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
     public static Button Button(string label, Action action, bool primary = false)
     {
         var button = new Button { Content = label, VerticalAlignment = VerticalAlignment.Center };

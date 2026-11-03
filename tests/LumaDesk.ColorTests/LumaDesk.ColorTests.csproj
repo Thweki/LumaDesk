@@ -7,6 +7,7 @@
     <Compile Include="../../src/LumaDesk/DpiNative.cs" Link="DpiNative.cs"/>
     <Compile Include="../../src/LumaDesk/DpiService.cs" Link="DpiService.cs"/>
     <Compile Include="../../src/LumaDesk/DisplayService.cs" Link="DisplayService.cs"/>
+    <Compile Include="../../src/LumaDesk/DisplayService.Inputs.cs" Link="DisplayService.Inputs.cs"/>
     <Compile Include="../../src/LumaDesk/AdvancedColorService.cs" Link="AdvancedColorService.cs"/>
   </ItemGroup>
 <ItemGroup><Compile Include="../../src/LumaDesk/L.cs" Link="L.cs"/><EmbeddedResource Include="../../src/LumaDesk/Localization/*.json" LogicalName="LumaDesk.Localization.%(Filename).json"/></ItemGroup></Project>
