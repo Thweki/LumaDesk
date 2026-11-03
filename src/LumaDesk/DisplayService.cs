@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 LumaDesk contributors
+
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
@@ -28,7 +31,7 @@ internal sealed class DisplayService
             var display = new DisplayInfo
             {
                 Id = string.IsNullOrWhiteSpace(device.Id) ? info.Device : DisplayRules.MonitorInstanceId(device.Id),
-                Device = info.Device, Name = device.Description ?? "显示器", RegistryPath = device.Key ?? "",
+                Device = info.Device, Name = device.Description ?? L.T("s1a13ea5910"), RegistryPath = device.Key ?? "",
                 Number = result.Count + 1, Primary = (info.Flags & 1) != 0,
                 X = mode.X, Y = mode.Y, Orientation = mode.Orientation,
                 Current = new(mode.Width, mode.Height, mode.Frequency)
@@ -110,7 +113,7 @@ internal sealed class DisplayService
                 }
                 return true;
             }, IntPtr.Zero);
-            if (!found || !ok) throw new InvalidOperationException("显示器未接受此命令。请确认显示器已连接，且菜单中已开启 DDC/CI。");
+            if (!found || !ok) throw new InvalidOperationException(L.T("sea3ca6fb16"));
         }
     });
     private static void ReadWmiBrightness(List<DisplayInfo> displays)
@@ -139,9 +142,9 @@ internal sealed class DisplayService
             bool found = false;
             foreach (ManagementObject item in items)
             {
-                using (item) { if ((string)item["InstanceName"] == display.WmiInstance) { uint status = Convert.ToUInt32(item.InvokeMethod("WmiSetBrightness", new object[] { 1u, (byte)Math.Clamp(value, 0, 100) })); if (status != 0) throw new InvalidOperationException($"背光控制失败：{status}"); found = true; } }
+                using (item) { if ((string)item["InstanceName"] == display.WmiInstance) { uint status = Convert.ToUInt32(item.InvokeMethod("WmiSetBrightness", new object[] { 1u, (byte)Math.Clamp(value, 0, 100) })); if (status != 0) throw new InvalidOperationException(L.F("sa5a4cdc304", status)); found = true; } }
             }
-            if (!found) throw new InvalidOperationException("未找到内置背光控制接口。");
+            if (!found) throw new InvalidOperationException(L.T("s6fe7702098"));
     }
     public static byte[]? ReadEdid(DisplayInfo display)
     {
@@ -155,24 +158,24 @@ internal sealed class DisplayService
     public static Native.DevMode CurrentMode(string device)
     {
         var mode = Native.DevMode.Create();
-        if (!Native.EnumDisplaySettings(device, -1, ref mode)) throw new InvalidOperationException("无法读取当前显示模式。");
+        if (!Native.EnumDisplaySettings(device, -1, ref mode)) throw new InvalidOperationException(L.T("s51258258c0"));
         return mode;
     }
     public static Native.DevMode FindMode(DisplayInfo display, DisplayMode selected, uint orientation)
     {
-        if (orientation > 3) throw new InvalidOperationException("不支持的屏幕旋转方向。");
+        if (orientation > 3) throw new InvalidOperationException(L.T("s2f4ed799c1"));
         ValidateIdentity(display.Device, display.Id);
         var original = CurrentMode(display.Device);
         var mode = original;
         bool found = false;
-        if (!DisplayRules.Supports(display, selected)) throw new InvalidOperationException("显示驱动未公布此显示模式。");
+        if (!DisplayRules.Supports(display, selected)) throw new InvalidOperationException(L.T("s94d7c908e4"));
         for (int i = 0; i < 4096; i++)
         {
             var candidate = Native.DevMode.Create();
             if (!Native.EnumDisplaySettings(display.Device, i, ref candidate)) break;
             if (candidate.Width == selected.Width && candidate.Height == selected.Height && candidate.Frequency == selected.Frequency && candidate.BitsPerPel == 32) { mode = candidate; found = true; break; }
         }
-        if (!found) throw new InvalidOperationException("显示驱动已不再提供此模式，请重新检测后操作。");
+        if (!found) throw new InvalidOperationException(L.T("sfa7b26c529"));
         mode.X = original.X; mode.Y = original.Y;
         if ((orientation % 2) != (mode.Orientation % 2)) (mode.Width, mode.Height) = (mode.Height, mode.Width);
         mode.Orientation = orientation;
@@ -183,12 +186,12 @@ internal sealed class DisplayService
     {
         var device = Native.DisplayDevice.Create();
         if (!Native.EnumDisplayDevices(deviceName, 0, ref device, 1) || !DisplayRules.MonitorInstanceId(device.Id).Equals(expectedId, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("显示器连接已变化，请重新检测后再操作。");
+            throw new InvalidOperationException(L.T("s9a4e077006"));
     }
     public static void ApplyMode(string device, Native.DevMode mode, bool test = false, string? expectedId = null)
     {
         if (expectedId != null) ValidateIdentity(device, expectedId);
         int result = Native.ChangeDisplaySettingsEx(device, ref mode, IntPtr.Zero, test ? 2u : 0u, IntPtr.Zero);
-        if (result != 0) throw new InvalidOperationException($"Windows 拒绝了显示模式（错误 {result}）。原设置将被保留或恢复。");
+        if (result != 0) throw new InvalidOperationException(L.F("sed8e561bc7", result));
     }
 }

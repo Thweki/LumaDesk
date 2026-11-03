@@ -9,4 +9,4 @@
     <Compile Include="../../src/LumaDesk/DisplayService.cs" Link="DisplayService.cs"/>
     <Compile Include="../../src/LumaDesk/AdvancedColorService.cs" Link="AdvancedColorService.cs"/>
   </ItemGroup>
-</Project>
+<ItemGroup><Compile Include="../../src/LumaDesk/L.cs" Link="L.cs"/><EmbeddedResource Include="../../src/LumaDesk/Localization/*.json" LogicalName="LumaDesk.Localization.%(Filename).json"/></ItemGroup></Project>

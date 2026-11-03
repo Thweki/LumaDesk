@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0-windows</TargetFramework><UseWindowsForms>true</UseWindowsForms><UseWPF>true</UseWPF><Nullable>enable</Nullable><ImplicitUsings>disable</ImplicitUsings></PropertyGroup>
+  <ItemGroup><Compile Include="../../src/LumaDesk/Native.cs" Link="Native.cs"/><Compile Include="../../src/LumaDesk/TrayIcon.cs" Link="TrayIcon.cs"/><EmbeddedResource Include="../../src/LumaDesk/Assets/logo.png" LogicalName="LumaDesk.Assets.logo.png"/></ItemGroup>
+</Project>

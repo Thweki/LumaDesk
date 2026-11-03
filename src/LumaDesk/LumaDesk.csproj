@@ -9,9 +9,11 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/app.ico</ApplicationIcon>
     <AssemblyName>LumaDesk</AssemblyName>
-    <Version>0.3.1</Version>
+    <Version>0.4.0</Version>
+    <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
   </PropertyGroup>
   <ItemGroup><PackageReference Include="System.Management" Version="8.0.0"/></ItemGroup>
   <ItemGroup><InternalsVisibleTo Include="LumaDesk.UiTests"/></ItemGroup>
-  <ItemGroup><Resource Include="Assets/app.ico"/></ItemGroup>
+  <ItemGroup><Resource Include="Assets/app.ico"/><Resource Include="Assets/brand.png"/></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="Localization/*.json" LogicalName="LumaDesk.Localization.%(Filename).json"/><EmbeddedResource Include="Assets/logo.png" LogicalName="LumaDesk.Assets.logo.png"/></ItemGroup>
 </Project>

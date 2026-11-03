@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 LumaDesk contributors
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,7 +35,7 @@ public partial class MainWindow
                 failures.Add(target.Name); Storage.Log(ex.ToString());
             }
         }
-        if (failures.Count > 0) throw new InvalidOperationException("组合亮度未能更新：" + string.Join("、", failures) + "。请重新检测读取实际状态。");
-        Status($"组合亮度 {value}% · " + (targets.Count == 1 ? display.Name : $"{targets.Count} 台屏幕"));
+        if (failures.Count > 0) throw new InvalidOperationException(L.T("s0ed98f4c87") + string.Join("、", failures) + L.T("s335ece13e6"));
+        Status(L.F("sb85c114a54", value) + (targets.Count == 1 ? display.Name : L.F("s57a83fca96", targets.Count)));
     }
 }

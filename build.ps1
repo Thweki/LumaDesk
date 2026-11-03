@@ -4,6 +4,8 @@ $sdk = Join-Path $PSScriptRoot '.tools\dotnet\dotnet.exe'
 if (-not (Test-Path $sdk)) { $sdk = 'dotnet' }
 $project = Join-Path $PSScriptRoot 'src\LumaDesk\LumaDesk.csproj'
 $destination = Join-Path $PSScriptRoot 'artifacts\LumaDesk-win-x64'
+& $sdk run --project (Join-Path $PSScriptRoot 'tools\IconBuilder') -c Release -- (Join-Path $PSScriptRoot 'src\LumaDesk\Assets\app.ico')
+if ($LASTEXITCODE -ne 0) { throw 'Icon generation failed.' }
 if ($Portable) {
     & $sdk publish $project -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o $destination
 } else {
@@ -12,11 +14,14 @@ if ($Portable) {
 if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.md') -Destination $destination -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE') -Destination $destination -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'NOTICE') -Destination $destination -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.en.md') -Destination $destination -Force
 $docDestination = Join-Path $destination 'docs'
 New-Item -ItemType Directory -Path $docDestination -Force | Out-Null
-foreach ($name in @('validation.md', 'color-hdr.md', 'display-layout.md', 'virtual-displays.md')) {
+foreach ($name in @('validation.md', 'color-hdr.md', 'display-layout.md', 'virtual-displays.md', 'localization.md')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "docs\$name") -Destination $docDestination -Force
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\third-party') -Destination $docDestination -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\licenses') -Destination $docDestination -Recurse -Force
 if (Test-Path (Join-Path $PSScriptRoot 'docs\images')) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\images') -Destination $docDestination -Recurse -Force }
 Write-Host "Ready: $destination\LumaDesk.exe"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 LumaDesk contributors
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -77,13 +80,13 @@ internal sealed class VirtualDisplayService
                 try { using var timeout = new CancellationTokenSource(2000); connected = (await transport("PING", timeout.Token)).Contains("PONG", StringComparison.Ordinal); }
                 catch (Exception ex) when (ex is IOException or OperationCanceledException or TimeoutException) { }
             }
-            return new(installed, connected, active, configured, connected ? "驱动已连接" : driver.Disabled ? "驱动已暂停；选择大于 0 的数量即可重新启用。" : installed ? "驱动已安装，但控制接口未就绪；可重新检测，或在安装后重启电脑。" : "尚未安装虚拟显示驱动", driver.Disabled);
+            return new(installed, connected, active, configured, connected ? L.T("sf9d54b1977") : driver.Disabled ? L.T("s6477a5fda8") : installed ? L.T("s8bb9672434") : L.T("sb171d58330"), driver.Disabled);
         }
         finally { gate.Release(); }
     }
     internal static string CountCommand(int count)
     {
-        if (count < 1 || count > MaximumDisplays) throw new ArgumentOutOfRangeException(nameof(count), "此驱动的在线数量须为 1–8；0 台需禁用驱动。");
+        if (count < 1 || count > MaximumDisplays) throw new ArgumentOutOfRangeException(nameof(count), L.T("saa537c558f"));
         return "SETDISPLAYCOUNT " + count.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
     internal async Task SetCountAsync(int count)
@@ -93,14 +96,14 @@ internal sealed class VirtualDisplayService
         try
         {
             var driver = await Task.Run(GetDriverState);
-            if (!driver.Installed) throw new InvalidOperationException("请先在本窗口安装虚拟显示驱动。");
+            if (!driver.Installed) throw new InvalidOperationException(L.T("sac9043bf39"));
             if (count == 0)
             {
                 // This upstream release clamps XML 0 to 1. Disable the real device
                 // instead of pretending SETDISPLAYCOUNT 0 removed the last monitor.
                 await DriverInstaller.SetEnabledAsync(false);
                 for (int i = 0; i < 30; i++) { if (ActiveCount() == 0 && (await Task.Run(GetDriverState)).Disabled) return; await Task.Delay(250); }
-                throw new InvalidOperationException("驱动停用请求已发送，但系统尚未确认所有虚拟屏幕已移除。");
+                throw new InvalidOperationException(L.T("s9c573b7ce5"));
             }
             if (driver.Disabled) await DriverInstaller.SetEnabledAsync(true);
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
@@ -110,9 +113,9 @@ internal sealed class VirtualDisplayService
                 try { ready = (await transport("PING", timeout.Token)).Contains("PONG", StringComparison.Ordinal); } catch (Exception ex) when (ex is IOException or TimeoutException) { }
                 if (ready) break; await Task.Delay(250, timeout.Token);
             }
-            if (!ready) throw new InvalidOperationException("驱动尚未就绪，请重新检测或重启电脑。");
+            if (!ready) throw new InvalidOperationException(L.T("s3a8d153c7c"));
             string response = await transport(CountCommand(count), timeout.Token);
-            if (response.Contains("Unknown command", StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("已安装驱动不支持动态数量控制，请使用兼容的 25.7.23 版本。");
+            if (response.Contains("Unknown command", StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException(L.T("sd9810dacd6"));
             // Commands restart the upstream adapter. A pipe write is not proof that
             // monitors appeared: verify persisted count AND actual desktop adapters.
             for (int i = 0; i < 40; i++)
@@ -120,7 +123,7 @@ internal sealed class VirtualDisplayService
                 await Task.Delay(350, timeout.Token);
                 if (ReadConfiguredCount() == count && ActiveCount() == count) return;
             }
-            throw new InvalidOperationException($"已发送数量 {count}，但系统尚未确认。当前活动虚拟屏幕：{ActiveCount()}；请重新检测。");
+            throw new InvalidOperationException(L.F("s5c7e1b46e3", count, ActiveCount()));
         }
         finally { gate.Release(); }
     }

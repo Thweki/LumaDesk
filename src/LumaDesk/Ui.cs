@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 LumaDesk contributors
+
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -7,6 +10,11 @@ namespace LumaDesk;
 
 internal static class Ui
 {
+    internal static void ConfigureWindow(Window window)
+    {
+        // Implicit Window styles do not match derived WPF window types.
+        window.Style = (Style)System.Windows.Application.Current.FindResource(typeof(Window));
+    }
     public static SolidColorBrush Brush(string hex) => (SolidColorBrush)new BrushConverter().ConvertFromString(hex)!;
     public static TextBlock Text(string text, double size = 13, string color = "#242424", bool bold = false) => new() { Text = text, FontSize = size, Foreground = Brush(color), FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal };
     public static TextBlock Icon(string glyph, double size = 19, string color = "#007A8A") => new() { Text = glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = size, Foreground = Brush(color), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };

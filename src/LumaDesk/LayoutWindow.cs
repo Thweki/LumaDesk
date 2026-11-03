@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 LumaDesk contributors
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +17,7 @@ internal sealed class LayoutWindow : Window
     private readonly Func<IReadOnlyList<ScreenPlacement>, Task> apply;
     private readonly Canvas canvas = new() { Height = 260, ClipToBounds = true, Background = Ui.Brush("#E8EDF5"), Margin = new Thickness(0, 14, 0, 14) };
     private readonly StackPanel body = new() { Margin = new Thickness(22) };
-    private readonly TextBlock feedback = Ui.Text("拖动屏幕排列；蓝色屏幕为主显示器。位置单位为输出像素。", 12, "#64748B");
+    private readonly TextBlock feedback = Ui.Text(L.T("s41463881b8"), 12, "#64748B");
     private readonly TextBox xBox = new() { Width = 95 }, yBox = new() { Width = 95 };
     private readonly ComboBox selected = new() { DisplayMemberPath = "Name", Width = 185 };
     private readonly ComboBox primary = new() { DisplayMemberPath = "Name", Width = 185 };
@@ -25,28 +28,29 @@ internal sealed class LayoutWindow : Window
     internal IReadOnlyList<ScreenPlacement> Placements => placements;
     internal LayoutWindow(MainWindow owner, Func<IReadOnlyList<ScreenPlacement>, Task>? apply = null)
     {
+        Ui.ConfigureWindow(this);
         this.owner = owner; this.apply = apply ?? (p => owner.ChangeLayoutAsync(p));
-        Title = "显示器排列 · LumaDesk"; Width = 760; Height = 650; MinWidth = 580; MinHeight = 530; WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        Title = L.T("sc91a2a81a1"); Width = 760; Height = 650; MinWidth = 580; MinHeight = 530; WindowStartupLocation = WindowStartupLocation.CenterScreen;
         Content = new ScrollViewer { Content = body };
-        body.Children.Add(Ui.Text("排列显示器", 22, "#26364A", true));
+        body.Children.Add(Ui.Text(L.T("s307f94d8e9"), 22, "#26364A", true));
         body.Children.Add(canvas);
         var coordinates = new StackPanel { Orientation = Orientation.Horizontal };
         coordinates.Children.Add(selected); coordinates.Children.Add(Ui.Text("  X  ", 12)); coordinates.Children.Add(xBox); coordinates.Children.Add(Ui.Text("  Y  ", 12)); coordinates.Children.Add(yBox);
-        var update = Ui.Button("更新预览", UpdateCoordinates); update.Margin = new Thickness(8, 0, 0, 0); coordinates.Children.Add(update); body.Children.Add(coordinates);
-        var primaryRow = Ui.Row(Ui.Text("主显示器", 13), primary); primaryRow.Margin = new Thickness(0, 14, 0, 14); body.Children.Add(primaryRow);
+        var update = Ui.Button(L.T("s4a05c9ce76"), UpdateCoordinates); update.Margin = new Thickness(8, 0, 0, 0); coordinates.Children.Add(update); body.Children.Add(coordinates);
+        var primaryRow = Ui.Row(Ui.Text(L.T("s93ff5822ca"), 13), primary); primaryRow.Margin = new Thickness(0, 14, 0, 14); body.Children.Add(primaryRow);
         var arrange = new StackPanel { Orientation = Orientation.Horizontal };
-        arrange.Children.Add(Ui.Button("横向排列", () => Arrange(false))); var vertical = Ui.Button("纵向排列", () => Arrange(true)); vertical.Margin = new Thickness(8, 0, 8, 0); arrange.Children.Add(vertical);
-        arrange.Children.Add(Ui.Button("重新读取", () => _ = ExecuteAsync(async () => { await owner.RefreshAsync(); Reload(); })));
+        arrange.Children.Add(Ui.Button(L.T("se25efd6551"), () => Arrange(false))); var vertical = Ui.Button(L.T("s86d5bec31e"), () => Arrange(true)); vertical.Margin = new Thickness(8, 0, 8, 0); arrange.Children.Add(vertical);
+        arrange.Children.Add(Ui.Button(L.T("sdf7392cc96"), () => _ = ExecuteAsync(async () => { await owner.RefreshAsync(); Reload(); })));
         body.Children.Add(arrange);
         var topology = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 12) };
-        topology.Children.Add(Ui.Button("扩展桌面", () => _ = TopologyAsync(true))); var clone = Ui.Button("复制屏幕", () => _ = TopologyAsync(false)); clone.Margin = new Thickness(8, 0, 0, 0); topology.Children.Add(clone); body.Children.Add(topology);
+        topology.Children.Add(Ui.Button(L.T("sa60416dbac"), () => _ = TopologyAsync(true))); var clone = Ui.Button(L.T("s99c94fd883"), () => _ = TopologyAsync(false)); clone.Margin = new Thickness(8, 0, 0, 0); topology.Children.Add(clone); body.Children.Add(topology);
         feedback.Margin = new Thickness(0, 7, 0, 14); body.Children.Add(feedback);
-        var applyButton = Ui.Button("应用排列", () => _ = ExecuteAsync(async () =>
+        var applyButton = Ui.Button(L.T("seb82fd9848"), () => _ = ExecuteAsync(async () =>
         {
-            var normalized = LayoutRules.Normalize(placements); await this.apply(normalized); Reload(); feedback.Text = "排列已应用并保存。";
+            var normalized = LayoutRules.Normalize(placements); await this.apply(normalized); Reload(); feedback.Text = L.T("s2128b7d275");
         }), true);
         System.Windows.Automation.AutomationProperties.SetAutomationId(applyButton, "layout-apply");
-        body.Children.Add(Ui.Row(Ui.Text("拖动和坐标输入只改变预览，点击应用后保存。", 11, "#718096"), applyButton));
+        body.Children.Add(Ui.Row(Ui.Text(L.T("s67773de970"), 11, "#718096"), applyButton));
         selected.SelectionChanged += (_, _) => UpdateFields();
         primary.SelectionChanged += (_, _) =>
         {
@@ -75,7 +79,7 @@ internal sealed class LayoutWindow : Window
     {
         if (selected.SelectedItem is not DisplayInfo d) return;
         if (!int.TryParse(xBox.Text, out int x) || !int.TryParse(yBox.Text, out int y) || Math.Abs((long)x) > 65535 || Math.Abs((long)y) > 65535)
-        { feedback.Text = "请输入 -65535 到 65535 之间的整数坐标。"; return; }
+        { feedback.Text = L.T("s444a27d2e4"); return; }
         placements = placements.Select(p => p.Id == d.Id ? p with { X = x, Y = y } : p).ToList(); Draw();
     }
     private void Arrange(bool vertical)
@@ -86,7 +90,7 @@ internal sealed class LayoutWindow : Window
     }
     private async Task TopologyAsync(bool extend) => await ExecuteAsync(async () =>
     {
-        await owner.ChangeTopologyAsync(extend); Reload(); feedback.Text = extend ? "已切换为扩展桌面。" : "已切换为复制屏幕。调整独立位置前请先切回扩展。";
+        await owner.ChangeTopologyAsync(extend); Reload(); feedback.Text = extend ? L.T("s181ae3be3a") : L.T("sad03744b01");
     });
     private async Task ExecuteAsync(Func<Task> action)
     {
@@ -105,7 +109,7 @@ internal sealed class LayoutWindow : Window
         foreach (var placement in placements.ToArray())
         {
             var display = displays.Single(d => d.Id == placement.Id);
-            var label = Ui.Text(display.Number + "  " + display.Name + (placement.Primary ? "\n主显示器" : ""), 12, placement.Primary ? "#FFFFFF" : "#334155", true); label.HorizontalAlignment = HorizontalAlignment.Center;
+            var label = Ui.Text(display.Number + "  " + display.Name + (placement.Primary ? L.T("scef99cd639") : ""), 12, placement.Primary ? "#FFFFFF" : "#334155", true); label.HorizontalAlignment = HorizontalAlignment.Center;
             var box = new Border { Width = placement.Width * scale, Height = placement.Height * scale, Background = Ui.Brush(placement.Primary ? "#4685EC" : "#CBD7E9"), BorderBrush = Ui.Brush("#FFFFFF"), BorderThickness = new Thickness(2), CornerRadius = new CornerRadius(6), Child = label, Cursor = Cursors.SizeAll, ToolTip = display.Name + " · " + display.Current.Resolution };
             Canvas.SetLeft(box, offsetX + placement.X * scale); Canvas.SetTop(box, offsetY + placement.Y * scale); canvas.Children.Add(box);
             System.Windows.Automation.AutomationProperties.SetAutomationId(box, "layout-screen-" + display.Number);

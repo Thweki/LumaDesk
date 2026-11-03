@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 LumaDesk contributors
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -31,20 +34,20 @@ internal static class DriverInstaller
     internal static bool MatchesHash(byte[] bytes, string expected) => Convert.ToHexString(SHA256.HashData(bytes)).Equals(expected, StringComparison.OrdinalIgnoreCase);
     internal static async Task<string> PreparePackageAsync()
     {
-        if (!Environment.Is64BitProcess || RuntimeInformation.ProcessArchitecture != Architecture.X64) throw new PlatformNotSupportedException("当前自动安装仅支持 Windows x64。");
+        if (!Environment.Is64BitProcess || RuntimeInformation.ProcessArchitecture != Architecture.X64) throw new PlatformNotSupportedException(L.T("sefa2f6017b"));
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(90) };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("LumaDeskWin/0.3");
         byte[] bytes = await client.GetByteArrayAsync(DownloadUrl);
-        if (bytes.Length > 2 * 1024 * 1024 || !MatchesHash(bytes, ArchiveHash)) throw new InvalidDataException("官方驱动下载包的 SHA-256 校验失败，未执行安装。");
+        if (bytes.Length > 2 * 1024 * 1024 || !MatchesHash(bytes, ArchiveHash)) throw new InvalidDataException(L.T("sa00feccffc"));
         string destination = Path.Combine(Storage.Folder, "driver-cache", Version, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(destination);
         using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
         foreach (var file in FileHashes)
         {
-            var entry = archive.GetEntry("VirtualDisplayDriver/" + file.Key) ?? throw new InvalidDataException("驱动包缺少 " + file.Key);
+            var entry = archive.GetEntry("VirtualDisplayDriver/" + file.Key) ?? throw new InvalidDataException(L.T("sa6131ff9aa") + file.Key);
             using var stream = entry.Open(); using var data = new MemoryStream(); await stream.CopyToAsync(data);
             byte[] content = data.ToArray();
-            if (!MatchesHash(content, file.Value)) throw new InvalidDataException("驱动文件校验失败：" + file.Key);
+            if (!MatchesHash(content, file.Value)) throw new InvalidDataException(L.T("s11b81f5079") + file.Key);
             await File.WriteAllBytesAsync(Path.Combine(destination, file.Key), content);
         }
         VerifySignature(Path.Combine(destination, "mttvdd.cat"));
@@ -61,30 +64,30 @@ internal static class DriverInstaller
         start.ArgumentList.Add(command); start.ArgumentList.Add(argument);
         try
         {
-            using var process = Process.Start(start) ?? throw new InvalidOperationException("无法启动驱动安装进程。");
+            using var process = Process.Start(start) ?? throw new InvalidOperationException(L.T("s0a8867cc2d"));
             await process.WaitForExitAsync();
-            if (process.ExitCode != 0) throw new InvalidOperationException("驱动操作未完成；详细原因已显示在管理进程中。");
+            if (process.ExitCode != 0) throw new InvalidOperationException(L.T("s08dadacc38"));
         }
-        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223) { throw new InvalidOperationException("已取消管理员授权，未执行驱动操作。"); }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223) { throw new InvalidOperationException(L.T("s3749ec47d3")); }
     }
     // Invoked only by this application's explicit --install-virtual-driver mode.
     // All elevated inputs are byte-verified against a fixed official release.
     internal static void InstallVerifiedPackage(string packageFolder)
     {
-        if (RuntimeInformation.ProcessArchitecture != Architecture.X64) throw new PlatformNotSupportedException("只支持 x64 驱动。");
+        if (RuntimeInformation.ProcessArchitecture != Architecture.X64) throw new PlatformNotSupportedException(L.T("s4bcf77c213"));
         using var identity = WindowsIdentity.GetCurrent();
-        if (!new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator)) throw new InvalidOperationException("安装显示驱动需要管理员权限。");
-        if (VirtualDisplayService.IsInstalled()) throw new InvalidOperationException("虚拟驱动已经存在；本安装器不会覆盖或替换其他安装。");
+        if (!new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator)) throw new InvalidOperationException(L.T("s8de5717282"));
+        if (VirtualDisplayService.IsInstalled()) throw new InvalidOperationException(L.T("s9f42b7f1d6"));
         var contents = new Dictionary<string, byte[]>();
         foreach (var file in FileHashes)
         {
             string source = Path.Combine(packageFolder, file.Key);
-            if (new FileInfo(source).Length > 2 * 1024 * 1024) throw new InvalidDataException("驱动文件尺寸异常。");
+            if (new FileInfo(source).Length > 2 * 1024 * 1024) throw new InvalidDataException(L.T("s0c552d617e"));
             byte[] bytes = File.ReadAllBytes(source);
-            if (!MatchesHash(bytes, file.Value)) throw new InvalidDataException("安装前复核失败：" + file.Key);
+            if (!MatchesHash(bytes, file.Value)) throw new InvalidDataException(L.T("s1ebc7cea3e") + file.Key);
             contents[file.Key] = bytes;
         }
-        if (!File.Exists(Path.Combine(Environment.SystemDirectory, "vcruntime140.dll"))) throw new InvalidOperationException("系统缺少 Microsoft Visual C++ x64 运行库，驱动暂不能加载。安装未开始。");
+        if (!File.Exists(Path.Combine(Environment.SystemDirectory, "vcruntime140.dll"))) throw new InvalidOperationException(L.T("s650fcabe24"));
         string shared = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "LumaDeskWin");
         EnsureProtectedDirectory(shared);
         string root = Path.Combine(shared, "VirtualDisplayDriver");
@@ -101,7 +104,7 @@ internal static class DriverInstaller
         var document = XDocument.Parse(Encoding.UTF8.GetString(contents["vdd_settings.xml"]));
         document.Root!.Element("monitors")!.Element("count")!.Value = "1";
         string settings = Path.Combine(config, "vdd_settings.xml");
-        if (File.Exists(settings) && (File.GetAttributes(settings) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("驱动配置不能是重解析点。");
+        if (File.Exists(settings) && (File.GetAttributes(settings) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException(L.T("s39e53d8c74"));
         if (File.Exists(settings)) File.Copy(settings, settings + "." + DateTime.UtcNow.ToString("yyyyMMddHHmmss") + ".bak");
         document.Save(settings);
         using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
@@ -112,7 +115,7 @@ internal static class DriverInstaller
     internal static void SetDriverEnabled(bool enabled)
     {
         using var identity = WindowsIdentity.GetCurrent();
-        if (!new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator)) throw new InvalidOperationException("启用或停用虚拟驱动需要管理员权限。");
+        if (!new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator)) throw new InvalidOperationException(L.T("sc7227565fb"));
         var displayClass = new Guid("4d36e968-e325-11ce-bfc1-08002be10318");
         IntPtr set = SetupDiGetClassDevs(ref displayClass, null, IntPtr.Zero, 2);
         if (set == new IntPtr(-1)) throw new Win32Exception(Marshal.GetLastWin32Error());
@@ -131,15 +134,15 @@ internal static class DriverInstaller
                 if (!match) continue;
                 found = true;
                 var change = new PropertyChange { HeaderSize = 8, InstallFunction = 0x12, StateChange = enabled ? 1u : 2u, Scope = 1 };
-                if (!SetupDiSetClassInstallParams(set, ref device, ref change, (uint)Marshal.SizeOf<PropertyChange>()) || !SetupDiCallClassInstaller(0x12, set, ref device)) throw new Win32Exception(Marshal.GetLastWin32Error(), "Windows 未能更改虚拟驱动状态。");
+                if (!SetupDiSetClassInstallParams(set, ref device, ref change, (uint)Marshal.SizeOf<PropertyChange>()) || !SetupDiCallClassInstaller(0x12, set, ref device)) throw new Win32Exception(Marshal.GetLastWin32Error(), L.T("s2ddc3008a1"));
             }
-            if (!found) throw new InvalidOperationException("未找到匹配 Root\\MttVDD 硬件标识的虚拟驱动；未修改其他显示设备。");
+            if (!found) throw new InvalidOperationException(L.T("s2e17ee9e7e"));
         }
         finally { SetupDiDestroyDeviceInfoList(set); }
     }
     private static void EnsureProtectedDirectory(string path)
     {
-        if (Directory.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("驱动安装目录不能是重解析点。");
+        if (Directory.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException(L.T("saf1738dcbb"));
         Directory.CreateDirectory(path);
         var security = new DirectorySecurity(); security.SetAccessRuleProtection(true, false);
         foreach (var sid in new[] { WellKnownSidType.BuiltinAdministratorsSid, WellKnownSidType.LocalSystemSid })
@@ -159,7 +162,7 @@ internal static class DriverInstaller
             byte[] id = Encoding.Unicode.GetBytes(VirtualDisplayService.HardwareId + "\0\0");
             if (!SetupDiSetDeviceRegistryProperty(set, ref device, 1, id, (uint)id.Length) || !SetupDiCallClassInstaller(0x19, set, ref device)) throw new Win32Exception(Marshal.GetLastWin32Error());
             registered = true;
-            if (!UpdateDriverForPlugAndPlayDevices(IntPtr.Zero, VirtualDisplayService.HardwareId, inf, 0, out bool reboot)) throw new Win32Exception(Marshal.GetLastWin32Error(), "Windows 拒绝安装签名显示驱动。");
+            if (!UpdateDriverForPlugAndPlayDevices(IntPtr.Zero, VirtualDisplayService.HardwareId, inf, 0, out bool reboot)) throw new Win32Exception(Marshal.GetLastWin32Error(), L.T("se0373e7082"));
             Storage.Log(reboot ? "Virtual driver installed; reboot required." : "Virtual driver installed.");
         }
         catch { if (registered) SetupDiRemoveDevice(set, ref device); throw; }
@@ -175,7 +178,7 @@ internal static class DriverInstaller
             var data = new TrustData { Size = (uint)Marshal.SizeOf<TrustData>(), UiChoice = 2, UnionChoice = 1, File = filePtr, ProviderFlags = 0x1000 };
             var action = new Guid("00AAC56B-CD44-11d0-8CC2-00C04FC295EE");
             int result = WinVerifyTrust(new IntPtr(-1), ref action, ref data);
-            if (result != 0) throw new InvalidDataException($"Windows 无法验证驱动签名：{Path.GetFileName(file)}（0x{result:X8}）。不会修改证书信任或关闭签名检查。");
+            if (result != 0) throw new InvalidDataException(L.F("sdbce82518c", Path.GetFileName(file), result));
         }
         finally { Marshal.FreeCoTaskMem(filePtr); Marshal.FreeCoTaskMem(info.Path); }
     }

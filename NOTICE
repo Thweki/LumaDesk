@@ -1,0 +1,18 @@
+LumaDesk
+Copyright (c) 2026 LumaDesk contributors
+
+Starting with version 0.4.0, LumaDesk's code, translations, build tools and
+project artwork are licensed under the GNU General Public License version 3
+only (SPDX: GPL-3.0-only). See LICENSE for the complete terms.
+
+Versions through 0.3.1 were released under MIT. This change does not replace
+the license attached to those earlier releases. Their license is retained
+in docs/licenses/MIT-through-0.3.1.txt for reference.
+
+Third-party components retain their own licenses. In particular, the
+VirtualDrivers virtual display driver is a separate signed download under
+its upstream MIT license. Runtime notices are in docs/third-party/.
+
+Corresponding source, language catalogs, original logo PNG and build tools:
+https://github.com/Thweki/LumaDesk
+Release source is available from the matching version tag.

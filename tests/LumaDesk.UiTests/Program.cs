@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 LumaDesk contributors
+
 using LumaDesk;
 using System;
 using System.Collections.Generic;
@@ -22,7 +25,8 @@ internal static class Program
     {
         output = Path.GetFullPath(args.Length > 0 ? args[0] : "artifacts/ui-tests"); Directory.CreateDirectory(output);
         Environment.SetEnvironmentVariable("LUMADESK_DATA_DIR", Path.Combine(output, "isolated-settings"));
-        Storage.Save(new Preferences { Hotkeys = false, CloseToTray = false });
+        string language = args.Length > 1 ? args[1] : "zh-Hans";
+        Storage.Save(new Preferences { Language = language, Hotkeys = false, CloseToTray = false });
         var app = new App { IntegrationTest = true }; app.InitializeComponent();
         var window = new MainWindow();
         window.Loaded += async (_, _) =>
@@ -32,6 +36,13 @@ internal static class Program
                 for (int i = 0; i < 150 && window.Displays.Count == 0; i++) await Task.Delay(100);
                 await Task.Delay(200);
                 Check(window.Displays.Count > 0, "Actual display scan populates overview");
+                if (language != "zh-Hans")
+                {
+                    await TestLocalizedUiAsync(window, language);
+                    File.WriteAllText(Path.Combine(output, "result.txt"), $"PASS: {checks} {language} UI checks. No hardware settings were changed.\n");
+                    Console.WriteLine($"{checks} {language} UI checks passed.");
+                    return;
+                }
                 Check(window.Displays.All(d => d.Id.StartsWith("DISPLAY\\") && d.Modes.Count > 0), "Stable monitor instance IDs and real modes");
                 bool rejected = false;
                 try { DisplayService.ValidateIdentity(window.Displays[0].Device, "DISPLAY\\WRONG\\DEVICE"); } catch (InvalidOperationException) { rejected = true; }
@@ -121,6 +132,52 @@ internal static class Program
         window.Show(); Dispatcher.Run(); return Environment.ExitCode;
     }
     private static void Check(bool test, string name) { if (!test) throw new Exception("FAIL " + name); checks++; Console.WriteLine("PASS " + name); }
+    private static async Task TestLocalizedUiAsync(MainWindow window, string language)
+    {
+        string Text(string chinese) => L.T(L.Catalog("zh-Hans").Single(p => p.Value == chinese).Key);
+        Console.WriteLine("LANG selected=" + L.Language + " window=" + window.Language.IetfLanguageTag + " font=" + window.FontFamily.Source);
+        Check(L.Language == language && window.Language.IetfLanguageTag.Equals(language, StringComparison.OrdinalIgnoreCase), "Window uses selected Windows UI language");
+        Check(new[] { "window.minimize", "window.maximize", "window.close" }.All(key => Descendants<Button>(window).Any(b => System.Windows.Automation.AutomationProperties.GetName(b) == L.T(key))), "Window caption accessibility names are localized");
+        var navigation = window.Navigation.Children.OfType<Button>().ToArray();
+        string[] labels = { "显示器", "显示器组", "应用", "快捷面板", "键盘", "预设", "关于" };
+        for (int i = 0; i < navigation.Length; i++)
+        {
+            Click(navigation[i]); window.UpdateLayout();
+            Check(window.Breadcrumb.Text.EndsWith(Text(labels[i])) && window.PageContent.Children.Count > 2, "Localized navigation: " + labels[i]);
+            Check(!Descendants<TextBlock>(window).Any(t => System.Text.RegularExpressions.Regex.IsMatch(t.Text, @"\bs[0-9a-f]{10}\b")), "No resource IDs leak into page " + i);
+        }
+        Click(navigation[2]); window.UpdateLayout();
+        var selector = Descendants<ComboBox>(window).Single(c => System.Windows.Automation.AutomationProperties.GetAutomationId(c) == "application-language");
+        Check(selector.Items.Count == 6 && selector.SelectedItem as string == L.NativeName(language), "Language picker offers system default and all five native names");
+        selector.SelectedIndex = 0;
+        Check(Storage.Load().Language == "auto" && L.Language == language, "Language preference persists without partially switching a live session");
+        Snapshot(window, "application.png");
+        var quick = new QuickWindow(window, dismissOnDeactivate: false);
+        try
+        {
+            quick.Render(); quick.Show(); await Task.Delay(50); quick.UpdateLayout();
+            Check(Descendants<Slider>(quick).Count() == window.Displays.Count + window.Displays.Count(d => d.DpiScale.CanSet), "Localized quick panel keeps direct controls");
+            Check(Descendants<TextBlock>(quick).Any(t => t.Text == Text("亮度")), "Quick brightness label translated");
+            Snapshot(quick, "quick-panel.png");
+            var more = Descendants<Button>(quick).First(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b).StartsWith("quick-more-toggle-"));
+            Click(more); quick.UpdateLayout(); Snapshot(quick, "quick-more.png");
+            Check(Descendants<Button>(quick).Any(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b).StartsWith("quick-color-toggle-")), "Localized advanced controls available");
+        }
+        finally { quick.Close(); }
+        using var dark = TrayIcon.Render(32, false); using var light = TrayIcon.Render(32, true);
+        bool found = false, transparent = false;
+        for (int y = 0; y < 32; y++) for (int x = 0; x < 32; x++)
+        {
+            var a = dark.GetPixel(x,y); var b = light.GetPixel(x,y);
+            CheckIconAlpha(a.A == b.A);
+            if (a.A == 0) transparent = true;
+            if (a.A > 240) { if (a.R > 40 || b.R < 245) throw new Exception("Incorrect theme glyph color"); found = true; }
+        }
+        Check(found && transparent, "Black and white tray icons retain identical transparent geometry");
+        static void CheckIconAlpha(bool equal) { if (!equal) throw new Exception("Theme changed logo geometry"); }
+        using var small = TrayIcon.Render(16, false);
+        small.Save(Path.Combine(output, "tray-16.png"), System.Drawing.Imaging.ImageFormat.Png);
+    }
     private static async Task TestLiveBrightnessAndDismissAsync(MainWindow window)
     {
         int writes = 0, latest = 0;
@@ -154,7 +211,7 @@ internal static class Program
             Check(calls == 0 && layout.Placements.Single(p => p.Id == a.Id).Primary, "Primary selection only previews and sends no display command");
             var apply = Descendants<Button>(layout).Single(btn => System.Windows.Automation.AutomationProperties.GetAutomationId(btn) == "layout-apply");
             Click(apply); await Task.Delay(20);
-            Check(calls == 1 && received!.Single(p => p.Id == a.Id).X == 0 && received.Single(p => p.Id == b.Id).X == 1920 && !window.IsVisible, "Layout applies a normalized exact set from its own window without opening settings");
+            Check(calls == 1 && received!.Single(p => p.Id == a.Id).X == 0 && received!.Single(p => p.Id == b.Id).X == 1920 && !window.IsVisible, "Layout applies a normalized exact set from its own window without opening settings");
             Click(apply); Check(calls == 1 && !apply.IsEnabled, "Pending layout blocks duplicate submission");
             hold.SetResult(); await Task.Delay(60); fail = true; Click(apply); await Task.Delay(60);
             Check(calls == 2 && Descendants<TextBlock>(layout).Any(t => t.Text == "测试：排列应用被拒绝"), "Layout errors remain visible in app and controls recover");

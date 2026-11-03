@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 LumaDesk contributors
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -36,7 +39,7 @@ public sealed class DisplayInfo
     public bool HasWmi { get; set; }
     public string? WmiInstance { get; set; }
     public int Dimming { get; set; }
-    public string BrightnessMethod => HasWmi ? "Windows 内置背光" : Brightness.HasValue ? "DDC/CI 硬件背光" : "硬件未提供亮度接口";
+    public string BrightnessMethod => HasWmi ? L.T("sd58c035039") : Brightness.HasValue ? L.T("sab507029e7") : L.T("s214b837a12");
     public string Subtitle => $"{Current.Resolution}  ·  {Current.Frequency} Hz";
 }
 public sealed class DpiScaleInfo
@@ -44,7 +47,7 @@ public sealed class DpiScaleInfo
     public int CurrentPercent { get; set; }
     public int RecommendedPercent { get; set; }
     public int[] SupportedPercents { get; set; } = Array.Empty<int>();
-    public string UnavailableReason { get; set; } = "尚未读取缩放信息。";
+    public string UnavailableReason { get; set; } = L.T("sad3d4c4dea");
     public bool CanSet => SupportedPercents.Length > 0 && string.IsNullOrEmpty(UnavailableReason);
 }
 public static class DpiRules
@@ -54,19 +57,19 @@ public static class DpiRules
     {
         long recommendedIndex = -(long)minimum, currentIndex = recommendedIndex + current, maximumIndex = recommendedIndex + maximum;
         if (minimum > 0 || maximum < 0 || recommendedIndex >= Percentages.Length || maximumIndex >= Percentages.Length || currentIndex < 0 || currentIndex > maximumIndex)
-            throw new InvalidOperationException("当前缩放范围无法识别，暂不能应用新的比例。");
+            throw new InvalidOperationException(L.T("s4dd5e6b5f4"));
         return new DpiScaleInfo { CurrentPercent = Percentages[(int)currentIndex], RecommendedPercent = Percentages[(int)recommendedIndex], SupportedPercents = Percentages.Take((int)maximumIndex + 1).ToArray(), UnavailableReason = "" };
     }
     public static int ToRelative(DpiScaleInfo info, int percent)
     {
-        if (!info.CanSet || !info.SupportedPercents.Contains(percent)) throw new InvalidOperationException("此屏幕不支持所选缩放比例。");
+        if (!info.CanSet || !info.SupportedPercents.Contains(percent)) throw new InvalidOperationException(L.T("s2a664f3979"));
         int recommended = Array.IndexOf(Percentages, info.RecommendedPercent), target = Array.IndexOf(Percentages, percent);
-        if (recommended < 0 || target < 0) throw new InvalidOperationException("无法识别缩放比例。");
+        if (recommended < 0 || target < 0) throw new InvalidOperationException(L.T("s78964c0bbc"));
         return target - recommended;
     }
     public static string LooksLike(DisplayMode mode, int percent)
     {
-        if (percent <= 0) return "未知";
+        if (percent <= 0) return L.T("s4d8c1c5b42");
         return $"{Math.Round(mode.Width * 100.0 / percent, MidpointRounding.AwayFromZero):0} × {Math.Round(mode.Height * 100.0 / percent, MidpointRounding.AwayFromZero):0}";
     }
 }
@@ -83,6 +86,7 @@ public sealed class PresetDisplay
 }
 public sealed class Preferences
 {
+    public string Language { get; set; } = "auto";
     public bool CloseToTray { get; set; } = true;
     public bool SyncBrightness { get; set; }
     public bool Hotkeys { get; set; } = true;

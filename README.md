@@ -1,5 +1,7 @@
 # LumaDesk
 
+简体中文 · [English](README.en.md)
+
 开源 Windows 显示管理工具，采用独立的 Windows 11 风格界面。常用控制直接在托盘快捷面板完成，无需跳转 Windows 设置。
 
 ![LumaDesk 快捷面板](docs/images/quick-panel.png)
@@ -15,6 +17,8 @@
 - **屏幕排列**：拖动、边缘吸附、像素坐标、主屏选择、横向/纵向排列、扩展/复制桌面。
 - **虚拟屏幕**：应用内下载和安装官方签名的 VirtualDrivers 驱动，管理 0–8 台屏幕。归零停用驱动，再次添加时启用。
 - **日常工具**：开机自启、画中画、亮度同步、亮度预设、快捷键、EDID 和诊断导出。
+- **五种语言**：简体中文、繁体中文、英文、日文、韩文。默认跟随 Windows 显示语言，其他语言回退英文；应用设置中可手动选择，重启后生效。
+- **黑白光环图标**：应用使用新版扁平 Logo，托盘图标随 Windows 任务栏主题切换黑白；ICO 包含 16–256 像素的九种尺寸。
 
 ## 使用
 
@@ -25,6 +29,7 @@
 3. 展开设备底部箭头，使用模式、刷新率、音量、子滑块和“色彩与 HDR”。
 4. 底部“排列”“虚拟屏幕”打开应用内管理窗口。
 5. “设置 → 应用 → 开机自启”控制当前用户登录后的托盘启动，默认关闭。
+6. “设置 → 应用 → 界面语言”选择语言，重新启动 LumaDesk 后生效；Windows 的数字和日期格式保持原设置。
 
 安装虚拟驱动、启停驱动或首次安装系统级 ICC 文件时，Windows 可能要求管理员授权。普通显示控制不要求管理员权限。
 
@@ -63,4 +68,8 @@
 
 ## 许可证
 
-代码和原创图标采用 [MIT](LICENSE)。虚拟驱动来自 [VirtualDrivers](https://github.com/VirtualDrivers/Virtual-Display-Driver)，采用[上游 MIT](docs/third-party/Virtual-Display-Driver-LICENSE.txt)；驱动不嵌入应用，仅在点击安装后下载并验证。
+从 **0.4.0** 起，项目代码、翻译、构建工具和图标采用 [GPL-3.0-only](LICENSE)。0.3.1 及更早版本仍保留发布时的 MIT 授权。本次协议变更不追溯替换旧版本许可，见 [NOTICE](NOTICE)。
+
+虚拟驱动来自 [VirtualDrivers](https://github.com/VirtualDrivers/Virtual-Display-Driver)，采用[上游 MIT](docs/third-party/Virtual-Display-Driver-LICENSE.txt)；驱动不嵌入应用，仅在点击安装后下载并验证。其他第三方组件保留各自许可。
+
+对应源码、语言资源和图标构建工具随版本标签公开。添加翻译见[多语言说明](docs/localization.md)。

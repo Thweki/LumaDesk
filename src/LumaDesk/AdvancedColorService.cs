@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 LumaDesk contributors
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -18,9 +21,9 @@ public sealed class DisplayColorState
     public bool HdrUserEnabled { get; set; }
     public bool HdrActive { get; set; }
     public bool PolicyLimited { get; set; }
-    public string ColorMode { get; set; } = "未知";
+    public string ColorMode { get; set; } = L.T("s4d8c1c5b42");
     public uint BitsPerChannel { get; set; }
-    public string Encoding { get; set; } = "未知";
+    public string Encoding { get; set; } = L.T("s4d8c1c5b42");
     public double? SdrWhiteNits { get; set; }
     public string HdrUnavailableReason { get; set; } = "";
     public bool ProfilesAvailable { get; set; }
@@ -68,22 +71,22 @@ internal static class AdvancedColorService
         for (int attempt = 0; attempt < 4; attempt++)
         {
             int status = DpiNative.GetDisplayConfigBufferSizes(2, out uint pc, out uint mc);
-            CheckWin32(status, "读取显示路径");
-            if (pc > 128 || mc > 1024) throw new InvalidOperationException("显示路径数据超出支持范围。");
+            CheckWin32(status, L.T("s5ee74333c6"));
+            if (pc > 128 || mc > 1024) throw new InvalidOperationException(L.T("s8833926459"));
             var paths = new DpiNative.Path[pc]; var modes = new DpiNative.Mode[mc];
             status = DpiNative.QueryDisplayConfig(2, ref pc, paths, ref mc, modes, IntPtr.Zero);
             if (status == 122) continue;
-            CheckWin32(status, "查询显示路径");
+            CheckWin32(status, L.T("s0b3152424b"));
             var matches = new List<DpiNative.Path>();
             foreach (var path in paths.Take((int)pc))
             {
                 var name = new DpiNative.SourceName { Header = DpiNative.Packet<DpiNative.SourceName>(1, path.Source.Adapter, path.Source.Id) };
                 if (DpiNative.GetSourceName(ref name) == 0 && string.Equals(name.Name, display.Device, StringComparison.OrdinalIgnoreCase)) matches.Add(path);
             }
-            if (matches.Count != 1) throw new InvalidOperationException(matches.Count > 1 ? "镜像中的屏幕共用显示源，暂不能单独配置颜色。" : "此屏幕没有唯一活动显示路径。");
+            if (matches.Count != 1) throw new InvalidOperationException(matches.Count > 1 ? L.T("see3246b1fd") : L.T("s988c6e594e"));
             return matches[0];
         }
-        throw new InvalidOperationException("显示器连接正在变化，请重新读取。");
+        throw new InvalidOperationException(L.T("s3bffd3b4df"));
     }
 
     public static DisplayColorState Read(DisplayInfo display)
@@ -97,7 +100,7 @@ internal static class AdvancedColorService
             try { ReadHdr(path, state); } catch (Exception ex) { state.HdrUnavailableReason = ex.Message; }
             try
             {
-                CheckHr(AdvancedColorNative.ColorProfileGetDisplayUserScope(path.Target.Adapter, path.Source.Id, out int scope), "读取颜色配置作用域");
+                CheckHr(AdvancedColorNative.ColorProfileGetDisplayUserScope(path.Target.Adapter, path.Source.Id, out int scope), L.T("s34f9be9568"));
                 state.UseUserProfiles = scope == 1;
                 state.SdrProfile = DefaultProfile(path, scope, false);
                 state.HdrProfile = DefaultProfile(path, scope, true);
@@ -105,8 +108,8 @@ internal static class AdvancedColorService
                 IntPtr list = IntPtr.Zero;
                 try
                 {
-                    CheckHr(AdvancedColorNative.ColorProfileGetDisplayList(scope, path.Target.Adapter, path.Source.Id, out list, out uint count), "读取屏幕颜色配置列表");
-                    if (count > 4096) throw new InvalidOperationException("颜色配置列表超出支持范围。");
+                    CheckHr(AdvancedColorNative.ColorProfileGetDisplayList(scope, path.Target.Adapter, path.Source.Id, out list, out uint count), L.T("sa58db507fa"));
+                    if (count > 4096) throw new InvalidOperationException(L.T("sbe31adde5e"));
                     for (int i = 0; i < count; i++)
                     {
                         string? name = Marshal.PtrToStringUni(Marshal.ReadIntPtr(list, checked(i * IntPtr.Size)));
@@ -121,7 +124,7 @@ internal static class AdvancedColorService
                 state.Profiles = profiles.OrderBy(s => s, StringComparer.CurrentCultureIgnoreCase).ToArray();
                 state.ProfilesAvailable = true;
             }
-            catch (EntryPointNotFoundException) { state.ProfileUnavailableReason = "此 Windows 版本没有逐屏颜色配置接口，需要 Windows 11 或兼容系统。"; }
+            catch (EntryPointNotFoundException) { state.ProfileUnavailableReason = L.T("s37bf50ef90"); }
             catch (Exception ex) { state.ProfileUnavailableReason = ex.Message; }
             return state;
         }
@@ -139,10 +142,10 @@ internal static class AdvancedColorService
         else
         {
             var old = new AdvancedColorNative.LegacyInfo { Header = DpiNative.Packet<AdvancedColorNative.LegacyInfo>(9, path.Target.Adapter, path.Target.Id) };
-            CheckWin32(AdvancedColorNative.GetLegacy(ref old), "读取高级颜色状态");
+            CheckWin32(AdvancedColorNative.GetLegacy(ref old), L.T("s9c07fd83a2"));
             state.BitsPerChannel = old.BitsPerChannel; state.Encoding = EncodingName(old.Encoding);
-            state.ColorMode = (old.Flags & 2) != 0 ? "高级颜色（HDR 状态未确定）" : "标准颜色";
-            state.HdrUnavailableReason = "系统只返回通用高级颜色状态，无法可靠区分 HDR 和广色域；HDR 开关需要支持独立 HDR 接口的 Windows。";
+            state.ColorMode = (old.Flags & 2) != 0 ? L.T("s35c3003ca0") : L.T("s3a484cff6c");
+            state.HdrUnavailableReason = L.T("s6932b13f73");
         }
         var white = new AdvancedColorNative.ValuePacket { Header = DpiNative.Packet<AdvancedColorNative.ValuePacket>(11, path.Target.Adapter, path.Target.Id) };
         if (state.HdrActive && AdvancedColorNative.GetWhite(ref white) == 0) state.SdrWhiteNits = white.Value * 0.08;
@@ -154,8 +157,8 @@ internal static class AdvancedColorService
         state.HdrKnown = true; state.HdrSupported = (flags & 0x10) != 0;
         state.HdrUserEnabled = (flags & 0x20) != 0; state.HdrActive = mode == 2;
         state.PolicyLimited = (flags & 8) != 0;
-        state.ColorMode = mode switch { 0 => "SDR", 1 => "广色域 SDR", 2 => "HDR", _ => "未知颜色模式" };
-        state.HdrUnavailableReason = !state.HdrSupported ? "此显示路径未报告 HDR 支持。" : state.PolicyLimited ? "Windows 策略正在限制高级颜色。" : "";
+        state.ColorMode = mode switch { 0 => "SDR", 1 => L.T("s8a1e6f1c35"), 2 => "HDR", _ => L.T("s374c506372") };
+        state.HdrUnavailableReason = !state.HdrSupported ? L.T("s40d62b3153") : state.PolicyLimited ? L.T("s14d2a76cf5") : "";
     }
 
     public static void SetHdr(DisplayInfo display, bool enabled)
@@ -167,14 +170,14 @@ internal static class AdvancedColorService
             if (before.HdrUserEnabled == enabled) return;
             var path = FindPath(display);
             var packet = new AdvancedColorNative.ValuePacket { Header = DpiNative.Packet<AdvancedColorNative.ValuePacket>(16, path.Target.Adapter, path.Target.Id), Value = enabled ? 1u : 0u };
-            CheckWin32(AdvancedColorNative.SetHdr(ref packet), "切换 HDR");
+            CheckWin32(AdvancedColorNative.SetHdr(ref packet), L.T("s5efbcc24e6"));
             for (int attempt = 0; attempt < 20; attempt++)
             {
                 Thread.Sleep(100);
                 var result = Read(display);
                 if (result.HdrKnown && result.HdrUserEnabled == enabled) return;
             }
-            throw new InvalidOperationException("Windows 尚未回报请求的 HDR 开关状态，请重新读取实际状态。");
+            throw new InvalidOperationException(L.T("s82559e2094"));
         }
     }
 
@@ -183,12 +186,12 @@ internal static class AdvancedColorService
         lock (Gate)
         {
             string name = Path.GetFileName(profileName);
-            if (string.IsNullOrWhiteSpace(name) || !string.Equals(name, profileName, StringComparison.Ordinal)) throw new InvalidOperationException("请选择已安装的配置文件名称。");
+            if (string.IsNullOrWhiteSpace(name) || !string.Equals(name, profileName, StringComparison.Ordinal)) throw new InvalidOperationException(L.T("s58d208dc77"));
             string file = Path.Combine(ColorDirectory(), name);
-            if (!IsDisplayProfile(file)) throw new InvalidOperationException("请选择有效的显示器 RGB ICC 配置文件。");
+            if (!IsDisplayProfile(file)) throw new InvalidOperationException(L.T("s5b23d417da"));
             var before = Read(display);
             if (!before.ProfilesAvailable) throw new InvalidOperationException(before.ProfileUnavailableReason);
-            if (hdr && (!before.HdrKnown || !before.HdrSupported)) throw new InvalidOperationException("此显示器尚未确认支持 HDR 配置。");
+            if (hdr && (!before.HdrKnown || !before.HdrSupported)) throw new InvalidOperationException(L.T("s1fac9623dc"));
             var path = FindPath(display);
             string wcsDevice = FindWcsDevice(display, before.UseUserProfiles);
             string previous = hdr ? before.HdrProfile : before.SdrProfile;
@@ -197,22 +200,22 @@ internal static class AdvancedColorService
             {
                 if (!before.UseUserProfiles)
                 {
-                    CheckBool(AdvancedColorNative.WcsSetUsePerUserProfiles(wcsDevice, MonitorClass, true), "启用此屏幕的个人颜色配置"); scopeChanged = true;
+                    CheckBool(AdvancedColorNative.WcsSetUsePerUserProfiles(wcsDevice, MonitorClass, true), L.T("sb16b8a2817")); scopeChanged = true;
                 }
                 // Associate without changing default first, then select the explicit SDR/HDR subtype.
-                CheckHr(AdvancedColorNative.ColorProfileAddDisplayAssociation(1, name, path.Target.Adapter, path.Source.Id, false, hdr), "关联颜色配置");
-                CheckHr(AdvancedColorNative.ColorProfileSetDisplayDefaultAssociation(1, name, 0, hdr ? 8 : 7, path.Target.Adapter, path.Source.Id), "设置默认颜色配置");
+                CheckHr(AdvancedColorNative.ColorProfileAddDisplayAssociation(1, name, path.Target.Adapter, path.Source.Id, false, hdr), L.T("s7959f6b82f"));
+                CheckHr(AdvancedColorNative.ColorProfileSetDisplayDefaultAssociation(1, name, 0, hdr ? 8 : 7, path.Target.Adapter, path.Source.Id), L.T("sf8cc0b8acc"));
                 var result = Read(display);
                 if (!result.ProfilesAvailable || !result.UseUserProfiles || !string.Equals(hdr ? result.HdrProfile : result.SdrProfile, name, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidOperationException("默认颜色配置回读与请求不一致。");
+                    throw new InvalidOperationException(L.T("s7b37b0e749"));
             }
             catch
             {
                 try
                 {
                     path = FindPath(display); // Remap before restoring; never use a reused display identifier.
-                    if (scopeChanged) CheckBool(AdvancedColorNative.WcsSetUsePerUserProfiles(wcsDevice, MonitorClass, false), "恢复系统颜色配置");
-                    else if (!string.IsNullOrEmpty(previous)) CheckHr(AdvancedColorNative.ColorProfileSetDisplayDefaultAssociation(1, previous, 0, hdr ? 8 : 7, path.Target.Adapter, path.Source.Id), "恢复原默认配置");
+                    if (scopeChanged) CheckBool(AdvancedColorNative.WcsSetUsePerUserProfiles(wcsDevice, MonitorClass, false), L.T("s16bada7b8a"));
+                    else if (!string.IsNullOrEmpty(previous)) CheckHr(AdvancedColorNative.ColorProfileSetDisplayDefaultAssociation(1, previous, 0, hdr ? 8 : 7, path.Target.Adapter, path.Source.Id), L.T("sce2729691e"));
                 }
                 catch (Exception ex) { Storage.Log("Color profile rollback: " + ex.Message); }
                 throw;
@@ -229,7 +232,7 @@ internal static class AdvancedColorService
             try { InstallProfileOnly(source); }
             catch (Win32Exception ex) when (ex.NativeErrorCode == 5)
             {
-                status?.Invoke("首次安装此颜色配置需要 Windows 系统授权；安装后会返回当前用户应用配置。 ");
+                status?.Invoke(L.T("s4efaebcfc1"));
                 InstallWithElevation(source);
             }
             // The elevated helper installs only. Apply to the original user's scope
@@ -245,18 +248,18 @@ internal static class AdvancedColorService
         lock (Gate)
         {
             string source = Path.GetFullPath(file);
-            if (!IsDisplayProfile(source)) throw new InvalidOperationException("文件不是有效的显示器 RGB ICC/ICM 配置。");
+            if (!IsDisplayProfile(source)) throw new InvalidOperationException(L.T("s1f36d4b219"));
             string installed = Path.Combine(ColorDirectory(), Path.GetFileName(source));
             if (File.Exists(installed))
             {
                 using var a = File.OpenRead(source); using var b = File.OpenRead(installed);
-                if (!SHA256.HashData(a).SequenceEqual(SHA256.HashData(b))) throw new InvalidOperationException("系统中已有同名但内容不同的配置；请为导入文件使用不同名称。");
+                if (!SHA256.HashData(a).SequenceEqual(SHA256.HashData(b))) throw new InvalidOperationException(L.T("s9fdfb960b5"));
                 return;
             }
             if (!AdvancedColorNative.InstallColorProfileW(null, source))
             {
                 int error = Marshal.GetLastWin32Error();
-                throw new Win32Exception(error == 0 ? 31 : error, "安装颜色配置失败：" + new Win32Exception(error).Message);
+                throw new Win32Exception(error == 0 ? 31 : error, L.T("s141d362ce1") + new Win32Exception(error).Message);
             }
         }
     }
@@ -271,22 +274,22 @@ internal static class AdvancedColorService
 
     private static void InstallWithElevation(string profile)
     {
-        string executable = Environment.ProcessPath ?? throw new InvalidOperationException("无法找到颜色配置安装程序。");
+        string executable = Environment.ProcessPath ?? throw new InvalidOperationException(L.T("sbc4c62685a"));
         if (string.Equals(Path.GetFileNameWithoutExtension(executable), "dotnet", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("请通过 LumaDesk.exe 启动应用后导入配置，以便请求 Windows 系统授权。");
+            throw new InvalidOperationException(L.T("se8f9d72e96"));
         try
         {
-            using var helper = Process.Start(CreateProfileInstallStartInfo(executable, profile)) ?? throw new InvalidOperationException("无法启动颜色配置安装程序。");
-            if (!helper.WaitForExit(60000)) throw new InvalidOperationException("颜色配置安装尚未完成；完成后可再次选择导入。");
-            if (helper.ExitCode != 0) throw new InvalidOperationException($"颜色配置安装未完成（{helper.ExitCode}）：" + new Win32Exception(helper.ExitCode).Message);
+            using var helper = Process.Start(CreateProfileInstallStartInfo(executable, profile)) ?? throw new InvalidOperationException(L.T("s39c3fae14b"));
+            if (!helper.WaitForExit(60000)) throw new InvalidOperationException(L.T("s4cde55d0cb"));
+            if (helper.ExitCode != 0) throw new InvalidOperationException(L.F("s1fad7c9ede", helper.ExitCode) + new Win32Exception(helper.ExitCode).Message);
             // Verify actual installed bytes rather than relying on the helper exit.
             string installed = Path.Combine(ColorDirectory(), Path.GetFileName(profile));
-            if (!File.Exists(installed)) throw new InvalidOperationException("安装程序已结束，但系统中没有找到配置文件。");
+            if (!File.Exists(installed)) throw new InvalidOperationException(L.T("s5309845c41"));
             using var a = File.OpenRead(profile); using var b = File.OpenRead(installed);
-            if (!SHA256.HashData(a).SequenceEqual(SHA256.HashData(b))) throw new InvalidOperationException("安装后的配置与所选文件不一致，未应用到显示器。");
+            if (!SHA256.HashData(a).SequenceEqual(SHA256.HashData(b))) throw new InvalidOperationException(L.T("s6c9bbb3bf5"));
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
-        { throw new InvalidOperationException("已取消 Windows 系统授权，未应用颜色配置。", ex); }
+        { throw new InvalidOperationException(L.T("s95bb15f7cf"), ex); }
     }
 
     public static void UseSystemProfiles(DisplayInfo display)
@@ -297,9 +300,9 @@ internal static class AdvancedColorService
             if (!before.ProfilesAvailable) throw new InvalidOperationException(before.ProfileUnavailableReason);
             if (!before.UseUserProfiles) return;
             FindPath(display);
-            CheckBool(AdvancedColorNative.WcsSetUsePerUserProfiles(FindWcsDevice(display, true), MonitorClass, false), "恢复系统颜色配置");
+            CheckBool(AdvancedColorNative.WcsSetUsePerUserProfiles(FindWcsDevice(display, true), MonitorClass, false), L.T("s16bada7b8a"));
             var result = Read(display);
-            if (!result.ProfilesAvailable || result.UseUserProfiles) throw new InvalidOperationException("尚未确认恢复系统颜色配置，请重新读取。");
+            if (!result.ProfilesAvailable || result.UseUserProfiles) throw new InvalidOperationException(L.T("s17b3b61bdb"));
         }
     }
 
@@ -309,7 +312,7 @@ internal static class AdvancedColorService
         // \\.\DISPLAYn: WCS can accept that alias yet return an unrelated default.
         string name = display.RegistryPath;
         if (!string.IsNullOrWhiteSpace(name) && AdvancedColorNative.WcsGetUsePerUserProfiles(name, MonitorClass, out bool enabled) && enabled == expectedScope) return name;
-        throw new InvalidOperationException("无法将此显示器对应到个人颜色配置作用域。");
+        throw new InvalidOperationException(L.T("s8bf4a84f50"));
     }
 
     private static string DefaultProfile(DpiNative.Path path, int scope, bool hdr)
@@ -319,7 +322,7 @@ internal static class AdvancedColorService
         {
             int hr = AdvancedColorNative.ColorProfileGetDisplayDefault(scope, path.Target.Adapter, path.Source.Id, 0, hdr ? 8 : 7, out name);
             if (hr == unchecked((int)0x80070002) || hr == unchecked((int)0x80070490)) return "";
-            CheckHr(hr, "读取默认颜色配置");
+            CheckHr(hr, L.T("s4502606c47"));
             return Path.GetFileName(Marshal.PtrToStringUni(name) ?? "");
         }
         finally { if (name != IntPtr.Zero) AdvancedColorNative.LocalFree(name); }
@@ -343,11 +346,11 @@ internal static class AdvancedColorService
     {
         uint bytes = 32768;
         var buffer = new StringBuilder((int)bytes / 2);
-        CheckBool(AdvancedColorNative.GetColorDirectoryW(null, buffer, ref bytes), "读取颜色配置目录");
+        CheckBool(AdvancedColorNative.GetColorDirectoryW(null, buffer, ref bytes), L.T("sd0f1b580f5"));
         return buffer.ToString();
     }
-    private static string EncodingName(uint value) => value switch { 0 => "RGB", 1 => "YCbCr 4:4:4", 2 => "YCbCr 4:2:2", 3 => "YCbCr 4:2:0", 4 => "强度", _ => "未知" };
-    private static void CheckWin32(int result, string operation) { if (result != 0) throw new InvalidOperationException(operation + "失败：" + new Win32Exception(result).Message + $"（{result}）"); }
+    private static string EncodingName(uint value) => value switch { 0 => "RGB", 1 => "YCbCr 4:4:4", 2 => "YCbCr 4:2:2", 3 => "YCbCr 4:2:0", 4 => L.T("sa2846644a6"), _ => L.T("s4d8c1c5b42") };
+    private static void CheckWin32(int result, string operation) { if (result != 0) throw new InvalidOperationException(operation + L.T("s09a4e5504e") + new Win32Exception(result).Message + $"（{result}）"); }
     private static void CheckBool(bool success, string operation) { if (!success) { int error = Marshal.GetLastWin32Error(); CheckWin32(error == 0 ? 31 : error, operation); } }
-    private static void CheckHr(int result, string operation) { if (result < 0) throw new InvalidOperationException(operation + $"失败（0x{result:X8}）：" + Marshal.GetExceptionForHR(result)?.Message); }
+    private static void CheckHr(int result, string operation) { if (result < 0) throw new InvalidOperationException(operation + L.F("s59da614de2", result) + Marshal.GetExceptionForHR(result)?.Message); }
 }

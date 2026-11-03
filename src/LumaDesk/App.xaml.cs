@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 LumaDesk contributors
+
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -12,6 +15,7 @@ namespace LumaDesk;
 
 public partial class App : System.Windows.Application
 {
+    public App() => L.Initialize(Storage.Load().Language);
     internal bool IntegrationTest { get; set; }
     private Mutex? mutex;
     private EventWaitHandle? activateEvent;
@@ -31,13 +35,13 @@ public partial class App : System.Windows.Application
         if (e.Args.Length == 2 && e.Args[0] == "--install-virtual-driver")
         {
             try { DriverInstaller.InstallVerifiedPackage(e.Args[1]); Shutdown(0); }
-            catch (Exception ex) { MessageBox.Show(ex.Message, "虚拟屏幕驱动安装未完成"); Shutdown(1); }
+            catch (Exception ex) { MessageBox.Show(ex.Message, L.T("sf59a804cb2")); Shutdown(1); }
             return;
         }
         if (e.Args.Length == 2 && e.Args[0] == "--set-virtual-driver-enabled" && (e.Args[1] == "true" || e.Args[1] == "false"))
         {
             try { DriverInstaller.SetDriverEnabled(e.Args[1] == "true"); Shutdown(0); }
-            catch (Exception ex) { MessageBox.Show(ex.Message, "虚拟屏幕状态未能更新"); Shutdown(1); }
+            catch (Exception ex) { MessageBox.Show(ex.Message, L.T("s4e4c729702")); Shutdown(1); }
             return;
         }
         if (e.Args.Length >= 2 && (e.Args[0] == "--watch-mode" || e.Args[0] == "--watch-dpi" || e.Args[0] == "--watch-layout"))
@@ -56,7 +60,7 @@ public partial class App : System.Windows.Application
         activateEvent = new EventWaitHandle(false, EventResetMode.AutoReset, "Local\\LumaDesk.Activate");
         if (!fresh) { activateEvent.Set(); Shutdown(); return; }
         activationRegistration = ThreadPool.RegisterWaitForSingleObject(activateEvent, (_, _) => Dispatcher.BeginInvoke(() => { if (MainWindow is MainWindow main) main.ShowQuick(); }), null, Timeout.Infinite, false);
-        DispatcherUnhandledException += (_, args) => { Storage.Log(args.Exception.ToString()); MessageBox.Show(args.Exception.Message, "操作未完成"); args.Handled = true; };
+        DispatcherUnhandledException += (_, args) => { Storage.Log(args.Exception.ToString()); MessageBox.Show(args.Exception.Message, L.T("s79be13bdf0")); args.Handled = true; };
         var window = new MainWindow(); MainWindow = window;
         window.Show(); window.Hide();
         if (!e.Args.Contains("--tray")) window.ShowQuick();
@@ -75,7 +79,7 @@ internal sealed class DpiRecovery
         File.WriteAllText(path, JsonSerializer.Serialize(new DpiRecovery { Device = display.Device, Id = display.Id, OriginalPercent = originalPercent }, Storage.Json));
         var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true };
         start.ArgumentList.Add("--watch-dpi"); start.ArgumentList.Add(path);
-        try { using var process = Process.Start(start) ?? throw new InvalidOperationException("无法启动缩放恢复进程。"); }
+        try { using var process = Process.Start(start) ?? throw new InvalidOperationException(L.T("sc4b70db65e")); }
         catch { File.Delete(path); throw; }
         return path;
     }
@@ -103,7 +107,7 @@ internal sealed class ModeRecovery
         File.WriteAllText(path, JsonSerializer.Serialize(new ModeRecovery { Device = device, Id = id, Original = original }, Storage.Json));
         var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false, CreateNoWindow = true };
         start.ArgumentList.Add("--watch-mode"); start.ArgumentList.Add(path);
-        try { using var process = Process.Start(start) ?? throw new InvalidOperationException("无法启动显示模式恢复进程。"); }
+        try { using var process = Process.Start(start) ?? throw new InvalidOperationException(L.T("scb179350e7")); }
         catch { File.Delete(path); throw; }
         return path;
     }

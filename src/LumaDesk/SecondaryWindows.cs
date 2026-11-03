@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 LumaDesk contributors
+
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -36,12 +39,13 @@ internal sealed class QuickWindow : Window
     private readonly StackPanel body = new() { Margin = new Thickness(6) };
     public QuickWindow(MainWindow owner, Func<DisplayInfo, int, Window, Task>? applyDpi = null, Func<DisplayInfo, DisplayMode, uint, Window, Task>? applyMode = null, bool dismissOnDeactivate = true)
     {
+        Ui.ConfigureWindow(this);
         this.owner = owner; this.applyDpi = applyDpi ?? ((display, percent, parent) => owner.ChangeDpiAsync(display, percent, parent));
         this.applyMode = applyMode ?? ((display, mode, orientation, parent) => owner.ChangeModeAsync(display, mode, orientation, parent));
         this.dismissOnDeactivate = dismissOnDeactivate;
-        Title = AppBrand.Name + " · 快捷面板"; Width = 360; Height = 620; MinHeight = 180;
+        Title = AppBrand.Name + L.T("s2c58655791"); Width = 360; Height = 620; MinHeight = 180;
         WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize; AllowsTransparency = false; ShowInTaskbar = false; Topmost = true;
-        var surface = new Border { CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(1), BorderBrush = Ui.Brush("#24000000"), Background = Ui.Brush("#F3F3F3"), Child = new ScrollViewer { Content = body } };
+        var surface = new Border { CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(1), BorderBrush = Ui.Brush("#24000000"), Background = Ui.Brush("#F3F3F3"), Child = new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto } };
         surface.SizeChanged += (_, _) => surface.Clip = new RectangleGeometry(new Rect(0, 0, surface.ActualWidth, surface.ActualHeight), 12, 12);
         Content = surface; WindowEffects.ConfigurePopup(this, surface, active => IsBackdropActive = active);
         placement = new PopupPlacement(this, () => preferredHeight);
@@ -94,12 +98,12 @@ internal sealed class QuickWindow : Window
                 header.Content = Ui.Row(name, Ui.Text(collapsed ? "▸" : "▾", 11, "#7A8699"));
                 header.HorizontalContentAlignment = HorizontalAlignment.Stretch; header.Background = System.Windows.Media.Brushes.Transparent; header.BorderThickness = new Thickness(0); header.Padding = new Thickness(0, 2, 0, 3);
                 System.Windows.Automation.AutomationProperties.SetAutomationId(header, "quick-device-header-" + d.Number);
-                System.Windows.Automation.AutomationProperties.SetName(header, d.Name + (collapsed ? " 展开" : " 收起"));
+                System.Windows.Automation.AutomationProperties.SetName(header, d.Name + (collapsed ? L.T("s2de119793c") : L.T("s49aac4283e")));
                 stack.Children.Add(header);
             }
             if (!collapsed)
             {
-                stack.Children.Add(owner.CreateSlider("亮度", owner.GetCombinedBrightness(d), 100, async v => { await owner.ChangeCombinedBrightness(d, v); owner.RefreshView(); }, compact: true));
+                stack.Children.Add(owner.CreateSlider(L.T("s8e2f643ad1"), owner.GetCombinedBrightness(d), 100, async v => { await owner.ChangeCombinedBrightness(d, v); owner.RefreshView(); }, compact: true));
                 stack.Children.Add(CreateDpiControls(d));
                 bool expanded = owner.Preferences.QuickMoreDisplayId == d.Id;
                 if (expanded)
@@ -115,18 +119,18 @@ internal sealed class QuickWindow : Window
                     }
                     if (d.Volume.HasValue)
                     {
-                        more.Children.Add(owner.CreateSlider("显示器音量", d.Volume, 100, async value =>
+                        more.Children.Add(owner.CreateSlider(L.T("s716ddda53d"), d.Volume, 100, async value =>
                         {
                             await owner.Service.SetPercentAsync(d, 0x62, value); d.Volume = value;
-                            owner.Status(d.Name + " · 显示器音量 " + value + "%"); owner.RefreshView();
+                            owner.Status(d.Name + L.T("s5caf7d72ba") + value + "%"); owner.RefreshView();
                         }, compact: true));
                     }
-                    if (d.Brightness.HasValue) more.Children.Add(owner.CreateSlider("硬件亮度", d.Brightness, 100, async v => { await owner.ChangeBrightness(d, v); owner.RefreshView(); }, compact: true));
-                    more.Children.Add(owner.CreateSlider("额外调暗", d.Dimming, 85, v => { owner.SetDimming(d, v); owner.RefreshView(); return Task.CompletedTask; }, compact: true));
+                    if (d.Brightness.HasValue) more.Children.Add(owner.CreateSlider(L.T("s06dab760bb"), d.Brightness, 100, async v => { await owner.ChangeBrightness(d, v); owner.RefreshView(); }, compact: true));
+                    more.Children.Add(owner.CreateSlider(L.T("s417de11214"), d.Dimming, 85, v => { owner.SetDimming(d, v); owner.RefreshView(); return Task.CompletedTask; }, compact: true));
                     more.Children.Add(CompactLine());
                     bool colorExpanded = colorSections.Contains(d.Id);
                     var colorButton = Ui.Button("", () => { if (!colorSections.Remove(d.Id)) colorSections.Add(d.Id); Render(); });
-                    colorButton.Content = Ui.Row(Ui.Text("色彩与 HDR", 12), Ui.Text(colorExpanded ? "⌃" : "›", 11, "#7A8699"));
+                    colorButton.Content = Ui.Row(Ui.Text(L.T("s58169370ac"), 12), Ui.Text(colorExpanded ? "⌃" : "›", 11, "#7A8699"));
                     colorButton.HorizontalContentAlignment = HorizontalAlignment.Stretch; colorButton.Padding = new Thickness(0, 5, 0, 5); colorButton.Background = System.Windows.Media.Brushes.Transparent; colorButton.BorderThickness = new Thickness(0);
                     System.Windows.Automation.AutomationProperties.SetAutomationId(colorButton, "quick-color-toggle-" + d.Number);
                     more.Children.Add(colorButton);
@@ -136,26 +140,26 @@ internal sealed class QuickWindow : Window
                         System.Windows.Automation.AutomationProperties.SetAutomationId(colorContent, "quick-color-content-" + d.Number);
                         more.Children.Add(colorContent);
                     }
-                    var pip = Ui.Button("", () => owner.OpenPip(d)); pip.Content = Ui.Row(Ui.Text("画中画", 12), Ui.Text("打开  ↗", 11, "#7A8699")); pip.HorizontalContentAlignment = HorizontalAlignment.Stretch; pip.Padding = new Thickness(0, 5, 0, 5); pip.Background = System.Windows.Media.Brushes.Transparent; pip.BorderThickness = new Thickness(0); more.Children.Add(pip);
+                    var pip = Ui.Button("", () => owner.OpenPip(d)); pip.Content = Ui.Row(Ui.Text(L.T("s850875a753"), 12), Ui.Text(L.T("s44429022e6"), 11, "#7A8699")); pip.HorizontalContentAlignment = HorizontalAlignment.Stretch; pip.Padding = new Thickness(0, 5, 0, 5); pip.Background = System.Windows.Media.Brushes.Transparent; pip.BorderThickness = new Thickness(0); more.Children.Add(pip);
                     stack.Children.Add(more);
                 }
                 AddDpiError(stack, d.Id);
                 var moreButton = Ui.Button("", () => { owner.Preferences.QuickMoreDisplayId = expanded ? null : d.Id; owner.SavePreferences(); Render(); });
-                moreButton.Content = Ui.Icon(expanded ? "\uE70E" : "\uE70D", 12, "#748095"); moreButton.Background = System.Windows.Media.Brushes.Transparent; moreButton.BorderThickness = new Thickness(0); moreButton.Padding = new Thickness(0, 2, 0, 0); moreButton.ToolTip = expanded ? "收起更多选项" : "更多选项";
+                moreButton.Content = Ui.Icon(expanded ? "\uE70E" : "\uE70D", 12, "#748095"); moreButton.Background = System.Windows.Media.Brushes.Transparent; moreButton.BorderThickness = new Thickness(0); moreButton.Padding = new Thickness(0, 2, 0, 0); moreButton.ToolTip = expanded ? L.T("sce85dd8c8f") : L.T("sc611656faf");
                 System.Windows.Automation.AutomationProperties.SetAutomationId(moreButton, "quick-more-toggle-" + d.Number);
-                System.Windows.Automation.AutomationProperties.SetName(moreButton, d.Name + (expanded ? " 收起更多选项" : " 更多选项"));
+                System.Windows.Automation.AutomationProperties.SetName(moreButton, d.Name + (expanded ? L.T("sc99c0b22e1") : L.T("sce412ae701")));
                 stack.Children.Add(moreButton);
             }
             var card = new Border { Child = stack, Padding = new Thickness(12, 7, 12, 7), BorderThickness = new Thickness(0, 0, 0, 1), BorderBrush = Ui.Brush("#16000000") }; body.Children.Add(card);
         }
-        if (owner.Displays.Count == 0) body.Children.Add(Ui.Card(Ui.Text("未检测到显示器，请打开设置重新检测。", 12, "#8B93A2")));
+        if (owner.Displays.Count == 0) body.Children.Add(Ui.Card(Ui.Text(L.T("s7d06b98afa"), 12, "#8B93A2")));
         var footer = new UniformGrid { Columns = 4, Margin = new Thickness(4, 8, 4, 4) };
-        foreach (var item in new (string Label, Action Action)[] { ("设置", owner.ShowSettings), ("排列", owner.ShowLayout), ("虚拟屏幕", owner.ShowVirtualDisplays), ("退出", owner.Quit) })
+        foreach (var item in new (string Label, Action Action)[] { (L.T("sdf3d58c7d8"), owner.ShowSettings), (L.T("s70473d8ed9"), owner.ShowLayout), (L.T("quick.virtual"), owner.ShowVirtualDisplays), (L.T("s498e1d59b4"), owner.Quit) })
         {
             var button = Ui.Button(item.Label, item.Action); button.FontSize = 11; button.Padding = new Thickness(4, 6, 4, 6); button.Margin = new Thickness(2, 0, 2, 0); button.Background = Ui.Brush("#70FFFFFF"); button.BorderBrush = Ui.Brush("#12000000"); footer.Children.Add(button);
         }
         body.Children.Add(footer);
-        body.Measure(new System.Windows.Size(Width - 18, double.PositiveInfinity));
+        body.Measure(new System.Windows.Size(Width - 2, double.PositiveInfinity));
         preferredHeight = Math.Clamp(body.DesiredSize.Height + 2, 180, 620);
         Height = preferredHeight;
         if (IsVisible) PositionNearTray();
@@ -171,10 +175,10 @@ internal sealed class QuickWindow : Window
             if (expanded) modeSections.Remove(display.Id); else modeSections[display.Id] = sectionId;
             Render();
         });
-        header.Content = Ui.Row(Ui.Text(refreshOnly ? "刷新率" : "输出显示模式", 12), Ui.Text((refreshOnly ? display.Current.Frequency + " Hz" : display.Current.Resolution) + (expanded ? "  ⌃" : "  ›"), 11, "#7A8699"));
+        header.Content = Ui.Row(Ui.Text(refreshOnly ? L.T("sf48164ea8a") : L.T("sbe69f5dbee"), 12), Ui.Text((refreshOnly ? display.Current.Frequency + " Hz" : display.Current.Resolution) + (expanded ? "  ⌃" : "  ›"), 11, "#7A8699"));
         header.HorizontalContentAlignment = HorizontalAlignment.Stretch; header.Padding = new Thickness(0, 5, 0, 5); header.Background = System.Windows.Media.Brushes.Transparent; header.BorderThickness = new Thickness(0);
         System.Windows.Automation.AutomationProperties.SetAutomationId(header, "quick-" + sectionId + "-toggle-" + display.Number);
-        System.Windows.Automation.AutomationProperties.SetName(header, display.Name + (refreshOnly ? " 刷新率" : " 输出显示模式"));
+        System.Windows.Automation.AutomationProperties.SetName(header, display.Name + (refreshOnly ? L.T("s27a6f7c7a1") : L.T("se287dc7c0f")));
         stack.Children.Add(header);
         if (!expanded) return stack;
         var modes = refreshOnly
@@ -182,7 +186,7 @@ internal sealed class QuickWindow : Window
             : display.Modes.Distinct().ToList();
         var list = new ListBox { ItemsSource = modes, SelectedItem = display.Current, MaxHeight = 210, BorderBrush = Ui.Brush("#DCE2EC"), BorderThickness = new Thickness(1), Background = System.Windows.Media.Brushes.White, FontSize = 11, Padding = new Thickness(3) };
         System.Windows.Automation.AutomationProperties.SetAutomationId(list, "quick-" + sectionId + "-list-" + display.Number);
-        System.Windows.Automation.AutomationProperties.SetName(list, display.Name + (refreshOnly ? " 可用刷新率" : " 可用输出模式"));
+        System.Windows.Automation.AutomationProperties.SetName(list, display.Name + (refreshOnly ? L.T("s0e76452bcb") : L.T("s56e1e2e177")));
         if (refreshOnly)
         {
             var template = new DataTemplate(); var text = new FrameworkElementFactory(typeof(TextBlock));
@@ -196,7 +200,7 @@ internal sealed class QuickWindow : Window
         };
         list.Loaded += (_, _) => { if (list.SelectedItem != null) list.ScrollIntoView(list.SelectedItem); };
         stack.Children.Add(list);
-        var help = Ui.Text(refreshOnly ? "仅列出当前输出分辨率支持的刷新率。" : "选择后直接改变输出像素；放大界面请使用上方的 HiDPI 控制。", 10, "#8790A0"); help.Margin = new Thickness(0, 6, 0, 7); stack.Children.Add(help);
+        var help = Ui.Text(refreshOnly ? L.T("s82f9d30470") : L.T("s29dce845a6"), 10, "#8790A0"); help.Margin = new Thickness(0, 6, 0, 7); stack.Children.Add(help);
         return stack;
     }
     private async Task ChangeDisplayAsync(DisplayInfo display, Func<Task> operation)
@@ -216,8 +220,8 @@ internal sealed class QuickWindow : Window
         var section = new StackPanel();
         System.Windows.Automation.AutomationProperties.SetAutomationId(section, "quick-dpi-" + display.Number);
         var info = display.DpiScale;
-        var amount = Ui.Text(info.CanSet ? $"缩放 {info.CurrentPercent}%" : "暂不可用", 11, "#7A8699");
-        section.Children.Add(Ui.Row(Ui.Text("分辨率（HiDPI）", 12), amount));
+        var amount = Ui.Text(info.CanSet ? L.F("sdaee699fa0", info.CurrentPercent) : L.T("sf36cac9622"), 11, "#7A8699");
+        section.Children.Add(Ui.Row(Ui.Text(L.T("sc2785ec7b6"), 12), amount));
         if (!info.CanSet)
         {
             var help = Ui.Text(info.UnavailableReason, 10, "#8790A0"); help.Margin = new Thickness(0, 3, 0, 3); section.Children.Add(help);
@@ -227,10 +231,10 @@ internal sealed class QuickWindow : Window
         // Resolution slider. DPI percentages therefore run in descending order.
         var steps = info.SupportedPercents.OrderByDescending(p => p).ToArray();
         var slider = new Slider { Minimum = 0, Maximum = steps.Length - 1, TickFrequency = 1, IsSnapToTickEnabled = true, IsMoveToPointEnabled = true, Value = Array.IndexOf(steps, info.CurrentPercent), Height = 22, Margin = new Thickness(0, 2, 0, 0), IsEnabled = steps.Length > 1 };
-        System.Windows.Automation.AutomationProperties.SetName(slider, display.Name + " HiDPI 分辨率");
+        System.Windows.Automation.AutomationProperties.SetName(slider, display.Name + L.T("s4fa3927f98"));
         System.Windows.Automation.AutomationProperties.SetAutomationId(slider, "quick-dpi-slider-" + display.Number);
         var preview = Ui.Text("", 10, "#64748B"); preview.Margin = new Thickness(0, 1, 0, 1);
-        preview.ToolTip = $"输出保持 {display.Current.Resolution} · {display.Current.Frequency} Hz";
+        preview.ToolTip = L.F("se4551ed916", display.Current.Resolution, display.Current.Frequency);
         bool resetting = false;
         int SelectedPercent() => steps[Math.Clamp((int)Math.Round(slider.Value), 0, steps.Length - 1)];
         void ResetToCurrent()
@@ -240,8 +244,8 @@ internal sealed class QuickWindow : Window
         void UpdatePreview()
         {
             int percent = SelectedPercent();
-            preview.Text = "看起来像约 " + DpiRules.LooksLike(display.Current, percent);
-            amount.Text = "缩放 " + percent + "%";
+            preview.Text = L.T("s8673626e8f") + DpiRules.LooksLike(display.Current, percent);
+            amount.Text = L.T("se726470b6d") + percent + "%";
             slider.ToolTip = $"{percent}% · {DpiRules.LooksLike(display.Current, percent)}";
         }
         var writer = new LatestValueWriter(async percent =>
@@ -313,7 +317,7 @@ internal sealed class DimWindow : Window
 {
     public DimWindow()
     {
-        Title = "LumaDesk · 调光层"; WindowStyle = WindowStyle.None; AllowsTransparency = true; Background = System.Windows.Media.Brushes.Black; Opacity = 0;
+        Title = L.T("s48a7629fcc"); WindowStyle = WindowStyle.None; AllowsTransparency = true; Background = System.Windows.Media.Brushes.Black; Opacity = 0;
         ShowActivated = false; ShowInTaskbar = false; Topmost = true; ResizeMode = ResizeMode.NoResize; Width = 1; Height = 1;
         SourceInitialized += (_, _) =>
         {
@@ -331,14 +335,15 @@ internal sealed class PipWindow : Window
 {
     private readonly DisplayInfo display;
     private readonly System.Windows.Controls.Image preview = new() { Stretch = Stretch.Uniform };
-    private readonly TextBlock status = Ui.Text("正在读取画面…", 11, "#9098A8");
+    private readonly TextBlock status = Ui.Text(L.T("sa10706fb30"), 11, "#9098A8");
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(150) };
     private bool paused;
     public PipWindow(DisplayInfo display)
     {
-        this.display = display; Title = display.Name + " · 画中画"; Width = 560; Height = 380; MinWidth = 280; MinHeight = 180; Topmost = true;
+        Ui.ConfigureWindow(this);
+        this.display = display; Title = display.Name + L.T("s20bd7e7897"); Width = 560; Height = 380; MinWidth = 280; MinHeight = 180; Topmost = true;
         var grid = new Grid(); grid.RowDefinitions.Add(new RowDefinition()); grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(42) }); grid.Children.Add(preview);
-        var pause = Ui.Button("暂停 / 继续", () => { paused = !paused; status.Text = paused ? "已暂停" : "实时预览 · 约 6 FPS"; }); pause.FontSize = 11; pause.Padding = new Thickness(10, 5, 10, 5);
+        var pause = Ui.Button(L.T("s6b0fa0abdc"), () => { paused = !paused; status.Text = paused ? L.T("seb0c326b60") : L.T("s9f277b6ebd"); }); pause.FontSize = 11; pause.Padding = new Thickness(10, 5, 10, 5);
         var footer = Ui.Row(status, pause); footer.Margin = new Thickness(12, 4, 12, 4); Grid.SetRow(footer, 1); grid.Children.Add(footer); Content = grid;
         SourceInitialized += (_, _) => Native.SetWindowDisplayAffinity(new WindowInteropHelper(this).Handle, 0x11);
         timer.Tick += (_, _) => Capture(); Loaded += (_, _) => timer.Start(); Closed += (_, _) => { timer.Stop(); preview.Source = null; };
@@ -349,7 +354,7 @@ internal sealed class PipWindow : Window
         try
         {
             var current = DisplayService.CurrentMode(display.Device);
-            if (current.Width == 0 || current.Height == 0) { status.Text = "显示器已断开"; return; }
+            if (current.Width == 0 || current.Height == 0) { status.Text = L.T("s88561e63c9"); return; }
             using var full = new Bitmap((int)current.Width, (int)current.Height);
             using (var graphics = Graphics.FromImage(full)) graphics.CopyFromScreen(current.X, current.Y, 0, 0, full.Size);
             int width = Math.Min(960, (int)current.Width); int height = Math.Max(1, (int)(width * current.Height / current.Width));
@@ -357,22 +362,8 @@ internal sealed class PipWindow : Window
             var handle = scaled.GetHbitmap();
             try { var source = Imaging.CreateBitmapSourceFromHBitmap(handle, IntPtr.Zero, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions()); source.Freeze(); preview.Source = source; }
             finally { Native.DeleteObject(handle); }
-            status.Text = "实时预览 · SDR · 约 6 FPS";
+            status.Text = L.T("s1bbc67943d");
         }
-        catch (Exception ex) { status.Text = "暂时无法捕获此屏幕"; status.ToolTip = ex.Message; }
-    }
-}
-
-internal static class TrayIcon
-{
-    public static Drawing.Icon Create()
-    {
-        using var bitmap = new Bitmap(32, 32); using var g = Graphics.FromImage(bitmap); g.SmoothingMode = Drawing.Drawing2D.SmoothingMode.AntiAlias;
-        using var fill = new Drawing.Drawing2D.LinearGradientBrush(new Drawing.Rectangle(2, 2, 28, 28), Drawing.Color.FromArgb(0, 122, 138), Drawing.Color.FromArgb(53, 86, 190), 45f);
-        g.FillEllipse(fill, 1, 1, 30, 30);
-        using var pen = new Drawing.Pen(Drawing.Color.White, 3.3f) { StartCap = Drawing.Drawing2D.LineCap.Round, EndCap = Drawing.Drawing2D.LineCap.Round, LineJoin = Drawing.Drawing2D.LineJoin.Round };
-        g.DrawLines(pen, new[] { new Drawing.PointF(11, 9), new Drawing.PointF(11, 23), new Drawing.PointF(23, 23) });
-        using var light = new Drawing.SolidBrush(Drawing.Color.FromArgb(168, 245, 227)); g.FillEllipse(light, 19, 7, 6, 6);
-        var handle = bitmap.GetHicon(); try { return (Drawing.Icon)Drawing.Icon.FromHandle(handle).Clone(); } finally { Native.DestroyIcon(handle); }
+        catch (Exception ex) { status.Text = L.T("se2c5e0ec0d"); status.ToolTip = ex.Message; }
     }
 }

@@ -7,3 +7,6 @@
 *.ps1 text eol=crlf
 *.png binary
 *.ico binary
+*.json text eol=lf
+LICENSE text eol=lf
+NOTICE text eol=lf
