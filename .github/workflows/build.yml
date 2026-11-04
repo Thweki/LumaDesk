@@ -2,33 +2,92 @@ name: Windows build
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - name: Core tests
-        run: dotnet run --project tests/LumaDesk.Tests -c Release
-      - name: Color contract tests
-        run: dotnet run --project tests/LumaDesk.ColorTests -c Release
-      - name: Virtual driver protocol tests (no install)
-        run: dotnet run --project tests/LumaDesk.VirtualTests -c Release
-      - name: Scene, automation and command tests (no hardware writes)
-        run: dotnet run --project tests/LumaDesk.WorkflowTests -c Release
-      - name: Build portable app
-        if: success()
-        shell: pwsh
-        run: ./build.ps1 -Portable
-      - name: Localization coverage and format checks
-        run: dotnet run --project tests/LumaDesk.LocalizationTests -c Release
-      - uses: actions/upload-artifact@v4
+      - name: Validate version and release notes
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          [xml]$project = Get-Content src/LumaDesk/LumaDesk.csproj
+          $version = [string]$project.Project.PropertyGroup.Version
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid release version.' }
+          if ($env:REF_TYPE -eq 'tag' -and $env:REF_NAME -ne "v$version") { throw 'Tag and app version differ.' }
+          if (-not (Test-Path "docs/releases/$version.md")) { throw 'Release notes are missing.' }
+      - name: Headless tests (no hardware writes)
+        run: ./test.ps1 -Headless
+      - name: Build EXE, portable ZIP and MSI
+        run: ./package.ps1
+      - name: Verify packages and MSI install / launch / uninstall
+        run: ./tools/Test-Package.ps1 -Install
+      - name: Upload release files
+        uses: actions/upload-artifact@v4
         with:
-          name: LumaDesk-win-x64
-          path: artifacts/LumaDesk-win-x64/
+          name: LumaDesk-release
+          if-no-files-found: error
+          path: |
+            artifacts/release/*.exe
+            artifacts/release/*.zip
+            artifacts/release/*.msi
+            artifacts/release/SHA256SUMS.txt
+      - name: Upload installer failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-logs
+          if-no-files-found: ignore
+          path: artifacts/release/*.log
+  release:
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: LumaDesk-release
+          path: release
+      - name: Publish preview release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          cd release
+          sha256sum --check SHA256SUMS.txt
+          cd ..
+          if gh release view "$TAG" --json isDraft > release-state.json 2>/dev/null; then
+            if [ "$(jq -r .isDraft release-state.json)" != true ]; then
+              echo 'Release is already public; refusing to replace its assets.' >&2
+              exit 1
+            fi
+          else
+            gh release create "$TAG" --verify-tag --draft --prerelease \
+              --title "LumaDesk $version Preview" --notes-file "docs/releases/$version.md"
+          fi
+          gh release upload "$TAG" release/*.exe release/*.zip release/*.msi release/SHA256SUMS.txt --clobber
+          gh release edit "$TAG" --draft=false --prerelease --notes-file "docs/releases/$version.md"

@@ -21,7 +21,7 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'NOTICE') -Destination $destinat
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.en.md') -Destination $destination -Force
 $docDestination = Join-Path $destination 'docs'
 New-Item -ItemType Directory -Path $docDestination -Force | Out-Null
-foreach ($name in @('validation.md', 'color-hdr.md', 'display-layout.md', 'virtual-displays.md', 'localization.md', 'workflows.md')) {
+foreach ($name in @('validation.md', 'color-hdr.md', 'display-layout.md', 'virtual-displays.md', 'localization.md', 'workflows.md', 'releasing.md')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "docs\$name") -Destination $docDestination -Force
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\third-party') -Destination $docDestination -Recurse -Force

@@ -2,69 +2,74 @@
 
 [简体中文](README.md) · English
 
-An open-source Windows display manager with a compact Fluent-style tray panel.
+**Every screen, one small tray panel.**
 
-![Quick panel](docs/images/quick-panel-en.png)
+LumaDesk is an open-source Windows display manager. Adjust brightness, change scaling and switch screen setups without digging through system settings.
 
-- Adjust combined hardware/software brightness and per-display DPI while dragging.
-- Select a screen from its desktop layout, without visible numbers or display names. Locate briefly marks the physical screen. Brightness and scaling stay visible; More settings expands the other controls and stays expanded when switching screens.
-- Link brightness lets you check multiple displays and adjust brightness only. Unchecked sync-group members are excluded; Done restores single-display controls. Selecting displays never changes their brightness.
-- Manage resolution, refresh rate, orientation, HDR and ICC profiles in the app.
-- Arrange displays, set the main display, extend or duplicate the desktop.
-- Install the signed VirtualDrivers driver and manage virtual displays.
-- Save screen setups (brightness, mode, scaling, readable HDR/ICC state and layout), apply them in one click, and undo the last switch.
-- Sync brightness in groups; configurable shortcuts target the screen under the pointer by default and show a brightness indicator.
-- Restore brightness after reconnect/wake for screens adjusted here. Optional scene schedules, power and connection triggers default off.
-- Switch monitor-reported inputs, favorite output modes, rename/reorder screens, hide scaling controls and pin the panel.
-- Input switching handles a detected digital-input firmware encoding mismatch and verifies readback. Ignored writes and unverified disconnections are reported separately.
-- Follow the system light/dark theme. Picture in picture supports region selection and frame-rate choices with background capture.
-- The quick panel stays anchored through DPI changes and closes when you click outside it.
-- The monochrome halo tray icon follows the Windows taskbar theme.
+[Download preview](https://github.com/Thweki/LumaDesk/releases) · [Report an issue](https://github.com/Thweki/LumaDesk/issues) · [Build status](https://github.com/Thweki/LumaDesk/actions/workflows/build.yml)
 
-Download the x64 portable ZIP from [Releases](https://github.com/Thweki/LumaDesk/releases), extract it and run `LumaDesk.exe`. The .NET runtime is included.
+## See it in action
 
-The interface follows the Windows display language by default. Simplified Chinese,
-Traditional Chinese, English, Japanese and Korean are included. Other languages
-fall back to English. Select an override under **Settings → Application → Display
-language** and restart the app to apply it. Windows number and date formats are
-kept independently of the UI language.
+Pick a screen by its position, open more settings, then adjust several screens together.
 
-Click the tray icon for the quick panel, double-click for settings, or right-click
-for the menu. Enable **Start with Windows** in Application settings if desired.
-Save and apply presets without configuring rules. Extra options stay collapsed.
-See [workflow and command-line notes](docs/workflows.md) for automation, partial
-results and the current-session undo behavior.
+![Screen selection, more settings and linked brightness](docs/images/quick-demo-en.gif)
 
-## Requirements and limitations
+*Rendered from the actual WPF interface with sample displays and simulated brightness callbacks. This does not show hardware response times.*
 
-Windows 10/11 x64. Acrylic requires Windows 11 22H2 or later; HDR and ICC controls
-depend on OS and driver capabilities. Driver installation and enable/disable,
-and first-time system ICC installation, can request administrator approval.
+<p>
+  <img src="docs/images/quick-panel-en.png" width="360" alt="LumaDesk quick panel">
+  <img src="docs/images/quick-panel-dark-en.png" width="360" alt="LumaDesk dark quick panel">
+</p>
 
-HiDPI uses Windows per-display DPI. It is not macOS-style full-desktop 2× rendering
-and downsampling. Some older applications can still look blurry. DDC response
-speed depends on monitor firmware and connections. Hardware writes have not
-been exhaustively validated on real devices; see [validation notes](docs/validation.md).
+## What you can do
 
-## Build
+- **Get brightness right:** combine backlight control and software dimming, adjust one screen, select several or sync a group.
+- **Control each screen:** scaling, resolution, refresh rate and rotation, plus inputs, volume and contrast where supported.
+- **Keep your setup handy:** arrange displays, choose the main screen, extend or mirror, and save setups as one-click presets.
+- **Go a little further:** HDR, ICC profiles, virtual displays and picture in picture.
+- **Make it yours:** keyboard shortcuts, optional startup, light/dark themes, and Simplified Chinese, Traditional Chinese, English, Japanese and Korean.
 
-On Windows with the .NET 8 SDK:
+![Full settings window](docs/images/settings-en.png)
+
+## Download and get started
+
+For **Windows 10 / 11 x64**. The .NET runtime is included. Choose a file from [Releases](https://github.com/Thweki/LumaDesk/releases):
+
+| File | Use it to… |
+| --- | --- |
+| `LumaDesk-VERSION-win-x64.exe` | Run directly, without installing |
+| `LumaDesk-VERSION-portable-win-x64.zip` | Get the app with its documentation and licenses; extract and run |
+| `LumaDesk-VERSION-win-x64.msi` | Install to Program Files with a Start menu shortcut (administrator access required) |
+
+1. Run `LumaDesk.exe`. Click the tray icon for the panel; double-click for settings.
+2. Pick a screen at the top and drag brightness or HiDPI. Use **Link brightness** to adjust several screens.
+3. Save your setup under **Settings → Presets**. Startup and language options live under **Settings → Application**.
+
+Default shortcuts: `Ctrl+Alt+↑ / ↓` adjusts the screen under the pointer; `Ctrl+Alt+0` removes software dimming.
+
+All editions store settings in `%LOCALAPPDATA%\LumaDesk`. “Portable” means no installation, not settings beside the executable. There is no telemetry. The virtual driver downloads only when you choose to install it. Driver installation and first-time system ICC imports may request administrator approval.
+
+## Before you download
+
+- HiDPI uses Windows per-display scaling, not full-desktop supersampling. Some older apps may still look blurry.
+- DDC/CI, HDR, ICC and input switching depend on your monitor, connection and driver. Acrylic requires Windows 11 22H2 or later.
+- Virtual displays require the separately installed [VirtualDrivers driver](https://github.com/VirtualDrivers/Virtual-Display-Driver).
+- This is still a preview. Hardware compatibility is being tested; include your monitor model and connection when reporting an issue. See the [validation notes](docs/validation.md).
+
+## Build it yourself
+
+Windows and the .NET 8 SDK are required.
 
 ```powershell
-./build.ps1 -Portable
-./test.ps1
+.\build.ps1 -Portable  # Self-contained EXE
+.\test.ps1             # Full suite; requires an interactive desktop
+.\package.ps1          # EXE, portable ZIP, MSI and SHA256SUMS.txt
 ```
 
-Build output: `artifacts/LumaDesk-win-x64/`. Interactive WPF tests require a desktop
-with active displays. CI runs the noninteractive checks and builds the portable app.
-Tests do not send monitor setting changes.
+App output: `artifacts/LumaDesk-win-x64/`. Release files: `artifacts/release/`. GitHub Actions runs headless tests, packaging and installation checks for pushes and PRs, and publishes version tags. See [release instructions](docs/releasing.md).
 
-Translations are embedded local JSON catalogs; no translation service is used at
-runtime. See [localization notes](docs/localization.md) to add a language.
+More: [Presets and automation](docs/workflows.md) · [HDR / ICC](docs/color-hdr.md) · [Display layout](docs/display-layout.md) · [Virtual displays](docs/virtual-displays.md) · [Translations](docs/localization.md)
 
 ## License
 
-Version 0.4.0 onward: [GPL-3.0-only](LICENSE). Previous releases through 0.3.1 retain
-their original MIT license. Third-party components retain their licenses; see
-[NOTICE](NOTICE). The corresponding source and build tools are included in each
-release's matching Git tag.
+Version 0.4.0 onward: [GPL-3.0-only](LICENSE). Versions through 0.3.1 retain their original MIT license. Third-party components keep their own licenses; see [NOTICE](NOTICE).

@@ -1,0 +1,32 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="LumaDesk" Manufacturer="LumaDesk contributors" Version="$(var.AppVersion)"
+           UpgradeCode="BB07ED3C-795F-4BCD-9D41-757B3542BFF1" Scope="perMachine" Language="1033">
+    <MajorUpgrade DowngradeErrorMessage="A newer version of LumaDesk is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+    <Property Id="WINDOWSBUILDNUMBER" Secure="yes">
+      <RegistrySearch Id="BuildNumberSearch" Root="HKLM" Key="SOFTWARE\Microsoft\Windows NT\CurrentVersion"
+                      Name="CurrentBuildNumber" Type="raw" Bitness="always64" />
+    </Property>
+    <Launch Condition="Installed OR (VersionNT64 AND WINDOWSBUILDNUMBER &gt;= 10240)" Message="LumaDesk requires Windows 10 or later (x64)." />
+    <Icon Id="AppIcon.exe" SourceFile="../src/LumaDesk/Assets/app.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.exe" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Thweki/LumaDesk" />
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="LumaDesk">
+        <Component Id="Application" Guid="*">
+          <File Id="AppExe" Source="$(var.PublishDir)/LumaDesk.exe" KeyPath="yes">
+            <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="LumaDesk"
+                      WorkingDirectory="INSTALLFOLDER" Advertise="yes" Icon="AppIcon.exe" />
+          </File>
+        </Component>
+      </Directory>
+    </StandardDirectory>
+    <Feature Id="Main" Title="LumaDesk" Level="1">
+      <ComponentRef Id="Application" />
+      <Files Include="$(var.PublishDir)/**" Directory="INSTALLFOLDER">
+        <Exclude Files="$(var.PublishDir)/LumaDesk.exe" />
+        <Exclude Files="$(var.PublishDir)/*.pdb" />
+      </Files>
+    </Feature>
+  </Package>
+</Wix>

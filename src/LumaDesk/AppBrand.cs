@@ -6,5 +6,5 @@ namespace LumaDesk;
 internal static class AppBrand
 {
     public const string Name = "LumaDesk";
-    public const string Version = "0.4.0";
+    public static string Version => typeof(AppBrand).Assembly.GetName().Version!.ToString(3);
 }

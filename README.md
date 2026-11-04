@@ -2,84 +2,74 @@
 
 简体中文 · [English](README.en.md)
 
-开源 Windows 显示管理工具，采用独立的 Windows 11 风格界面。常用控制直接在托盘快捷面板完成，无需跳转 Windows 设置。
+**在托盘里，管好你的每一块屏幕。**
 
-![LumaDesk 快捷面板](docs/images/quick-panel.png)
+LumaDesk 是一个开源 Windows 显示管理工具。调亮度、改缩放、切换屏幕配置，打开一个小面板就够了。
 
-## 功能
+[下载预览版](https://github.com/Thweki/LumaDesk/releases) · [反馈问题](https://github.com/Thweki/LumaDesk/issues) · [构建状态](https://github.com/Thweki/LumaDesk/actions/workflows/build.yml)
 
-- **紧凑面板**：圆角、Windows 11 Desktop Acrylic 磨砂背景，点击外部或按 Escape 关闭。系统关闭透明效果或接口不可用时回退实色。
-- **直觉选屏**：按实际排列点选屏幕，不显示编号、型号或方位文字；“定位”短暂标出对应屏幕。亮度与缩放常驻，“更多设置”展开其他控制，切屏保留展开状态。
-- **多屏亮度联调**：进入“联调亮度”后可勾选多个屏幕或全选，只提供亮度调节；不会影响未勾选的同步组成员。选择本身不改亮度，“完成”恢复单屏控制。
-- **稳定定位**：缩放变化后保持原屏幕右下角停靠，使用实际工作区坐标；高缩放时自动限制面板大小，避免越出屏幕。
-- **实时调整**：亮度和 HiDPI 在拖动中提交，慢请求串行处理并只保留最新目标；缩放不再等待松手，也不在每个档位重新扫描全部 DDC 硬件。
-- **组合亮度**：背光与软件调暗衔接；独立背光和调暗子滑块保留在更多选项中。没有背光接口的屏幕使用软件调暗。
-- **逐屏控制**：分辨率、刷新率、旋转、DDC/CI 对比度与音量，按设备能力启用。
-- **HDR/ICC**：应用内切换 HDR，查看颜色状态，导入 ICC/ICM，分别设置 SDR/HDR 默认配置，恢复系统配置。
-- **屏幕排列**：拖动、边缘吸附、像素坐标、主屏选择、横向/纵向排列、扩展/复制桌面。
-- **虚拟屏幕**：应用内下载和安装官方签名的 VirtualDrivers 驱动，管理 0–8 台屏幕。归零停用驱动，再次添加时启用。
-- **场景预设**：保存亮度、输出模式、旋转、缩放、可读取的 HDR/ICC 状态和排列，一键切换，可撤销上次切换。旧亮度预设继续可用。
-- **多屏日常操作**：按组同步亮度，默认用快捷键调整鼠标所在屏幕；显示亮度提示，可自定义按键。
-- **恢复与自动化**：重连或唤醒后恢复在本应用调整过的亮度；可选连接指定屏幕、定时或电源变化时应用预设。
-- **输入源与收藏**：在更多选项中切换显示器报告支持的 HDMI/DP 等输入源，收藏常用显示模式。
-- **输入源兼容**：识别部分显示器报告列表与实际编码不一致的情况；切换后读回确认，未生效或连接中断时分别提示，不把命令发送当作切换成功。
-- **简洁面板**：屏幕重命名、排序、隐藏缩放滑块、固定面板；浅色/深色默认跟随系统。
-- **日常工具**：开机自启、画中画、EDID 和诊断导出；画中画可裁剪预览区域和选择帧率，捕获移至后台。
-- **五种语言**：简体中文、繁体中文、英文、日文、韩文。默认跟随 Windows 显示语言，其他语言回退英文；应用设置中可手动选择，重启后生效。
-- **黑白光环图标**：应用使用新版扁平 Logo，托盘图标随 Windows 任务栏主题切换黑白；ICO 包含 16–256 像素的九种尺寸。
+## 看看它怎么用
 
-## 使用
+按屏幕的位置点选，展开更多设置，再把几块屏幕的亮度一起调好。
 
-从 [Releases](https://github.com/Thweki/LumaDesk/releases) 下载 x64 便携版，解压运行 `LumaDesk.exe`。自带 .NET 运行时。
+![选屏、展开设置与多屏亮度联调演示](docs/images/quick-demo.gif)
 
-1. 单击托盘图标打开快捷面板；双击打开完整设置。
-2. 拖动亮度或 HiDPI 立即调整；右移 HiDPI 滑块增加桌面空间。
-3. 展开设备底部箭头，使用模式、刷新率、音量、子滑块和“色彩与 HDR”。
-4. 底部“排列”“虚拟屏幕”打开应用内管理窗口。
-5. “设置 → 应用 → 开机自启”控制当前用户登录后的托盘启动，默认关闭。
-6. “设置 → 应用 → 界面语言”选择语言，重新启动 LumaDesk 后生效；Windows 的数字和日期格式保持原设置。
+*动图由实际 WPF 界面生成，使用示例屏幕和模拟亮度回调，不代表硬件响应速度。*
 
-安装虚拟驱动、启停驱动或首次安装系统级 ICC 文件时，Windows 可能要求管理员授权。普通显示控制不要求管理员权限。
+<p>
+  <img src="docs/images/quick-panel.png" width="360" alt="LumaDesk 快捷面板">
+  <img src="docs/images/quick-panel-dark.png" width="360" alt="LumaDesk 深色快捷面板">
+</p>
 
-`Ctrl+Alt+↑/↓` 默认调整鼠标所在屏幕的组合亮度，`Ctrl+Alt+0` 移除软件调暗。在键盘设置中可更换按键、目标屏幕或关闭。
+## 平时用得上的功能
 
-预设只需“保存当前设置”和“应用”。定时、电源触发、重连应用完整预设默认关闭，放在预设的“更多选项”中；不启用它们也能正常使用。亮度自动恢复只针对在本应用调整过的屏幕，可在应用设置中关闭。设备缺席时跳过，整套屏幕或模式不匹配时保留现有排列。详情见[预设与自动化](docs/workflows.md)。
+- **亮度顺手调**：背光与软件调暗衔接，支持单屏、多选联调和分组同步。
+- **每块屏幕单独管**：缩放、分辨率、刷新率、旋转，以及设备支持的输入源、音量和对比度。
+- **把桌面摆好**：拖动排列、设置主屏、扩展或复制桌面；保存成预设，下次一键切换。
+- **更多显示工具**：HDR 开关、ICC 配置、虚拟屏幕和画中画。
+- **融入日常使用**：快捷键、可选开机自启、深浅主题，支持简繁中文、英文、日文和韩文。
 
-设置和日志位于 `%LOCALAPPDATA%\LumaDesk`。不收集遥测；只有主动安装虚拟驱动时下载固定版本官方包。
+![完整设置界面](docs/images/settings.png)
 
-## 平台与边界
+## 下载与上手
 
-- 面向 Windows 10/11 x64；Acrylic 需要 Windows 11 22H2 及以后，现代 HDR/ICC 接口依赖系统和驱动版本。不可用功能在应用内说明原因。
-- HiDPI 使用 Windows 每屏 DPI 重绘，保持当前输出像素。它不是全桌面 2× 超采样/降采样；部分旧应用仍可能模糊。
-- DDC 响应速度取决于显示器固件、接口和线缆。应用合并过时请求、按屏幕排队并并发探测，不能消除硬件自身延迟。
-- 组合亮度 20–100% 对应硬件 0–100%；0–20% 衔接最多 85% 软件调暗。0% 是最低亮度，不是关机。比例不是实测尼特。
-- 颜色管理目前为逐屏 ICC 关联与 HDR 开关，不包含 3D LUT、硬件色温/校准或 HDR SDR 白点写入。
-- 虚拟屏幕依赖独立签名驱动与 Microsoft Visual C++ x64 运行库；创建虚拟屏幕不等于把实体屏幕改成超采样输出。
-- 包含模式/缩放回读、失败恢复和恢复进程。成功提交后不自动撤销，不能保证驱动崩溃或断电时恢复。
+适用于 **Windows 10 / 11 x64**，自带 .NET 运行时。到 [Releases](https://github.com/Thweki/LumaDesk/releases) 选择一种下载：
 
-**当前是早期版本，自动化测试通过不等于所有硬件写入已验证。** 已验证三屏只读枚举、HDR/ICC 查询、完整排列 `SDC_VALIDATE`、UI 事件及模拟控制回调；未实际修改模式、DPI、HDR、ICC，或安装虚拟驱动。见[验证记录](docs/validation.md)。
+| 文件 | 适合你，如果…… |
+| --- | --- |
+| `LumaDesk-版本-win-x64.exe` | 想直接运行，免安装 |
+| `LumaDesk-版本-portable-win-x64.zip` | 想保留完整说明和许可文件，解压即用 |
+| `LumaDesk-版本-win-x64.msi` | 想安装到 Program Files，并从开始菜单打开（需要管理员权限） |
 
-## 构建和测试
+1. 运行 `LumaDesk.exe`，单击托盘图标打开快捷面板，双击打开设置。
+2. 在顶部点选屏幕，拖动亮度或 HiDPI 滑块；多屏一起调时，点击“联调亮度”。
+3. 想保留当前配置，到“设置 → 预设”保存。开机自启和界面语言在“设置 → 应用”里。
 
-需要 Windows 与 .NET 8 SDK。
+默认快捷键：`Ctrl+Alt+↑ / ↓` 调整鼠标所在屏幕的亮度，`Ctrl+Alt+0` 移除软件调暗。
+
+三个版本都把设置保存在 `%LOCALAPPDATA%\LumaDesk`；“便携版”指免安装，不会把设置写在程序旁。应用不收集遥测，虚拟驱动只在主动安装时下载。安装驱动或首次导入系统级 ICC 时，可能需要管理员授权。
+
+## 下载前知道这些就够了
+
+- HiDPI 使用 Windows 每屏缩放，不是全桌面超采样；部分旧应用仍可能模糊。
+- DDC/CI、HDR、ICC 和输入源控制取决于显示器、连接方式及驱动；磨砂效果需要 Windows 11 22H2 或更新版本。
+- 虚拟屏幕依赖单独安装的 [VirtualDrivers 驱动](https://github.com/VirtualDrivers/Virtual-Display-Driver)。
+- 目前仍是预览版，硬件兼容性在持续验证。遇到问题欢迎附上显示器型号和连接方式：[验证记录](docs/validation.md)。
+
+## 自己构建
+
+需要 Windows 和 .NET 8 SDK。
 
 ```powershell
-.\build.ps1 -Portable  # 自包含单文件 x64 便携版
-.\test.ps1             # 规则、颜色、虚拟驱动和 WPF 集成测试
+.\build.ps1 -Portable  # 构建自包含 EXE
+.\test.ps1             # 完整测试，需要交互式桌面
+.\package.ps1          # 生成 EXE、便携 ZIP、MSI 和 SHA256SUMS.txt
 ```
 
-输出：`artifacts/LumaDesk-win-x64/LumaDesk.exe`。UI 测试需要交互式桌面和活动显示器，使用隔离目录，不发送真实调整命令。CI 运行不依赖桌面的检查并构建发行包。
+构建输出在 `artifacts/LumaDesk-win-x64/`，发行文件在 `artifacts/release/`。GitHub Actions 对提交和 PR 运行无桌面测试、打包和安装检查；推送版本标签后自动发布。见[发布说明](docs/releasing.md)。
 
-```powershell
-.\artifacts\LumaDesk-win-x64\LumaDesk.exe --diagnostics .\diagnostics.json
-```
+进一步了解：[预设与自动化](docs/workflows.md) · [HDR / ICC](docs/color-hdr.md) · [屏幕排列](docs/display-layout.md) · [虚拟屏幕](docs/virtual-displays.md) · [添加翻译](docs/localization.md)
 
-实现说明：[HDR/ICC](docs/color-hdr.md) · [屏幕排列](docs/display-layout.md) · [虚拟显示驱动](docs/virtual-displays.md)。
+## 开源许可
 
-## 许可证
-
-从 **0.4.0** 起，项目代码、翻译、构建工具和图标采用 [GPL-3.0-only](LICENSE)。0.3.1 及更早版本仍保留发布时的 MIT 授权。本次协议变更不追溯替换旧版本许可，见 [NOTICE](NOTICE)。
-
-虚拟驱动来自 [VirtualDrivers](https://github.com/VirtualDrivers/Virtual-Display-Driver)，采用[上游 MIT](docs/third-party/Virtual-Display-Driver-LICENSE.txt)；驱动不嵌入应用，仅在点击安装后下载并验证。其他第三方组件保留各自许可。
-
-对应源码、语言资源和图标构建工具随版本标签公开。添加翻译见[多语言说明](docs/localization.md)。
+0.4.0 起使用 [GPL-3.0-only](LICENSE)，0.3.1 及更早版本保留原 MIT 许可。第三方组件按各自许可分发，见 [NOTICE](NOTICE)。
