@@ -14,8 +14,6 @@ Pick a screen by its position, open more settings, then adjust several screens t
 
 ![Screen selection, more settings and linked brightness](docs/images/quick-demo-en.gif)
 
-*Rendered from the actual WPF interface with sample displays and simulated brightness callbacks. This does not show hardware response times.*
-
 <p>
   <img src="docs/images/quick-panel-en.png" width="360" alt="LumaDesk quick panel">
   <img src="docs/images/quick-panel-dark-en.png" width="360" alt="LumaDesk dark quick panel">

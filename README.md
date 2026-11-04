@@ -14,8 +14,6 @@ LumaDesk 是一个开源 Windows 显示管理工具。调亮度、改缩放、�
 
 ![选屏、展开设置与多屏亮度联调演示](docs/images/quick-demo.gif)
 
-*动图由实际 WPF 界面生成，使用示例屏幕和模拟亮度回调，不代表硬件响应速度。*
-
 <p>
   <img src="docs/images/quick-panel.png" width="360" alt="LumaDesk 快捷面板">
   <img src="docs/images/quick-panel-dark.png" width="360" alt="LumaDesk 深色快捷面板">
