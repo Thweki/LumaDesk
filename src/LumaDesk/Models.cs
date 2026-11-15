@@ -96,6 +96,7 @@ public sealed class PresetDisplay
     public int? Dpi { get; set; }
     public bool? Hdr { get; set; }
     public bool? UserProfiles { get; set; }
+    // null is unspecified (legacy/unavailable); "" captures an absent default.
     public string? SdrProfile { get; set; }
     public string? HdrProfile { get; set; }
     public int? X { get; set; }

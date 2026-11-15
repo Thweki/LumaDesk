@@ -10,19 +10,21 @@ using System.Windows.Threading;
 
 namespace LumaDesk;
 
-// Keep one monitor anchor for the lifetime of the popup. WPF's global WorkArea
+// Keep a monitor anchor until explicitly moved or disconnected. WPF's global WorkArea
 // uses system-DPI logical coordinates; it cannot be used as per-monitor Left/Top.
 internal sealed class PopupPlacement
 {
     private readonly Window window;
     private readonly Func<double> desiredHeight;
+    private readonly Func<string?, Native.MonitorInfo?> readMonitor;
     private HwndSource? source;
     private string? monitorDevice;
     private bool queued, closed, positioning;
 
-    internal PopupPlacement(Window window, Func<double> desiredHeight)
+    internal PopupPlacement(Window window, Func<double> desiredHeight, Func<string?, Native.MonitorInfo?>? readMonitor = null)
     {
         this.window = window; this.desiredHeight = desiredHeight;
+        this.readMonitor = readMonitor ?? ReadMonitor;
         window.SourceInitialized += (_, _) =>
         {
             source = HwndSource.FromHwnd(new WindowInteropHelper(window).Handle);
@@ -33,6 +35,16 @@ internal sealed class PopupPlacement
         window.SizeChanged += (_, _) => Schedule();
         window.LocationChanged += (_, _) => Schedule();
         window.Closed += (_, _) => { closed = true; source?.RemoveHook(Hook); source = null; };
+    }
+
+    internal bool MoveToMonitor(string device)
+    {
+        // A stale selection must not silently move the panel to another screen.
+        if (closed || source == null || !window.IsVisible || string.IsNullOrWhiteSpace(device) || readMonitor(device) is not { } monitor)
+            return false;
+        monitorDevice = monitor.Device;
+        Position();
+        return true;
     }
 
     private IntPtr Hook(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -78,20 +90,30 @@ internal sealed class PopupPlacement
 
     private Native.MonitorInfo? ReadAnchor()
     {
+        var monitor = monitorDevice == null ? null : readMonitor(monitorDevice);
+        if (monitor != null) return monitor;
+        // Use the notification-area taskbar on first open (or if its monitor was removed).
+        var fallback = readMonitor(null);
+        if (fallback != null) monitorDevice = fallback.Value.Device;
+        return fallback;
+    }
+
+    private static Native.MonitorInfo? ReadMonitor(string? device)
+    {
         Native.MonitorInfo? found = null;
-        if (monitorDevice != null)
+        if (device != null)
+        {
             Native.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr handle, IntPtr dc, ref Native.Rect rect, IntPtr data) =>
             {
                 var info = new Native.MonitorInfo { Size = Marshal.SizeOf<Native.MonitorInfo>() };
-                if (Native.GetMonitorInfo(handle, ref info) && info.Device == monitorDevice) { found = info; return false; }
+                if (Native.GetMonitorInfo(handle, ref info) && string.Equals(info.Device, device, StringComparison.OrdinalIgnoreCase)) { found = info; return false; }
                 return true;
             }, IntPtr.Zero);
-        if (found != null) return found;
-        // Use the notification-area taskbar on first open (or if its monitor was removed).
+            return found;
+        }
         var monitor = Native.MonitorFromWindow(Native.FindWindow("Shell_TrayWnd", null), 1);
         var fallback = new Native.MonitorInfo { Size = Marshal.SizeOf<Native.MonitorInfo>() };
         if (!Native.GetMonitorInfo(monitor, ref fallback)) return null;
-        monitorDevice = fallback.Device;
         return fallback;
     }
 
