@@ -115,6 +115,7 @@ internal static partial class Program
                 Snapshot(quick, "quick-panel.png"); quick.Close();
                 TestKeepAwake(window);
                 await TestQuickPlacementAsync(window);
+                await TestFocusDisplayAsync(window);
                 await TestQuickDisplayPickerAsync(window);
                 await TestMultiBrightnessAsync(window);
                 await TestBrightnessStepsFixtureAsync(window);
