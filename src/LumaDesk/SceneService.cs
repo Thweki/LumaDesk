@@ -30,6 +30,9 @@ internal static class SceneService
 {
     internal const int MaxNameLength = 40;
 
+    internal static bool MatchesName(Preset preset, string? query) =>
+        preset.Name.Contains(query?.Trim() ?? "", StringComparison.OrdinalIgnoreCase);
+
     // Metadata only: keep the same object so registered shortcuts still target it.
     internal static void Rename(IReadOnlyCollection<Preset> presets, Preset scene, string name)
     {
@@ -40,6 +43,8 @@ internal static class SceneService
         if (presets.Any(p => p != scene && p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException(L.T("s1f09d8e896"));
         scene.Name = name;
+    }
+
     internal static bool Move(List<Preset> presets, Preset preset, int direction)
     {
         if (direction is not (-1 or 1)) return false;

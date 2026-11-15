@@ -15,6 +15,7 @@ public partial class MainWindow
     private bool sceneBusy;
     private Preset? undoScene;
     private string sceneReport = "";
+    private string sceneSearch = "";
     private sealed class SceneBackend : ISceneBackend
     {
         private readonly MainWindow owner;
@@ -204,12 +205,28 @@ public partial class MainWindow
         if (sceneDraft != null) PageContent.Children.Add(Ui.Card(CreateSceneDraftEditor(sceneDraft)));
         if (undoScene != null) PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.previous")), Ui.Button(L.T("scene.undo"), () => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); })))));
         if (!string.IsNullOrEmpty(sceneReport)) PageContent.Children.Add(Ui.Card(new Expander { Header = L.T("scene.details"), Content = Ui.Text(sceneReport, 12) }));
+        var search = new TextBox { Text = sceneSearch, MinWidth = 180 };
+        System.Windows.Automation.AutomationProperties.SetName(search, L.T("scene.search"));
+        var clear = Ui.Button(L.T("scene.clearSearch"), () => { search.Clear(); search.Focus(); });
+        var count = Ui.Text("", 11);
+        count.Margin = new Thickness(0, 5, 0, 0);
+        var searchPanel = new StackPanel();
+        searchPanel.Children.Add(new Label { Content = L.T("scene.search"), Target = search });
+        searchPanel.Children.Add(Ui.Row(search, clear));
+        searchPanel.Children.Add(count);
+        PageContent.Children.Add(Ui.Card(searchPanel));
+        var emptyMessage = Ui.Text(L.T("scene.noSearchResults"));
+        emptyMessage.TextWrapping = TextWrapping.Wrap;
+        var noMatches = Ui.Card(emptyMessage);
+        PageContent.Children.Add(noMatches);
+        var cards = new List<(Preset Scene, Border Card, StackPanel Order)>();
         if (Preferences.Presets.Count == 0) PageContent.Children.Add(Ui.Card(Ui.Labels(L.T("s502f445e9e"), L.T("scene.empty"))));
         foreach (var scene in Preferences.Presets.ToArray())
         {
             var card = new StackPanel();
             card.Children.Add(Ui.Row(Ui.Labels(scene.Name, L.F("sb91b8e2562", scene.Displays.Count)), Ui.Button(L.T("s63c73c4730"), () => _ = RunAsync(async () => await ApplySceneAsync(scene)), true)));
-            card.Children.Add(CreateSceneOrderControls(scene));
+            var order = CreateSceneOrderControls(scene);
+            card.Children.Add(order);
             var details = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
             var rename = new TextBox { Text = scene.Name, MaxLength = SceneService.MaxNameLength };
             System.Windows.Automation.AutomationProperties.SetName(rename, L.T("s2c09021a16"));
@@ -229,7 +246,29 @@ public partial class MainWindow
             var delete = Ui.Button(L.T("s2f9daa8289"), () => { Preferences.Presets.Remove(scene); Save(); ConfigureHotkeys(); Render(); quick?.Render(); });
             delete.Margin = new Thickness(0, 12, 0, 0); details.Children.Add(delete);
             card.Children.Add(new Expander { Header = L.T("scene.more"), Content = details, Margin = new Thickness(0, 10, 0, 0) });
-            PageContent.Children.Add(Ui.Card(card));
+            var container = Ui.Card(card);
+            cards.Add((scene, container, order));
+            PageContent.Children.Add(container);
         }
+        void Filter()
+        {
+            sceneSearch = search.Text;
+            bool filtering = !string.IsNullOrWhiteSpace(sceneSearch);
+            int matches = 0;
+            foreach (var entry in cards)
+            {
+                bool match = SceneService.MatchesName(entry.Scene, sceneSearch);
+                entry.Card.Visibility = match ? Visibility.Visible : Visibility.Collapsed;
+                // Reordering across hidden neighbors would be surprising.
+                entry.Order.Visibility = filtering ? Visibility.Collapsed : Visibility.Visible;
+                if (match) matches++;
+            }
+            count.Text = L.F("scene.searchCount", matches, cards.Count);
+            clear.IsEnabled = sceneSearch.Length > 0;
+            noMatches.Visibility = matches == 0 && cards.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+        // Change visibility in place so typing retains focus and unsaved card edits.
+        search.TextChanged += (_, _) => Filter();
+        Filter();
     }
 }

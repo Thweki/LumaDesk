@@ -33,6 +33,12 @@ On the **Presets** page, expand **More options** for an existing preset, enter a
 
 On the **Presets** page, use **Move up** or **Move down** on a preset card to put frequently used presets first. The order is saved immediately, survives restarts, and also appears in the tray preset menu. Reordering does not capture or apply display settings or change preset IDs, saved values, shortcuts, or trigger settings. Existing automation still selects the first matching preset in list order when multiple rules match. No experimental flag is required.
 
+## 搜索预设 / Search presets
+
+在设置的“预设”页，在“按名称搜索预设”中输入名称的一部分即可即时筛选。搜索不区分大小写，会忽略首尾空白，并保留已保存的顺序。“清除搜索”恢复完整列表。搜索不会修改已保存的预设、应用显示设置或丢失卡片中尚未提交的编辑。筛选期间隐藏排序按钮，清除搜索后可继续排序。搜索词在本次会话中切换页面后保留，退出后不保存。
+
+In **Settings → Presets**, type part of a name into **Search presets by name**. Results update as you type, ignore case and surrounding whitespace, and keep the saved order. The result count and an empty-result message help you narrow the list; **Clear search** restores all presets. Search only matches preset names and treats punctuation literally. Filtering preserves unsaved card edits and does not change saved presets or apply display settings. Reorder controls are hidden during a search; clear it to reorder. The query survives page navigation for this session and is not saved on exit. The tray menu continues to show all presets. No experimental flag is required.
+
 ## 可选自动化
 
 预设可设置每天的时间（本机 24 小时制）或接通电源/使用电池触发。应用运行期间约每 20 秒检查一次；休眠错过的最近一次时间可在恢复后触发，不补跑历史任务。同一轮多个预设命中时只应用列表中第一个匹配屏幕集合的预设。
