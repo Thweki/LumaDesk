@@ -164,6 +164,33 @@ public partial class MainWindow
         Render(); quick?.Render(); Status(L.T("sa0d6e1ed82"));
     }
 
+    private StackPanel CreateSceneOrderControls(Preset scene)
+    {
+        int index = Preferences.Presets.IndexOf(scene);
+        var controls = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
+        var up = Ui.Button(L.T("panel.up"), () => MoveScene(scene, -1));
+        var down = Ui.Button(L.T("panel.down"), () => MoveScene(scene, 1));
+        up.IsEnabled = index > 0 && !sceneBusy;
+        down.IsEnabled = index >= 0 && index < Preferences.Presets.Count - 1 && !sceneBusy;
+        System.Windows.Automation.AutomationProperties.SetName(up, scene.Name + ": " + L.T("panel.up"));
+        System.Windows.Automation.AutomationProperties.SetName(down, scene.Name + ": " + L.T("panel.down"));
+        controls.Children.Add(up); controls.Children.Add(down);
+        return controls;
+    }
+
+    private void MoveScene(Preset scene, int direction)
+    {
+        if (sceneBusy || !SceneService.Move(Preferences.Presets, scene, direction)) return;
+        try { Storage.Save(Preferences); }
+        catch (Exception ex)
+        {
+            SceneService.Move(Preferences.Presets, scene, -direction);
+            Status(L.T("s888403f2f3") + ex.Message, true);
+            return;
+        }
+        Render(); quick?.Render(); Status(L.T("sa0d6e1ed82"));
+    }
+
     private void RenderScenes()
     {
         Heading(L.T("s0b2fca3986"), L.T("scene.description"));
@@ -178,6 +205,7 @@ public partial class MainWindow
         {
             var card = new StackPanel();
             card.Children.Add(Ui.Row(Ui.Labels(scene.Name, L.F("sb91b8e2562", scene.Displays.Count)), Ui.Button(L.T("s63c73c4730"), () => _ = RunAsync(async () => await ApplySceneAsync(scene)), true)));
+            card.Children.Add(CreateSceneOrderControls(scene));
             var details = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
             var rename = new TextBox { Text = scene.Name, MaxLength = 40 };
             details.Children.Add(Ui.Row(rename, Ui.Button(L.T("scene.update"), () => _ = RunAsync(() => SaveSceneAsync(rename.Text, scene)))));
