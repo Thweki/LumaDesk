@@ -511,5 +511,11 @@
   "input.unchanged": "螢幕未保持在目標輸入，切換未生效。請檢查目標連接埠訊號或螢幕的自動輸入設定。",
   "input.compatibility": "已啟用此螢幕的相容切換方式。",
   "input.switching": "正在切換並確認…",
-  "input.unverified": "已傳送切換要求，但無法確認目前輸入。請在螢幕上確認。"
+  "input.unverified": "已傳送切換要求，但無法確認目前輸入。請在螢幕上確認。",
+  "night.title": "夜間時段（實驗性）",
+  "night.help": "預設關閉。在本地時間的指定時段內，為每個螢幕套用至少 35% 的軟體調暗，不變更亮度設定。「重設調暗」會暫停本次夜間調暗，直到下個時段或應用程式重新啟動。",
+  "night.start": "開始（HH:mm）",
+  "night.end": "結束（HH:mm）",
+  "night.apply": "套用時段",
+  "night.invalid": "請使用 24 小時制 HH:mm 格式，開始和結束時間不能相同。"
 }

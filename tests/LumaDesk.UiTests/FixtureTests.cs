@@ -55,6 +55,7 @@ internal static partial class Program
                     var owner = new MainWindow();
                     await TestLiveBrightnessFixtureAsync(owner);
                     await TestInputSwitchUiAsync(owner, offscreen: true);
+                    TestNightDimmingFixture(owner);
                     Check(!owner.IsLoaded && new WindowInteropHelper(owner).Handle == IntPtr.Zero && owner.Displays.Count == 0,
                         "Fixture owner never loads a desktop window or discovers displays");
                     Result($"PASS: {checks} desktop-independent WPF fixture checks. No hardware queries or writes.");

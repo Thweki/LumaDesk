@@ -38,7 +38,7 @@ public partial class MainWindow
         lastAutomationTime = DateTime.Now; lastPower = Forms.SystemInformation.PowerStatus.PowerLineStatus;
         preferenceTimer.Tick += (_, _) => { preferenceTimer.Stop(); Save(); };
         automationTimer.Tick += async (_, _) => await TickAutomationAsync();
-        if (!testing) automationTimer.Start();
+        if (!testing) { UpdateNightDimming(DateTime.Now); automationTimer.Start(); }
     }
     private void StopAutomation()
     {
@@ -106,6 +106,7 @@ public partial class MainWindow
     {
         if (sceneBusy || modePending || scanning || restoringConnection || testing) return;
         DateTime now = DateTime.Now;
+        UpdateNightDimming(now);
         var power = Forms.SystemInformation.PowerStatus.PowerLineStatus;
         var scenes = Preferences.Presets.Where(p =>
             AutomationRules.CrossedTime(p.AtTime, lastAutomationTime, now) ||

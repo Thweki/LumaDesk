@@ -511,5 +511,11 @@
   "input.unchanged": "The display did not stay on the requested input. Check its signal and the monitor's automatic input settings.",
   "input.compatibility": "Using this display's compatible input switching method.",
   "input.switching": "Switching and verifying…",
-  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor."
+  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor.",
+  "night.title": "Night window (experimental)",
+  "night.help": "Off by default. During this local-time window, apply at least 35% software shading to every screen. Brightness settings stay unchanged. Reset dimming suspends this night until the next window or app restart.",
+  "night.start": "Start (HH:mm)",
+  "night.end": "End (HH:mm)",
+  "night.apply": "Apply window",
+  "night.invalid": "Use different start and end times in 24-hour HH:mm format."
 }

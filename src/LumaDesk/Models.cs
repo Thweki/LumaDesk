@@ -134,6 +134,9 @@ public sealed class Preferences
     public List<DisplayGroup> Groups { get; set; } = new();
     public Dictionary<string, DisplayPreference> DisplayOptions { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public bool RestoreBrightness { get; set; } = true;
+    public bool ExperimentalNightDimming { get; set; }
+    public string NightDimmingStart { get; set; } = "21:00";
+    public string NightDimmingEnd { get; set; } = "07:00";
     public Dictionary<string, PresetDisplay> RememberedBrightness { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public HotkeyBinding BrightnessUp { get; set; } = new() { Key = 0x26 };
     public HotkeyBinding BrightnessDown { get; set; } = new() { Key = 0x28 };
