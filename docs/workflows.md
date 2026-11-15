@@ -11,6 +11,12 @@
 - 重连/唤醒恢复亮度默认开启，只恢复在本应用调整过的设备。最多尝试三次；手动调整会取代旧恢复目标。更换端口造成设备 ID 变化时不会猜测映射。
 - 自动恢复亮度不等于恢复完整场景。后者需在预设的更多选项中明确开启“连接这些屏幕时使用”，且屏幕集合必须完全匹配。
 
+## 捕获为草稿 / Capture a live setup as a draft
+
+在“预设”页点击“捕获当前配置”，即可读取当前连接屏幕的设置，生成尚未保存的预设草稿。检查屏幕摘要、输入名称，然后点击“保存草稿”或“丢弃草稿”。保存使用捕获时的设置，不会再次读取或应用屏幕设置；之后调整屏幕或断开连接不会改变草稿。草稿仅在本次运行期间保留，切换页面不会丢失，退出应用后丢弃。一次只保留一份草稿；保存失败可重试，自动触发和快捷键默认关闭。
+
+On **Presets**, click **Capture current setup** to read the connected displays into an **Unsaved preset**. Review the screen summary, edit the name, then **Save draft** or **Discard draft**. Capture reads the same settings supported by presets: brightness/dimming, output mode, rotation, scaling, readable HDR/ICC state, primary display and coordinates. Unavailable values remain unspecified. Capture, save and discard do not apply display settings. Saving uses the captured values without another scan, even after screens change or disconnect. Names must contain 1–40 characters and be unique, ignoring case and surrounding whitespace. One draft is kept in memory across page navigation and discarded on exit. Failed saves retain it for retry. Saved drafts start with automatic triggers and shortcuts off. No experimental flag is required.
+
 ## 复制预设 / Duplicate a preset
 
 在“预设”页展开已有预设的“更多选项”，输入“新预设名称”，点击“复制预设”。名称为 1–40 个字符，不能与已有名称重复（不区分大小写）。副本拥有独立 ID，复制已保存的显示设置，无需连接原来的屏幕，也不会读取或应用当前设置。自动触发和快捷键默认关闭，可在副本的更多选项中单独配置；原预设及其自动化保持不变。
@@ -26,6 +32,11 @@ Each click reads a fresh snapshot and shows **current → saved** differences fo
 The comparison does not apply settings, modify presets, or replace the undo snapshot. Unknown readings remain visible as **Unknown**. It is a snapshot, not a driver capability check or a guarantee of successful apply: layout restoration still requires matching screens and valid geometry, and unavailable ICC assignments are not installed. Click again after changing your setup to refresh the report. Applying the preset remains a separate action.
 
 默认关闭。在 **设置 → 应用 → 预设比较（实验性）** 中启用，然后打开预设的 **更多选项 → 与当前设置比较**。每次点击读取当前快照，按“当前 → 已保存”显示亮度、调暗、模式、旋转、缩放、HDR/ICC、位置和主屏差异，并列出未连接或未包含的屏幕。旧预设只比较已保存的项目。无法读取的值显示为“未知”。比较不会应用设置、更改预设或替换撤销快照，也不保证驱动支持或排列能够恢复。更改设置后再次点击可刷新；关闭开关可移除比较控件。
+## 排序预设 / Reorder presets
+
+在“预设”页点击预设卡片上的“上移”或“下移”，即可将常用预设放在前面。顺序会自动保存，重启后保留，托盘预设菜单也使用同一顺序。排序不读取或应用屏幕设置，也不改变预设 ID、显示设置、快捷键或自动触发配置。多个自动化规则同时匹配时，仍按列表顺序选择第一个匹配项。
+
+On the **Presets** page, use **Move up** or **Move down** on a preset card to put frequently used presets first. The order is saved immediately, survives restarts, and also appears in the tray preset menu. Reordering does not capture or apply display settings or change preset IDs, saved values, shortcuts, or trigger settings. Existing automation still selects the first matching preset in list order when multiple rules match. No experimental flag is required.
 
 ## 可选自动化
 
