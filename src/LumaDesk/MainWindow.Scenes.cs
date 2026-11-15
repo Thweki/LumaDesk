@@ -76,6 +76,23 @@ public partial class MainWindow
         }
     }
 
+    private void RenameScene(Preset scene, string name)
+    {
+        string previousName = scene.Name;
+        try
+        {
+            SceneService.Rename(Preferences.Presets, scene, name);
+            Storage.Save(Preferences);
+        }
+        catch (Exception ex)
+        {
+            scene.Name = previousName;
+            Status(ex.Message, true);
+            return;
+        }
+        Render(); quick?.Render(); Status(L.T("scene.renamed"));
+    }
+
     internal async Task<SceneResult?> ApplySceneAsync(Preset preset, bool undo = false)
     {
         if (sceneBusy || modePending || scanning || Service.IsWriting) throw new InvalidOperationException(L.T("s92f637408f"));
@@ -138,7 +155,7 @@ public partial class MainWindow
         Heading(L.T("s0b2fca3986"), L.T("scene.description"));
         string defaultName = L.T("s3cbfca23b6"); int suffix = 2;
         while (Preferences.Presets.Any(p => p.Name == defaultName)) defaultName = L.T("s3cbfca23b6") + " " + suffix++;
-        var name = new TextBox { Text = defaultName, MaxLength = 40, MinWidth = 180 };
+        var name = new TextBox { Text = defaultName, MaxLength = SceneService.MaxNameLength, MinWidth = 180 };
         PageContent.Children.Add(Ui.Card(Ui.Row(name, Ui.Button(L.T("sce211a5a47"), () => _ = RunAsync(() => SaveSceneAsync(name.Text)), true))));
         if (undoScene != null) PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.previous")), Ui.Button(L.T("scene.undo"), () => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); })))));
         if (!string.IsNullOrEmpty(sceneReport)) PageContent.Children.Add(Ui.Card(new Expander { Header = L.T("scene.details"), Content = Ui.Text(sceneReport, 12) }));
@@ -148,8 +165,10 @@ public partial class MainWindow
             var card = new StackPanel();
             card.Children.Add(Ui.Row(Ui.Labels(scene.Name, L.F("sb91b8e2562", scene.Displays.Count)), Ui.Button(L.T("s63c73c4730"), () => _ = RunAsync(async () => await ApplySceneAsync(scene)), true)));
             var details = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
-            var rename = new TextBox { Text = scene.Name, MaxLength = 40 };
-            details.Children.Add(Ui.Row(rename, Ui.Button(L.T("scene.update"), () => _ = RunAsync(() => SaveSceneAsync(rename.Text, scene)))));
+            var rename = new TextBox { Text = scene.Name, MaxLength = SceneService.MaxNameLength };
+            System.Windows.Automation.AutomationProperties.SetName(rename, L.T("s2c09021a16"));
+            details.Children.Add(Ui.Row(rename, Ui.Button(L.T("scene.rename"), () => RenameScene(scene, rename.Text))));
+            details.Children.Add(Ui.Button(L.T("scene.update"), () => _ = RunAsync(() => SaveSceneAsync(rename.Text, scene))));
             details.Children.Add(Ui.Line());
             details.Children.Add(Ui.Row(Ui.Labels(L.T("scene.onConnect"), L.T("scene.onConnectHelp")), Toggle(scene.OnConnect, v =>
             {

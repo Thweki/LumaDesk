@@ -28,6 +28,20 @@ internal sealed class SceneResult
 
 internal static class SceneService
 {
+    internal const int MaxNameLength = 40;
+
+    // Metadata only: keep the same object so registered shortcuts still target it.
+    internal static void Rename(IReadOnlyCollection<Preset> presets, Preset scene, string name)
+    {
+        if (!presets.Contains(scene)) throw new InvalidOperationException(L.T("command.presetMissing"));
+        name = name.Trim();
+        if (name.Length == 0) throw new InvalidOperationException(L.T("s2c09021a16"));
+        if (name.Length > MaxNameLength) throw new InvalidOperationException(L.F("scene.nameTooLong", MaxNameLength));
+        if (presets.Any(p => p != scene && p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException(L.T("s1f09d8e896"));
+        scene.Name = name;
+    }
+
     internal static async Task<Preset> Capture(ISceneBackend backend, string name)
     {
         var scene = new Preset { Name = name };

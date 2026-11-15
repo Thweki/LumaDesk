@@ -2,6 +2,10 @@
 
 日常使用只需要调整屏幕，然后点“保存当前设置”。从托盘面板的“预设”选择名称即可切换。更多选项默认收起，自动触发默认关闭，不需要先配置规则。
 
+在“设置 → 预设 → 更多选项”中编辑名称，然后点击“重命名”，即可只修改名称；不会读取或覆盖已保存的屏幕设置，也不要求连接原来的屏幕。预设 ID、快捷键、自动触发规则和顺序保持不变。名称会去除首尾空白，不能为空，最多 40 个字符，且不能与其他预设重名（不区分大小写）。“用当前设置更新”仍用于重新记录屏幕设置。按名称调用的脚本需使用新名称；按 ID 调用的脚本无需修改。
+
+To rename a preset, open **Settings → Presets → More options**, edit its name, and click **Rename**. No enablement is required. This changes only the name, even with the saved displays disconnected; the ID, shortcut, automation and saved display settings stay intact. Names are trimmed, limited to 40 characters and must be nonempty and unique (case-insensitive). **Update from current setup** still captures display settings. Scripts using a name must use the new name; scripts using the preset ID continue to work.
+
 ## 场景与恢复
 
 - 新预设记录设备 ID、亮度/调暗、输出模式、旋转、DPI、可读取的 HDR/ICC 默认配置、主屏和坐标。旧预设只恢复原有亮度数据，不补写其他设置。
