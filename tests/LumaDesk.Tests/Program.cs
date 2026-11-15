@@ -138,4 +138,5 @@ foreach (var invalid in new[] {
 }
 var snapped = LayoutRules.Snap(layout[0] with { X = -1900, Y = 15 }, new[] { layout[1] }, 30);
 Check(snapped.X == -1920 && snapped.Y == 0, "Dragged screen snaps to neighboring edge and alignment");
+LayoutSwapTests.Run(Check);
 Console.WriteLine($"{tests} tests passed.");
