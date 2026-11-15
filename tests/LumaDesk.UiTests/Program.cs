@@ -113,6 +113,7 @@ internal static partial class Program
                 var quickScroll = Descendants<ScrollViewer>(quick).First();
                 Check(quick.Height < 620 && quickScroll.ScrollableHeight == 0, "Compact selected-screen panel sizes to content without blank height or scrolling");
                 Snapshot(quick, "quick-panel.png"); quick.Close();
+                TestKeepAwake(window);
                 await TestQuickPlacementAsync(window);
                 await TestFocusDisplayAsync(window);
                 await TestQuickDisplayPickerAsync(window);
