@@ -36,6 +36,21 @@ $app = '.\LumaDesk.exe'
 
 已有应用时，命令通过限定当前 Windows 用户及桌面会话的本地命名管道交给应用执行；不会另建调暗覆盖层。未运行时，查询直接读取，修改命令启动托盘应用后再执行。发送命令后不自动重试，避免超时导致重复写入。管道不对网络开放。
 
+## Diagnostic log export / 诊断日志导出
+
+To collect logs for a support report without probing or changing displays:
+
+```powershell
+$process = Start-Process -FilePath '.\LumaDesk.exe' -ArgumentList '--export-log .\lumadesk-logs.zip' -Wait -PassThru
+$process.ExitCode
+```
+
+`--export-log <archive.zip>` creates a new ZIP containing only the available `app.log` and `app.previous.log` from `%LOCALAPPDATA%\LumaDesk` (or `LUMADESK_DATA_DIR` when set). It works with the tray app running or closed and does not start or activate it. Settings, presets and recovery files are excluded. Log text is copied verbatim and can contain device names, file paths and exception details; review the archive before sharing. When the app is running, the export is a best-effort copy while logging and rotation may continue.
+
+The exit code is 0 on success or 1 for invalid arguments, missing logs, an existing destination or a read/write failure. The destination's parent directory must exist. Existing files are never overwritten, and export failures are not appended to the source logs. Unlike the automation commands above, this command writes a ZIP directly, takes no `--output` option and does not return JSON.
+
+此命令将现有的当前和上一份日志导出为新的 ZIP，不探测或更改显示器，也不启动托盘窗口。不包含设置、预设或恢复文件；日志可能包含设备名称、路径和异常详情，分享前请检查。成功返回 0；参数无效、无日志、目标已存在或读写失败时返回 1，不覆盖已有文件。
+
 ## 硬件与性能边界
 
 DDC 调用按设备串行，不同设备的探测及组合亮度同步可并行；实际延迟仍受显卡驱动和显示器限制。慢调用记录耗时。输入源能力仅在展开控件时读取，并缓存五分钟；列表来自能力串，不猜测不存在的 HDMI/DP 端口。参照 [Microsoft 低层显示器配置 API](https://learn.microsoft.com/en-us/windows/win32/monitor/using-the-low-level-monitor-configuration-functions)。输入切换成功返回后可能立即断开当前电脑，故不继续回读或自动重试。
