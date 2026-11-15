@@ -21,7 +21,9 @@ internal sealed class LayoutWindow : Window
     private readonly TextBox xBox = new() { Width = 95 }, yBox = new() { Width = 95 };
     private readonly ComboBox selected = new() { DisplayMemberPath = "Name", Width = 185 };
     private readonly ComboBox primary = new() { DisplayMemberPath = "Name", Width = 185 };
-    private List<ScreenPlacement> placements = new();
+    private readonly LayoutHistory history = new();
+    private IReadOnlyList<ScreenPlacement> placements => history.Current;
+    private readonly Button undoButton, redoButton;
     private List<DisplayInfo> displays = new();
     private bool loading, busy;
     private double scale, offsetX, offsetY;
@@ -42,6 +44,15 @@ internal sealed class LayoutWindow : Window
         arrange.Children.Add(Ui.Button(L.T("se25efd6551"), () => Arrange(false))); var vertical = Ui.Button(L.T("s86d5bec31e"), () => Arrange(true)); vertical.Margin = new Thickness(8, 0, 8, 0); arrange.Children.Add(vertical);
         arrange.Children.Add(Ui.Button(L.T("sdf7392cc96"), () => _ = ExecuteAsync(async () => { await owner.RefreshAsync(); Reload(); })));
         body.Children.Add(arrange);
+        var historyRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 0) };
+        undoButton = Ui.Button(L.T("layout.undo"), () => RestorePreview(false));
+        redoButton = Ui.Button(L.T("layout.redo"), () => RestorePreview(true));
+        redoButton.Margin = new Thickness(8, 0, 0, 0);
+        System.Windows.Automation.AutomationProperties.SetAutomationId(undoButton, "layout-undo");
+        System.Windows.Automation.AutomationProperties.SetAutomationId(redoButton, "layout-redo");
+        historyRow.Children.Add(undoButton); historyRow.Children.Add(redoButton); body.Children.Add(historyRow);
+        CommandBindings.Add(new CommandBinding(ApplicationCommands.Undo, (_, _) => RestorePreview(false), (_, e) => { e.CanExecute = !busy && !canvas.IsMouseCaptureWithin && history.CanUndo; e.Handled = true; }));
+        CommandBindings.Add(new CommandBinding(ApplicationCommands.Redo, (_, _) => RestorePreview(true), (_, e) => { e.CanExecute = !busy && !canvas.IsMouseCaptureWithin && history.CanRedo; e.Handled = true; }));
         var topology = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 12) };
         topology.Children.Add(Ui.Button(L.T("sa60416dbac"), () => _ = TopologyAsync(true))); var clone = Ui.Button(L.T("s99c94fd883"), () => _ = TopologyAsync(false)); clone.Margin = new Thickness(8, 0, 0, 0); topology.Children.Add(clone); body.Children.Add(topology);
         feedback.Margin = new Thickness(0, 7, 0, 14); body.Children.Add(feedback);
@@ -55,7 +66,7 @@ internal sealed class LayoutWindow : Window
         primary.SelectionChanged += (_, _) =>
         {
             if (loading || primary.SelectedItem is not DisplayInfo display) return;
-            placements = placements.Select(p => p with { Primary = p.Id == display.Id }).ToList(); Draw();
+            EditPreview(placements.Select(p => p with { Primary = p.Id == display.Id }));
         };
         canvas.SizeChanged += (_, _) => Draw();
         Closing += (_, e) => { if (busy) e.Cancel = true; };
@@ -64,10 +75,29 @@ internal sealed class LayoutWindow : Window
     private void Reload()
     {
         loading = true; displays = owner.Displays.ToList();
-        placements = displays.Select(d => new ScreenPlacement(d.Id, d.X, d.Y, (int)d.Current.Width, (int)d.Current.Height, d.Primary)).ToList();
+        history.Reset(displays.Select(d => new ScreenPlacement(d.Id, d.X, d.Y, (int)d.Current.Width, (int)d.Current.Height, d.Primary)));
         selected.ItemsSource = displays; selected.SelectedIndex = displays.Count > 0 ? 0 : -1;
         primary.ItemsSource = displays; primary.SelectedItem = displays.FirstOrDefault(d => d.Primary);
-        loading = false; UpdateFields(); Draw();
+        loading = false; RefreshPreview();
+    }
+    private void EditPreview(IEnumerable<ScreenPlacement> next)
+    {
+        history.Edit(next); RefreshPreview();
+    }
+    private void RestorePreview(bool redo)
+    {
+        if (busy || canvas.IsMouseCaptureWithin) return;
+        if (redo) history.Redo(); else history.Undo();
+        RefreshPreview();
+    }
+    private void RefreshPreview()
+    {
+        loading = true;
+        primary.SelectedItem = displays.FirstOrDefault(d => placements.Any(p => p.Id == d.Id && p.Primary));
+        loading = false;
+        undoButton.IsEnabled = history.CanUndo; redoButton.IsEnabled = history.CanRedo;
+        CommandManager.InvalidateRequerySuggested();
+        UpdateFields(); Draw();
     }
     private void UpdateFields()
     {
@@ -80,13 +110,12 @@ internal sealed class LayoutWindow : Window
         if (selected.SelectedItem is not DisplayInfo d) return;
         if (!int.TryParse(xBox.Text, out int x) || !int.TryParse(yBox.Text, out int y) || Math.Abs((long)x) > 65535 || Math.Abs((long)y) > 65535)
         { feedback.Text = L.T("s444a27d2e4"); return; }
-        placements = placements.Select(p => p.Id == d.Id ? p with { X = x, Y = y } : p).ToList(); Draw();
+        EditPreview(placements.Select(p => p.Id == d.Id ? p with { X = x, Y = y } : p));
     }
     private void Arrange(bool vertical)
     {
         int cursor = 0;
-        placements = placements.Select(p => { var next = p with { X = vertical ? 0 : cursor, Y = vertical ? cursor : 0 }; cursor += vertical ? p.Height : p.Width; return next; }).ToList();
-        UpdateFields(); Draw();
+        EditPreview(placements.Select(p => { var next = p with { X = vertical ? 0 : cursor, Y = vertical ? cursor : 0 }; cursor += vertical ? p.Height : p.Width; return next; }));
     }
     private async Task TopologyAsync(bool extend) => await ExecuteAsync(async () =>
     {
@@ -125,7 +154,7 @@ internal sealed class LayoutWindow : Window
                 if (!dragging) return; dragging = false; box.ReleaseMouseCapture(); Point point = e.GetPosition(canvas);
                 var moved = placement with { X = placement.X + (int)Math.Round((point.X - origin.X) / scale), Y = placement.Y + (int)Math.Round((point.Y - origin.Y) / scale) };
                 moved = LayoutRules.Snap(moved, placements, (int)(16 / scale));
-                placements = placements.Select(p => p.Id == moved.Id ? moved : p).ToList(); UpdateFields(); Draw(); e.Handled = true;
+                EditPreview(placements.Select(p => p.Id == moved.Id ? moved : p)); e.Handled = true;
             };
         }
     }
