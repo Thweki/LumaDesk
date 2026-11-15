@@ -188,6 +188,7 @@ foreach (var invalid in new[] { new[] { "--brightness", "A", "101", "--output", 
     bool rejected = false; try { CommandService.Parse(invalid); } catch (ArgumentException) { rejected = true; }
     Check(rejected, "Invalid CLI arguments are rejected before dispatch");
 }
+await CommandPipeTests.Run(Check);
 var service = new DisplayService();
 using (var cancelled = new CancellationTokenSource())
 {
