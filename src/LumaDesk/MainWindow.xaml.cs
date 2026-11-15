@@ -214,6 +214,7 @@ public partial class MainWindow : Window
             var selected = display.Modes.First(m => m.Resolution == (string?)resolution.SelectedItem && m.Frequency == (uint)refresh.SelectedItem);
             await ChangeModeAsync(display, selected, (uint)orientation.SelectedIndex);
         }), true))); PageContent.Children.Add(Ui.Card(mode));
+        if (CreateRefreshTimingControls(display) is UIElement timing) PageContent.Children.Add(Ui.Card(timing));
         var extras = new StackPanel(); extras.Children.Add(Ui.Row(Ui.Labels(L.T("s850875a753"), Help(L.T("sce70a24e69"))), Ui.Button(L.T("s86227fc6df"), () => OpenPip(display)))); extras.Children.Add(Ui.Line());
         extras.Children.Add(CreateColorControls(display)); extras.Children.Add(Ui.Line());
         if (CreateScanModeControls(display) is { } scanModes) { extras.Children.Add(scanModes); extras.Children.Add(Ui.Line()); }

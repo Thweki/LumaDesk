@@ -120,6 +120,7 @@ internal static partial class Program
                 await TestBrightnessStepsFixtureAsync(window);
                 await TestInputSwitchUiAsync(window);
                 await TestScanModeFixtureAsync(window);
+                await TestRefreshTimingUiAsync(window);
                 await TestQuickDpiAsync(window);
                 await TestQuickModesAsync(window);
                 if (window.Displays.Count > 1)

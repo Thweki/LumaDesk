@@ -535,5 +535,15 @@
   "scan.disabled": "Scan mode control is disabled.",
   "scan.unavailable": "This display does not report readable, selectable scan modes over DDC/CI.",
   "scan.unverified": "The scan mode change could not be verified. Refresh to read the actual mode; check the monitor menu if needed.",
-  "scan.confirmed": "Scan mode confirmed by the monitor."
+  "scan.confirmed": "Scan mode confirmed by the monitor.",
+  "timing.title": "Refresh timing (experimental)",
+  "timing.disabled": "Refresh timing inspection is disabled.",
+  "timing.ambiguous": "This display has no unique active path. Refresh the display list; mirrored displays cannot be inspected separately.",
+  "timing.failed": "Could not read refresh timing: {0}",
+  "timing.hz": "{0:0.###} Hz",
+  "timing.rates": "Desktop rate: {0}\nSignal rate: {1}",
+  "timing.on": "Windows Dynamic Refresh Rate (DRR): enabled",
+  "timing.off": "Windows Dynamic Refresh Rate (DRR): disabled",
+  "timing.unknown": "Windows Dynamic Refresh Rate (DRR): not reported",
+  "timing.help": "Read-only snapshot of configured rates, not live FPS. DRR automatically boosts desktop refresh rate. Gaming VRR / Adaptive-Sync support and activity are not reported by this inspector; DRR disabled does not mean VRR is unsupported."
 }

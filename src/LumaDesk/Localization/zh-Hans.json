@@ -535,5 +535,15 @@
   "scan.disabled": "扫描模式控制未启用。",
   "scan.unavailable": "此显示器未通过 DDC/CI 报告可读取、可选择的扫描模式。",
   "scan.unverified": "无法验证扫描模式更改。请刷新以读取实际模式；必要时检查显示器菜单。",
-  "scan.confirmed": "显示器已确认扫描模式。"
+  "scan.confirmed": "显示器已确认扫描模式。",
+  "timing.title": "刷新时序（实验性）",
+  "timing.disabled": "刷新时序检查已禁用。",
+  "timing.ambiguous": "此显示器没有唯一的活动路径。请刷新显示器列表；无法单独检查镜像显示器。",
+  "timing.failed": "无法读取刷新时序：{0}",
+  "timing.hz": "{0:0.###} Hz",
+  "timing.rates": "桌面刷新率：{0}\n信号刷新率：{1}",
+  "timing.on": "Windows 动态刷新率（DRR）：已启用",
+  "timing.off": "Windows 动态刷新率（DRR）：已禁用",
+  "timing.unknown": "Windows 动态刷新率（DRR）：未报告",
+  "timing.help": "只读查看配置的刷新率，并非实时帧率。DRR 会自动提升桌面刷新率。此检查器不报告游戏 VRR / Adaptive-Sync 的支持情况或活动状态；DRR 已禁用不代表不支持 VRR。"
 }
