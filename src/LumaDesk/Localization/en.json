@@ -525,5 +525,15 @@
   "input.switching": "Switching and verifying…",
   "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor.",
   "quick.showList": "Show display list",
-  "quick.showMap": "Show display map"
+  "quick.showMap": "Show display map",
+  "timing.title": "Refresh timing (experimental)",
+  "timing.disabled": "Refresh timing inspection is disabled.",
+  "timing.ambiguous": "This display has no unique active path. Refresh the display list; mirrored displays cannot be inspected separately.",
+  "timing.failed": "Could not read refresh timing: {0}",
+  "timing.hz": "{0:0.###} Hz",
+  "timing.rates": "Desktop rate: {0}\nSignal rate: {1}",
+  "timing.on": "Windows Dynamic Refresh Rate (DRR): enabled",
+  "timing.off": "Windows Dynamic Refresh Rate (DRR): disabled",
+  "timing.unknown": "Windows Dynamic Refresh Rate (DRR): not reported",
+  "timing.help": "Read-only snapshot of configured rates, not live FPS. DRR automatically boosts desktop refresh rate. Gaming VRR / Adaptive-Sync support and activity are not reported by this inspector; DRR disabled does not mean VRR is unsupported."
 }
