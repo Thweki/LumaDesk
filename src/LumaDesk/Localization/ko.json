@@ -471,6 +471,7 @@
   "scene.previous": "전환 전 설정",
   "scene.scale": "배율",
   "scene.undo": "마지막 전환 실행 취소",
+  "scene.undoOutput": "마지막 디스플레이 조정 실행 취소",
   "scene.unsupported": "이 장치에서 사용할 수 없는 설정입니다",
   "scene.captureDraft": "현재 구성 캡처",
   "scene.draftTitle": "저장하지 않은 프리셋",

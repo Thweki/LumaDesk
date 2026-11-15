@@ -74,6 +74,7 @@ public partial class MainWindow
         {
             var info = await Task.Run(() => DpiService.Read(display)); DpiRules.ToRelative(info, percent);
             if (info.CurrentPercent == percent) { display.DpiScale = info; return; }
+            var before = sceneBusy ? null : SceneService.CaptureScale(display, info.CurrentPercent);
             var original = DisplayService.CurrentMode(display.Device);
             var recovery = await Task.Run(() => DpiRecovery.Prepare(display, info.CurrentPercent));
             lease = await Task.Run(() => new ModeLease(() => DpiService.Set(display, percent), () => DpiService.Set(display, info.CurrentPercent), () => File.Delete(recovery)));
@@ -83,6 +84,7 @@ public partial class MainWindow
             // DPI changes are committed after successful readback, matching the quick-menu
             // interaction. Hardware mode switching has a separate safety confirmation.
             lease.Keep();
+            if (before != null) UndoHistory.Remember(before, outputOnly: true);
         }
         finally
         {

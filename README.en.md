@@ -24,6 +24,7 @@ Pick a screen by its position, open more settings, then adjust several screens t
 - **Get brightness right:** combine backlight control and software dimming, adjust one screen, select several or sync a group.
 - **Control each screen:** scaling, resolution, refresh rate and rotation, plus inputs, volume and contrast where supported.
 - **Keep your setup handy:** arrange displays, choose the main screen, extend or mirror, and save setups as one-click presets.
+- **Take back an adjustment:** undo the last applied preset, resolution, refresh rate, rotation or scaling change from the Presets menu.
 - **Go a little further:** HDR, ICC profiles, virtual displays and picture in picture.
 - **Make it yours:** keyboard shortcuts, optional startup, light/dark themes, and Simplified Chinese, Traditional Chinese, English, Japanese and Korean.
 

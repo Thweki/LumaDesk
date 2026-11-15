@@ -471,6 +471,7 @@
   "scene.previous": "切換前的設定",
   "scene.scale": "縮放",
   "scene.undo": "復原上次切換",
+  "scene.undoOutput": "復原上次顯示調整",
   "scene.unsupported": "目前裝置不支援此設定",
   "scene.captureDraft": "擷取目前配置",
   "scene.draftTitle": "未儲存的預設",

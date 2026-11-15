@@ -23,6 +23,13 @@ On **Presets**, click **Capture current setup** to read the connected displays i
 
 On the **Presets** page, expand **More options** for an existing preset, enter a **New preset name**, and click **Duplicate preset**. Names must contain 1–40 characters and be unique, ignoring case and surrounding whitespace. The copy gets its own ID and saved display settings, even if those screens are disconnected. Duplication does not capture or apply the current setup. Automatic triggers and the shortcut start off; configure them separately on the copy if needed. The original preset and its automation stay unchanged. No experimental flag is required.
 
+## 撤销显示调整 / Undo a display adjustment
+
+调整分辨率、刷新率、旋转或缩放后，在快捷面板的“预设”菜单或设置的“预设”页点击“撤销上次显示调整”。缩放撤销只恢复该屏幕的缩放；模式撤销恢复切换前的输出、缩放和排列，不改动亮度、软件调暗、HDR 或 ICC。与预设切换共用一个会话内撤销位置，下一次成功的显示调整或预设切换会替换它；无变化或已回滚的失败调整不会替换它。部分撤销失败时保留原快照供重试，退出应用后不保留。
+
+After changing resolution, refresh rate, rotation or scaling, choose **Undo last display adjustment** in the quick panel's **Presets** menu or **Settings → Presets**. Scaling undo restores only that screen's scale. Mode undo restores the previous outputs, scaling and arrangement; brightness, software dimming, HDR and ICC remain as they are.
+
+There is one undo slot per app session, shared with **Undo last switch** for presets. The next successful output/scaling adjustment or preset application replaces it. No-op changes and failed adjustments that roll back preserve it. An undo that partially fails retains the original snapshot for retry; reconnect missing displays before retrying. Layout restoration requires the same screen set and a valid extended layout, as with presets. This does not undo brightness, input, topology or layout-editor changes, and there is no redo or history across restarts.
 ## 排序预设 / Reorder presets
 
 在“预设”页点击预设卡片上的“上移”或“下移”，即可将常用预设放在前面。顺序会自动保存，重启后保留，托盘预设菜单也使用同一顺序。排序不读取或应用屏幕设置，也不改变预设 ID、显示设置、快捷键或自动触发配置。多个自动化规则同时匹配时，仍按列表顺序选择第一个匹配项。
