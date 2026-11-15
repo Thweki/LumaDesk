@@ -1,4 +1,11 @@
 {
+  "gamma.help": "Gamma 預設（實驗性）：儲存時同時擷取可讀取的 SDR Gamma 曲線。套用和復原會在其他顯示設定之後還原曲線。其他色彩軟體或顯示變更可能覆寫曲線。",
+  "gamma.saved": "已儲存 Gamma 曲線",
+  "gamma.absent": "未擷取 Gamma 曲線；此預設不會變更 Gamma。",
+  "gamma.invalid": "Gamma 曲線必須包含三個遞增通道，每個通道含 256 個值。",
+  "gamma.sdrOnly": "還原 Gamma 需要唯一對應且已確認處於 SDR 色彩模式的顯示器。",
+  "gamma.unverified": "顯示器未確認儲存的 Gamma 曲線。未嘗試自動重試。",
+  "gamma.unavailable": "顯示驅動程式無法讀取或寫入 Gamma 曲線。",
   "s4d8c1c5b42": "未知",
   "s5ee74333c6": "讀取顯示路徑",
   "s8833926459": "顯示路徑資料超出支持范圍。",

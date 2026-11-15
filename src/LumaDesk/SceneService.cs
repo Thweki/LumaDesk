@@ -20,6 +20,13 @@ internal interface ISceneBackend
     Task Layout(IReadOnlyList<ScreenPlacement> placements);
 }
 
+internal interface ISceneGammaBackend
+{
+    bool GammaEnabled { get; }
+    Task<ushort[]?> ReadGamma(DisplayInfo display);
+    Task RestoreGamma(DisplayInfo display, ushort[] ramp);
+}
+
 internal sealed class SceneResult
 {
     public int Applied { get; set; }
@@ -52,6 +59,7 @@ internal static class SceneService
             Displays = source.Displays.Select(d => new PresetDisplay
             {
                 Id = d.Id, Name = d.Name, Brightness = d.Brightness, Dimming = d.Dimming,
+                GammaRamp = d.GammaRamp?.ToArray(),
                 Mode = d.Mode, Orientation = d.Orientation, Dpi = d.Dpi, Hdr = d.Hdr,
                 UserProfiles = d.UserProfiles, SdrProfile = d.SdrProfile, HdrProfile = d.HdrProfile,
                 X = d.X, Y = d.Y, Primary = d.Primary
@@ -85,6 +93,15 @@ internal static class SceneService
                 }
             }
             catch (Exception ex) { Storage.Log("Scene color capture: " + ex.Message); }
+            if (backend is ISceneGammaBackend { GammaEnabled: true } gamma)
+            {
+                try
+                {
+                    var ramp = await gamma.ReadGamma(d);
+                    if (ramp != null) { GammaService.Validate(ramp); saved.GammaRamp = ramp.ToArray(); }
+                }
+                catch (Exception ex) { Storage.Log("Scene gamma capture: " + ex.Message); }
+            }
             scene.Displays.Add(saved);
         }
         return scene;
@@ -95,6 +112,7 @@ internal static class SceneService
     {
         var result = new SceneResult();
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var appliedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var saved in scene.Displays)
         {
             if (!ids.Add(saved.Id)) continue;
@@ -123,7 +141,7 @@ internal static class SceneService
             });
             if (saved.UserProfiles.HasValue) await Step("ICC", d => backend.Profiles(d, saved));
             await Step(L.T("scene.brightness"), d => backend.Brightness(d, saved));
-            if (!failed) result.Applied++;
+            if (!failed) { result.Applied++; appliedIds.Add(saved.Id); }
         }
         if (scene.Displays.Any(d => d.X.HasValue))
         {
@@ -133,6 +151,33 @@ internal static class SceneService
             {
                 try { await backend.Layout(layout); }
                 catch (Exception ex) { result.Issues.Add(L.T("scene.layout") + ": " + ex.Message); }
+            }
+        }
+        // Mode, HDR, ICC and layout changes can reset gamma. Restore ramps last,
+        // resolving stable identities again after all topology-changing operations.
+        if (backend is ISceneGammaBackend { GammaEnabled: true } gamma)
+        {
+            ids.Clear();
+            foreach (var saved in scene.Displays)
+            {
+                if (!ids.Add(saved.Id) || saved.GammaRamp == null) continue;
+                var display = backend.Displays.FirstOrDefault(d => string.Equals(d.Id, saved.Id, StringComparison.OrdinalIgnoreCase));
+                if (display == null)
+                {
+                    if (appliedIds.Remove(saved.Id))
+                    { result.Applied--; result.Issues.Add(saved.Name + " · Gamma: " + L.T("scene.disconnected")); }
+                    continue;
+                }
+                try
+                {
+                    GammaService.Validate(saved.GammaRamp);
+                    await gamma.RestoreGamma(display, saved.GammaRamp.ToArray());
+                }
+                catch (Exception ex)
+                {
+                    if (appliedIds.Remove(saved.Id)) result.Applied--;
+                    result.Issues.Add(display.Name + " · Gamma: " + ex.Message);
+                }
             }
         }
         return result;
