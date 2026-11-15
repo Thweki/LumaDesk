@@ -1,5 +1,35 @@
 # LumaDesk 验证记录
 
+## Desktop-independent WPF fixtures (CI)
+
+Run on Windows with .NET 8:
+
+```powershell
+dotnet run --project tests/LumaDesk.UiTests -c Debug -- --fixtures artifacts/wpf-fixtures
+```
+
+The `wpf-fixtures` Windows CI job runs the existing input-switch and live-brightness
+callback checks on an STA WPF dispatcher with detached controls, injected reads and
+writes, and isolated settings. The main window is constructed but never shown or
+loaded, so its display discovery, tray, and automation startup do not run. The
+fixture suite does not require an interactive desktop, monitor topology, focus,
+or screen capture. A 30-second dispatcher timeout fails stalled asynchronous tests;
+the CI job also has a 10-minute limit covering build and execution.
+
+The normal UI runner and `./test.ps1` retain the desktop suite, including actual
+display queries, placement, focus/dismissal, overlays, and PIP capture. `-Headless`
+still runs only the non-WPF suites. Fixture success does not validate those desktop
+behaviors or hardware writes.
+
+On failure, CI retains `artifacts/wpf-fixtures/` as `wpf-fixture-failure` for 14 days:
+build/run output (`run.log`), check count and exception (`result.txt`), isolated
+settings/logs, and any completed offscreen control snapshot. Build failures may
+produce only the run log. These artifacts do not capture the user's desktop.
+
+Local validation for this change is limited to static checks: this Linux worktree
+has no `dotnet` or PowerShell. Windows CI must confirm compilation and fixture
+execution; no WPF pass is claimed locally.
+
 ## 0.5.0 发布检查（2026-11-04）
 
 完整 `test.ps1` 通过 436 项检查：逻辑 48、色彩 17、虚拟屏幕 15、本地化 32、工作流 44、中文 WPF 界面 184，其他四种语言各 24。界面截图与中英文 GIF 已按当前控件重新生成；动图使用示例屏幕和模拟亮度回调，不发送硬件写入。

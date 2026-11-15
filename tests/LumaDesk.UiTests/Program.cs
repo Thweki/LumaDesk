@@ -23,6 +23,7 @@ internal static partial class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        if (args.Length > 0 && args[0] == "--fixtures") return RunFixtures(args);
         output = Path.GetFullPath(args.Length > 0 ? args[0] : "artifacts/ui-tests"); Directory.CreateDirectory(output);
         Environment.SetEnvironmentVariable("LUMADESK_DATA_DIR", Path.Combine(output, "isolated-settings"));
         string language = args.Length > 1 ? args[1] : "zh-Hans";
@@ -234,13 +235,7 @@ internal static partial class Program
     }
     private static async Task TestLiveBrightnessAndDismissAsync(MainWindow window)
     {
-        int writes = 0, latest = 0;
-        var host = new Window { Width = 300, Height = 160, Content = window.CreateSlider("live-fixture", 0, 100, v => { writes++; latest = v; return Task.CompletedTask; }) };
-        host.Show(); var slider = Descendants<Slider>(host).Single();
-        slider.RaiseEvent(new DragStartedEventArgs(0, 0) { RoutedEvent = Thumb.DragStartedEvent }); slider.Value = 30; await Task.Delay(100);
-        Check(writes == 1 && latest == 30, "Brightness ValueChanged reaches controller before drag release");
-        slider.Value = 40; slider.Value = 70; await Task.Delay(100);
-        Check(writes == 2 && latest == 70, "Live brightness coalesces rapid input to latest target"); host.Close();
+        await TestLiveBrightnessFixtureAsync(window);
         var popup = new QuickWindow(window); popup.Render(); popup.Show(); popup.Activate(); await Task.Delay(40);
         var hold = popup.KeepOpen(); var outside = new Window { Width = 220, Height = 120, Title = "Dismiss test" }; outside.Show(); outside.Activate(); await Task.Delay(80);
         Check(popup.IsVisible, "Owned dialog lease protects quick popup from premature dismissal");
@@ -506,7 +501,7 @@ internal static partial class Program
             foreach (var sub in Descendants<T>(child)) yield return sub;
         }
     }
-    private static void Snapshot(Window window, string name)
+    private static void Snapshot(FrameworkElement window, string name)
     {
         window.UpdateLayout(); var bitmap = new RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, PixelFormats.Pbgra32); bitmap.Render(window);
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); using var file = File.Create(Path.Combine(output, name)); encoder.Save(file);
