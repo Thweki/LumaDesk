@@ -11,6 +11,30 @@ concurrency:
   group: windows-${{ github.ref }}
   cancel-in-progress: false
 jobs:
+  wpf-fixtures:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Run desktop-independent WPF fixtures
+        run: |
+          New-Item -ItemType Directory -Force artifacts/wpf-fixtures | Out-Null
+          dotnet run --project tests/LumaDesk.UiTests -c Debug -- --fixtures artifacts/wpf-fixtures 2>&1 | Tee-Object -FilePath artifacts/wpf-fixtures/run.log
+          if ($LASTEXITCODE -ne 0) { throw "WPF fixtures failed with exit code $LASTEXITCODE." }
+      - name: Upload WPF fixture failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wpf-fixture-failure
+          path: artifacts/wpf-fixtures/
+          if-no-files-found: warn
+          retention-days: 14
   build:
     runs-on: windows-latest
     timeout-minutes: 25
