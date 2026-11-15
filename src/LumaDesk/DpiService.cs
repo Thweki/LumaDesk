@@ -68,6 +68,19 @@ internal static class DpiService
         DisplayService.ValidateIdentity(display.Device, display.Id);
         return ReadPath(FindPath(display.Device));
     }
+    internal static uint? ReadConnectionTechnology(DisplayInfo display)
+    {
+        try
+        {
+            DisplayService.ValidateIdentity(display.Device, display.Id);
+            // FindPath rejects ambiguous clone sources. Do not depend on DPI support.
+            var path = FindPath(display.Device);
+            DisplayService.ValidateIdentity(display.Device, display.Id);
+            return path.Target.Available != 0 ? path.Target.Technology : null;
+        }
+        // A disconnected/stale display or unsupported topology query has no label.
+        catch (InvalidOperationException) { return null; }
+    }
     public static void Set(DisplayInfo display, int percent)
     {
         DisplayService.ValidateIdentity(display.Device, display.Id);

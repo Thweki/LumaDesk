@@ -148,6 +148,7 @@ foreach (var malformed in new[] {
     "(vcp(60(11 12) 10(01 (02))))"
 })
     Check(InputRules.Parse(malformed).Length == 0, "Malformed VCP features never expose input-switch choices: " + malformed);
+InputConnectionTests.Run(Check);
 var legacyInputs = InputRules.Resolve(7, new uint[] { 17, 18, 15 });
 Check(legacyInputs.LegacyCodes && legacyInputs.Current == 15 && legacyInputs.Choices.Select(i => i.TransportCode).SequenceEqual(new uint[] { 5, 6, 7 }), "Observed nonstandard digital inputs map UI labels to the firmware's write codes");
 Check(InputRules.Resolve(5, new uint[] { 17, 18, 15 }).Current == 17 && InputRules.Resolve(6, new uint[] { 17, 18, 15 }).Current == 18, "Compatibility readback normalizes HDMI inputs as well as DisplayPort");

@@ -22,7 +22,7 @@ Pick a screen by its position, open more settings, then adjust several screens t
 ## What you can do
 
 - **Get brightness right:** combine backlight control and software dimming, adjust one screen, select several or sync a group.
-- **Control each screen:** scaling, resolution, refresh rate and rotation, plus inputs, volume and contrast where supported.
+- **Control each screen:** scaling, resolution, refresh rate and rotation, plus inputs, volume and contrast where supported. [Windows connection labels](docs/input-connection.md) show recognized connector types even when DDC input detection is unavailable.
 - **Keep your setup handy:** arrange displays, choose the main screen, extend or mirror, and save setups as one-click presets.
 - **Go a little further:** HDR, ICC profiles, virtual displays and picture in picture.
 - **Make it yours:** keyboard shortcuts, optional startup, light/dark themes, and Simplified Chinese, Traditional Chinese, English, Japanese and Korean.
