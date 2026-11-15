@@ -141,6 +141,18 @@ internal static class AdvancedColorService
         }
     }
 
+    // Lightweight tile probe: no ICC enumeration, caching, or display writes.
+    internal static bool ReadHdrActive(DisplayInfo display)
+    {
+        lock (Gate)
+        {
+            var state = new DisplayColorState();
+            try { ReadHdr(FindPath(display), state); }
+            catch { return false; }
+            return state.HdrKnown && state.HdrActive;
+        }
+    }
+
     private static void ReadHdr(DpiNative.Path path, DisplayColorState state)
     {
         var packet = new AdvancedColorNative.Info2 { Header = DpiNative.Packet<AdvancedColorNative.Info2>(15, path.Target.Adapter, path.Target.Id) };
