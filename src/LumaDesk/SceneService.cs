@@ -40,6 +40,27 @@ internal static class SceneService
         if (presets.Any(p => p != scene && p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
             throw new InvalidOperationException(L.T("s1f09d8e896"));
         scene.Name = name;
+
+    internal static Preset Duplicate(Preset source, string name, IEnumerable<Preset> presets)
+    {
+        name = name.Trim();
+        if (name.Length is < 1 or > 40) throw new ArgumentException(L.T("scene.duplicateNameRequired"));
+        if (presets.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            throw new ArgumentException(L.T("s1f09d8e896"));
+
+        // Copy saved values, including unspecified legacy fields, without reading hardware.
+        // A new identity and default automation prevent competing triggers or hotkeys.
+        return new Preset
+        {
+            Name = name,
+            Displays = source.Displays.Select(d => new PresetDisplay
+            {
+                Id = d.Id, Name = d.Name, Brightness = d.Brightness, Dimming = d.Dimming,
+                Mode = d.Mode, Orientation = d.Orientation, Dpi = d.Dpi, Hdr = d.Hdr,
+                UserProfiles = d.UserProfiles, SdrProfile = d.SdrProfile, HdrProfile = d.HdrProfile,
+                X = d.X, Y = d.Y, Primary = d.Primary
+            }).ToList()
+        };
     }
 
     internal static async Task<Preset> Capture(ISceneBackend backend, string name)

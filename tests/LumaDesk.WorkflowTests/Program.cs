@@ -121,6 +121,7 @@ using (var cancelled = new CancellationTokenSource())
     catch (OperationCanceledException) { stopped = true; }
     Check(stopped && !service.IsWriting, "Cancelled reconnect write exits before device lookup and releases its busy state");
 }
+await SceneDuplicateTests.Run(Check);
 await ReconnectTests.RunAsync(Check);
 PipBufferTests.Run(Check);
 Console.WriteLine($"{checks} workflow checks passed. No native writes were issued.");
