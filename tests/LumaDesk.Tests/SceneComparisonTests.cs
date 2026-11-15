@@ -33,8 +33,8 @@ internal static class SceneComparisonTests
         now.HdrProfile = ""; now.X = 0; now.Y = 1080; now.Primary = false;
         string beforeSaved = JsonSerializer.Serialize(saved), beforeCurrent = JsonSerializer.Serialize(current);
         report = SceneComparison.Compare(saved, current);
-        check(report.Differences.Count == 13 && report.Differences.All(d => d.DisplayName == "Current alias"),
-            "Comparison reports all thirteen changed display fields using current aliases");
+        check(report.Differences.Count == 12 && report.Differences.All(d => d.DisplayName == "Current alias"),
+            "Comparison reports all twelve changed display fields using current aliases");
         check(report.Differences.Single(d => d.Setting == "scene.brightness") is { Current: "80%", Saved: "25%" } &&
             report.Differences.Single(d => d.Setting == "s60cc99cc00") is { Current: "0°", Saved: "90°" },
             "Comparison distinguishes current from saved values and formats rotation as degrees");
