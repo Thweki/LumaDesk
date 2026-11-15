@@ -74,6 +74,25 @@ var layout = new[] { new ScreenPlacement("A", -1920,0,1920,1080,false), new Scre
 Check(LayoutRules.Normalize(layout).SequenceEqual(layout), "Valid adjacent monitors preserve pixel coordinates");
 var primaryChanged = LayoutRules.Normalize(layout.Select(p => p with { Primary = p.Id == "A" }));
 Check(primaryChanged[0].X == 0 && primaryChanged[1].X == 1920 && primaryChanged[0].Primary, "Changing primary translates the whole desktop while preserving relative positions");
+foreach (var (primaryCoordinate, secondaryCoordinate) in new[] { (int.MinValue, int.MaxValue), (int.MaxValue, int.MinValue) })
+foreach (bool horizontal in new[] { true, false })
+{
+    var extreme = new[]
+    {
+        new ScreenPlacement("A", horizontal ? primaryCoordinate : 0, horizontal ? 0 : primaryCoordinate, 1920, 1080, true),
+        new ScreenPlacement("B", horizontal ? secondaryCoordinate : 0, horizontal ? 0 : secondaryCoordinate, 1920, 1080, false)
+    };
+    bool rejected = false;
+    try { LayoutRules.Normalize(extreme); } catch (InvalidOperationException) { rejected = true; }
+    Check(rejected, $"Extreme relative layout coordinates are rejected as validation errors: {primaryCoordinate}, horizontal={horizontal}");
+}
+foreach (int origin in new[] { int.MinValue, int.MaxValue - 1920 })
+{
+    var translated = new[] { new ScreenPlacement("A", origin, origin, 1920, 1080, true), new ScreenPlacement("B", origin + 1920, origin, 1920, 1080, false) };
+    var normalized = LayoutRules.Normalize(translated);
+    Check(normalized[0].X == 0 && normalized[0].Y == 0 && normalized[1].X == 1920 && normalized[1].Y == 0,
+        "Valid relative layout survives an extreme absolute origin: " + origin);
+}
 foreach (var invalid in new[] {
     new[] { layout[0] with { Primary = true }, layout[1] },
     new[] { layout[0] with { X = -1000 }, layout[1] },
