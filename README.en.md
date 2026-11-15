@@ -68,6 +68,8 @@ App output: `artifacts/LumaDesk-win-x64/`. Release files: `artifacts/release/`. 
 
 More: [Presets and automation](docs/workflows.md) · [HDR / ICC](docs/color-hdr.md) · [Display layout](docs/display-layout.md) · [Virtual displays](docs/virtual-displays.md) · [Translations](docs/localization.md)
 
+Optional experiment: [save and restore per-display gamma ramps in presets](docs/workflows.md#gamma-预设实验性--gamma-presets-experimental), disabled by default (`LUMADESK_EXPERIMENTAL_GAMMA=1`).
+
 ## License
 
 Version 0.4.0 onward: [GPL-3.0-only](LICENSE). Versions through 0.3.1 retain their original MIT license. Third-party components keep their own licenses; see [NOTICE](NOTICE).

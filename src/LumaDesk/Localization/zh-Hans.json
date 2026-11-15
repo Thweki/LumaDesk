@@ -1,4 +1,11 @@
 {
+  "gamma.help": "Gamma 预设（实验性）：保存时同时捕获可读取的 SDR Gamma 曲线。应用和撤销会在其他显示设置之后恢复曲线。其他色彩软件或显示变更可能覆盖曲线。",
+  "gamma.saved": "已保存 Gamma 曲线",
+  "gamma.absent": "未捕获 Gamma 曲线；此预设不会更改 Gamma。",
+  "gamma.invalid": "Gamma 曲线必须包含三个递增通道，每个通道含 256 个值。",
+  "gamma.sdrOnly": "恢复 Gamma 需要唯一映射且已确认处于 SDR 色彩模式的显示器。",
+  "gamma.unverified": "显示器未确认保存的 Gamma 曲线。未尝试自动重试。",
+  "gamma.unavailable": "显示驱动程序无法读取或写入 Gamma 曲线。",
   "s4d8c1c5b42": "未知",
   "s5ee74333c6": "读取显示路径",
   "s8833926459": "显示路径数据超出支持范围。",

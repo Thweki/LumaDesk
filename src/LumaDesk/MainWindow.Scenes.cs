@@ -15,13 +15,16 @@ public partial class MainWindow
     private bool sceneBusy;
     private Preset? undoScene;
     private string sceneReport = "";
-    private sealed class SceneBackend : ISceneBackend
+    private sealed class SceneBackend : ISceneBackend, ISceneGammaBackend
     {
         private readonly MainWindow owner;
         private readonly IReadOnlyList<DisplayInfo>? snapshot;
         internal SceneBackend(MainWindow owner, IReadOnlyList<DisplayInfo>? snapshot = null)
         { this.owner = owner; this.snapshot = snapshot; }
         public IReadOnlyList<DisplayInfo> Displays => snapshot ?? owner.Displays;
+        public bool GammaEnabled => GammaService.Enabled;
+        public Task<ushort[]?> ReadGamma(DisplayInfo d) => Task.Run(() => GammaService.Capture(d));
+        public Task RestoreGamma(DisplayInfo d, ushort[] ramp) => Task.Run(() => GammaService.Restore(d, ramp));
         public Task<DisplayColorState> Color(DisplayInfo d) => Task.Run(() => AdvancedColorService.Read(d));
         public Task Mode(DisplayInfo d, DisplayMode mode, uint orientation) => owner.ChangeModeAsync(d, mode, orientation, exactOutput: true);
         public Task Dpi(DisplayInfo d, int percent) => owner.ChangeDpiAsync(d, percent);
@@ -179,6 +182,7 @@ public partial class MainWindow
     private void RenderScenes()
     {
         Heading(L.T("s0b2fca3986"), L.T("scene.description"));
+        if (GammaService.Enabled) PageContent.Children.Add(Ui.Card(Ui.Text(L.T("gamma.help"), 12)));
         string defaultName = L.T("s3cbfca23b6"); int suffix = 2;
         while (Preferences.Presets.Any(p => p.Name == defaultName)) defaultName = L.T("s3cbfca23b6") + " " + suffix++;
         var name = new TextBox { Text = defaultName, MaxLength = 40, MinWidth = 180 };
@@ -194,6 +198,9 @@ public partial class MainWindow
             card.Children.Add(Ui.Row(Ui.Labels(scene.Name, L.F("sb91b8e2562", scene.Displays.Count)), Ui.Button(L.T("s63c73c4730"), () => _ = RunAsync(async () => await ApplySceneAsync(scene)), true)));
             card.Children.Add(CreateSceneOrderControls(scene));
             var details = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
+            if (GammaService.Enabled)
+                foreach (var display in scene.Displays)
+                    details.Children.Add(Ui.Labels(display.Name, L.T(display.GammaRamp == null ? "gamma.absent" : "gamma.saved")));
             var rename = new TextBox { Text = scene.Name, MaxLength = 40 };
             details.Children.Add(Ui.Row(rename, Ui.Button(L.T("scene.update"), () => _ = RunAsync(() => SaveSceneAsync(rename.Text, scene)))));
             details.Children.Add(Ui.Line());

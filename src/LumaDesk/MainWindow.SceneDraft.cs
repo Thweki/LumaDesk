@@ -67,8 +67,11 @@ public partial class MainWindow
         var panel = new StackPanel();
         panel.Children.Add(Ui.Labels(L.T("scene.draftTitle"), L.T("scene.draftHelp")));
         foreach (var display in draft.Displays)
+        {
             panel.Children.Add(Ui.Labels(display.Name, L.F("scene.draftSummary", display.Mode,
                 display.Brightness?.ToString() ?? "—", display.Dimming, display.Dpi?.ToString() ?? "—")));
+            if (GammaService.Enabled) panel.Children.Add(Ui.Text(L.T(display.GammaRamp == null ? "gamma.absent" : "gamma.saved"), 12));
+        }
         var name = new TextBox { Text = draft.Name, MaxLength = 40, MinWidth = 180 };
         System.Windows.Automation.AutomationProperties.SetName(name, L.T("scene.duplicateName"));
         System.Windows.Automation.AutomationProperties.SetAutomationId(name, "SceneDraftName");

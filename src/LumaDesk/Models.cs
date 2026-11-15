@@ -89,6 +89,8 @@ public sealed class PresetDisplay
     public string Name { get; set; } = "";
     public int? Brightness { get; set; }
     public double Dimming { get; set; }
+    // RGB, 256 unsigned 16-bit entries per channel; null leaves gamma unchanged.
+    public ushort[]? GammaRamp { get; set; }
     public DisplayMode? Mode { get; set; }
     public uint? Orientation { get; set; }
     public int? Dpi { get; set; }

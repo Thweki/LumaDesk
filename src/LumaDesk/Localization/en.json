@@ -1,4 +1,11 @@
 {
+  "gamma.help": "Gamma presets (experimental): saving also captures readable SDR gamma ramps. Apply and Undo restore them after other display settings. Other color software or display changes may overwrite them.",
+  "gamma.saved": "Gamma ramp saved",
+  "gamma.absent": "Gamma ramp not captured; this preset leaves gamma unchanged.",
+  "gamma.invalid": "The gamma ramp must contain three increasing channels of 256 values each.",
+  "gamma.sdrOnly": "Gamma restore requires a uniquely mapped display with a confirmed SDR color mode.",
+  "gamma.unverified": "The display did not confirm the saved gamma ramp. No automatic retry was attempted.",
+  "gamma.unavailable": "The display driver could not read or write the gamma ramp.",
   "s4d8c1c5b42": "Unknown",
   "s5ee74333c6": "Read display paths",
   "s8833926459": "Display path data exceeds the supported range.",
