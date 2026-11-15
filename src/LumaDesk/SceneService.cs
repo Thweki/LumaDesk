@@ -50,17 +50,20 @@ internal static class SceneService
         };
     }
 
-    internal static async Task<Preset> Capture(ISceneBackend backend, string name)
+    internal static Task<Preset> Capture(ISceneBackend backend, string name) => Capture(backend.Displays, backend.Color, name);
+
+    internal static async Task<Preset> Capture(IReadOnlyList<DisplayInfo> displays,
+        Func<DisplayInfo, Task<DisplayColorState>> readColor, string name)
     {
         var scene = new Preset { Name = name };
-        foreach (var d in backend.Displays.ToArray())
+        foreach (var d in displays.ToArray())
         {
             var saved = new PresetDisplay { Id = d.Id, Name = d.Name, Brightness = d.Brightness, Dimming = d.Dimming,
                 Mode = d.Current, Orientation = d.Orientation, Dpi = d.DpiScale.CanSet ? d.DpiScale.CurrentPercent : null,
                 X = d.X, Y = d.Y, Primary = d.Primary };
             try
             {
-                var color = await backend.Color(d);
+                var color = await readColor(d);
                 if (color.HdrKnown && color.HdrSupported) saved.Hdr = color.HdrUserEnabled;
                 if (color.ProfilesAvailable)
                 {

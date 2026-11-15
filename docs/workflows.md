@@ -17,6 +17,16 @@
 
 On the **Presets** page, expand **More options** for an existing preset, enter a **New preset name**, and click **Duplicate preset**. Names must contain 1–40 characters and be unique, ignoring case and surrounding whitespace. The copy gets its own ID and saved display settings, even if those screens are disconnected. Duplication does not capture or apply the current setup. Automatic triggers and the shortcut start off; configure them separately on the copy if needed. The original preset and its automation stay unchanged. No experimental flag is required.
 
+## Experimental preset comparison
+
+Disabled by default. Enable **Settings → Application → Preset comparison (experimental)**, then open a preset's **More options → Compare with current setup**. The persisted option is `ExperimentalPresetComparison` (default `false`). Disable the same toggle to remove the comparison controls.
+
+Each click reads a fresh snapshot and shows **current → saved** differences for backlight brightness, software dimming, resolution/refresh rate, rotation, scaling, HDR, personal ICC scope/profiles, position and main display. It also lists disconnected preset displays and connected displays absent from the preset. Device IDs are matched without guessing by name. Older brightness-only presets compare only their saved fields.
+
+The comparison does not apply settings, modify presets, or replace the undo snapshot. Unknown readings remain visible as **Unknown**. It is a snapshot, not a driver capability check or a guarantee of successful apply: layout restoration still requires matching screens and valid geometry, and unavailable ICC assignments are not installed. Click again after changing your setup to refresh the report. Applying the preset remains a separate action.
+
+默认关闭。在 **设置 → 应用 → 预设比较（实验性）** 中启用，然后打开预设的 **更多选项 → 与当前设置比较**。每次点击读取当前快照，按“当前 → 已保存”显示亮度、调暗、模式、旋转、缩放、HDR/ICC、位置和主屏差异，并列出未连接或未包含的屏幕。旧预设只比较已保存的项目。无法读取的值显示为“未知”。比较不会应用设置、更改预设或替换撤销快照，也不保证驱动支持或排列能够恢复。更改设置后再次点击可刷新；关闭开关可移除比较控件。
+
 ## 可选自动化
 
 预设可设置每天的时间（本机 24 小时制）或接通电源/使用电池触发。应用运行期间约每 20 秒检查一次；休眠错过的最近一次时间可在恢复后触发，不补跑历史任务。同一轮多个预设命中时只应用列表中第一个匹配屏幕集合的预设。

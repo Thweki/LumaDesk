@@ -176,6 +176,7 @@ public partial class MainWindow
             var details = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
             var rename = new TextBox { Text = scene.Name, MaxLength = 40 };
             details.Children.Add(Ui.Row(rename, Ui.Button(L.T("scene.update"), () => _ = RunAsync(() => SaveSceneAsync(rename.Text, scene)))));
+            if (CreateSceneComparison(scene) is UIElement comparison) details.Children.Add(comparison);
             details.Children.Add(Ui.Line());
             details.Children.Add(CreateSceneDuplicateEditor(scene));
             details.Children.Add(Ui.Line());

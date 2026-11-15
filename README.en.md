@@ -45,6 +45,8 @@ For **Windows 10 / 11 x64**. The .NET runtime is included. Choose a file from [R
 
 Default shortcuts: `Ctrl+Alt+↑ / ↓` adjusts the screen under the pointer; `Ctrl+Alt+0` removes software dimming.
 
+To inspect a preset before switching, enable **Application → Preset comparison (experimental)**, then use **Presets → More options → Compare with current setup**. This read-only comparison defaults off; see [preset comparison](docs/workflows.md#experimental-preset-comparison).
+
 All editions store settings in `%LOCALAPPDATA%\LumaDesk`. “Portable” means no installation, not settings beside the executable. There is no telemetry. The virtual driver downloads only when you choose to install it. Driver installation and first-time system ICC imports may request administrator approval.
 
 ## Before you download
