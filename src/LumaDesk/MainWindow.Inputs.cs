@@ -20,6 +20,9 @@ public partial class MainWindow
         System.Windows.Automation.AutomationProperties.SetAutomationId(expander, "input-section-" + display.Number);
         System.Windows.Automation.AutomationProperties.SetAutomationId(status, "input-status-" + display.Number);
         var current = Ui.Text("", 11, "#7A8699");
+        var connection = Ui.Text("", 11, "#7A8699"); connection.TextWrapping = TextWrapping.Wrap;
+        connection.ToolTip = L.T("input.connectionHelp");
+        System.Windows.Automation.AutomationProperties.SetAutomationId(connection, "input-connection-" + display.Number);
         var choices = new ComboBox { Margin = new Thickness(0, 6, 0, 6) };
         System.Windows.Automation.AutomationProperties.SetAutomationId(choices, "input-choice-" + display.Number);
         System.Windows.Automation.AutomationProperties.SetName(choices, L.T("input.title"));
@@ -33,6 +36,9 @@ public partial class MainWindow
         {
             var active = inputs?.Choices.FirstOrDefault(i => i.Code == inputs.Current);
             current.Text = active == null ? L.T("input.currentUnknown") : L.F("input.current", active);
+            var label = InputRules.ConnectionLabel(inputs?.ConnectionTechnology);
+            connection.Text = label == null ? "" : L.F("input.connection", label);
+            connection.Visibility = label == null ? Visibility.Collapsed : Visibility.Visible;
             apply.IsEnabled = !loading && !switching && choices.SelectedItem is MonitorInput selected && selected.Code != inputs?.Current;
             choices.IsEnabled = !loading && !switching; refresh.IsEnabled = !loading && !switching;
         }
@@ -46,7 +52,7 @@ public partial class MainWindow
                 choices.ItemsSource = inputs.Choices;
                 choices.SelectedItem = inputs.Choices.FirstOrDefault(i => i.Code == inputs.Current);
                 content.Children.Clear();
-                content.Children.Add(current); content.Children.Add(choices); content.Children.Add(actions);
+                content.Children.Add(current); content.Children.Add(connection); content.Children.Add(choices); content.Children.Add(actions);
                 var help = Ui.Text(L.T("input.help"), 11, "#7A8699"); help.TextWrapping = TextWrapping.Wrap; help.Margin = new Thickness(0, 7, 0, 7);
                 content.Children.Add(help); content.Children.Add(status);
                 status.Text = inputs.Choices.Count == 0 ? L.T("input.unavailable") : inputs.LegacyCodes ? L.T("input.compatibility") : "";
@@ -58,6 +64,7 @@ public partial class MainWindow
         {
             if (loading || switching || inputs == null || choices.SelectedItem is not MonitorInput selected || selected.Code == inputs.Current) return;
             using var hold = (Window.GetWindow(expander) as QuickWindow)?.KeepOpen();
+            inputs = inputs with { ConnectionTechnology = null }; // A switch can remove this PC's route.
             switching = true; status.Text = L.T("input.switching"); Update();
             try
             {

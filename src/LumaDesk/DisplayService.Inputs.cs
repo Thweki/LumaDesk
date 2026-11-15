@@ -19,7 +19,11 @@ internal sealed record MonitorInput(uint Code, uint? WriteCode = null)
     internal uint TransportCode => WriteCode ?? Code;
     public override string ToString() => Code switch { 1 => "VGA 1", 2 => "VGA 2", 3 => "DVI 1", 4 => "DVI 2", 15 => "DisplayPort 1", 16 => "DisplayPort 2", 17 => "HDMI 1", 18 => "HDMI 2", _ => L.F("input.number", Code) };
 }
-internal sealed record MonitorInputs(uint? Current, IReadOnlyList<MonitorInput> Choices, uint? RawCurrent = null, bool LegacyCodes = false);
+internal sealed record MonitorInputs(uint? Current, IReadOnlyList<MonitorInput> Choices, uint? RawCurrent = null, bool LegacyCodes = false)
+{
+    // Windows connector metadata is not a DDC input code or a switchable choice.
+    internal uint? ConnectionTechnology { get; init; }
+}
 internal sealed record InputSwitchResult(bool Confirmed, uint? Current);
 
 internal sealed partial class DisplayService
@@ -64,7 +68,7 @@ internal sealed partial class DisplayService
             legacyInputCodes.TryGetValue(display.Id, out bool previousLegacy);
             var inputs = InputRules.Resolve(current, codes, previousLegacy);
             if (current.HasValue) legacyInputCodes[display.Id] = inputs.LegacyCodes;
-            return inputs;
+            return inputs with { ConnectionTechnology = DpiService.ReadConnectionTechnology(display) };
         }
     });
     internal async Task<InputSwitchResult> SetInputAsync(DisplayInfo display, uint code)
@@ -131,6 +135,16 @@ internal static class InputSwitch
 
 internal static class InputRules
 {
+    // DISPLAYCONFIG_VIDEO_OUTPUT_TECHNOLOGY, not MCCS VCP 60 values.
+    // Unknown technologies stay unspecified; Windows cannot supply a port number.
+    internal static string? ConnectionLabel(uint? technology) => technology switch
+    {
+        0 => "VGA", 4 => "DVI", 5 => "HDMI", 6 => "LVDS",
+        10 => "DisplayPort", 11 => "eDP", 15 => "Miracast",
+        0x80000000 => L.T("input.connectionInternal"),
+        _ => null
+    };
+
     // Some firmware advertises MCCS 0F/10/11/12 but actually uses 07/08/05/06.
     // Evidence: https://github.com/rockowitz/ddcutil/issues/157
     // Gate this quirk on BOTH the digital-only capability set and an observed
