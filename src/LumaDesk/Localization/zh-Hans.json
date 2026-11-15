@@ -524,6 +524,8 @@
   "input.compatibility": "已启用此显示器的兼容切换方式。",
   "input.switching": "正在切换并确认…",
   "input.unverified": "已发送切换请求，但无法确认当前输入。请在显示器上确认。",
+  "quick.volumeDown": "显示器音量降低 5 个百分点",
+  "quick.volumeUp": "显示器音量提高 5 个百分点",
   "timing.title": "刷新时序（实验性）",
   "timing.disabled": "刷新时序检查已禁用。",
   "timing.ambiguous": "此显示器没有唯一的活动路径。请刷新显示器列表；无法单独检查镜像显示器。",
