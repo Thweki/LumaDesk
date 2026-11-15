@@ -62,14 +62,21 @@ internal sealed class CommandService : IDisposable
         }
         throw new InvalidDataException("Command too long.");
     }
-    internal static bool IsCommand(string[] args) => args.Length > 0 && args[0] is "--list" or "--brightness" or "--apply-preset";
+    internal static ControlReply ListPresets(Preferences preferences) => new(true, preferences.Presets.Select(p => new
+    {
+        p.Id, p.Name,
+        Displays = p.Displays.Select(d => new { d.Id, d.Name }).ToArray()
+    }).ToArray());
+
+    internal static bool IsCommand(string[] args) => args.Length > 0 && args[0] is "--list" or "--list-presets" or "--brightness" or "--apply-preset";
     internal static (ControlCommand Command, string Output) Parse(string[] args)
     {
         int index = Array.IndexOf(args, "--output");
-        if (index < 1 || index != args.Length - 2 || string.IsNullOrWhiteSpace(args[index + 1])) throw new ArgumentException("Use --list | --brightness <display> <0-100> | --apply-preset <name>, followed by --output <result.json>.");
+        if (index < 1 || index != args.Length - 2 || string.IsNullOrWhiteSpace(args[index + 1])) throw new ArgumentException("Use --list | --list-presets | --brightness <display> <0-100> | --apply-preset <name>, followed by --output <result.json>.");
         ControlCommand command = args[0] switch
         {
             "--list" when index == 1 => new("list"),
+            "--list-presets" when index == 1 => new("list-presets"),
             "--brightness" when index == 3 && int.TryParse(args[2], out int value) && value >= 0 && value <= 100 => new("brightness", args[1], value),
             "--apply-preset" when index == 2 => new("preset", args[1]),
             _ => throw new ArgumentException("Invalid display command.")
@@ -88,6 +95,10 @@ internal sealed class CommandService : IDisposable
             try { await pipe.ConnectAsync(700); }
             catch (TimeoutException)
             {
+                if (parsed.Command.Action == "list-presets")
+                {
+                    File.WriteAllText(output, JsonSerializer.Serialize(ListPresets(Storage.Load()), Storage.Json)); return 0;
+                }
                 if (parsed.Command.Action == "list")
                 {
                     var displays = await new DisplayService().ScanAsync();

@@ -22,6 +22,7 @@ if (args.Contains("--read-inputs"))
 }
 int checks = 0;
 void Check(bool value, string message) { if (!value) throw new Exception(message); checks++; Console.WriteLine("PASS " + message); }
+PresetListTests.Run(Check);
 var backend = new FakeBackend();
 var scene = await SceneService.Capture(backend, "Work");
 Check(scene.Displays.Count == 2 && scene.Displays[0].Dpi == 125 && scene.Displays[0].Hdr == false && scene.Displays[1].X == 1920, "Capture includes output, scale, HDR, ICC and arrangement");

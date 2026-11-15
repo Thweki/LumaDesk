@@ -17,6 +17,7 @@ public partial class MainWindow
     internal async Task<ControlReply> ExecuteCommand(ControlCommand command)
     {
         if (command.Action == "list") return new(true, Displays);
+        if (command.Action == "list-presets") return CommandService.ListPresets(Preferences);
         if (sceneBusy || modePending || scanning || restoringConnection) return new(false, Error: L.T("s92f637408f"));
         if (command.Action == "preset")
         {
