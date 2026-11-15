@@ -117,6 +117,7 @@ internal static partial class Program
                 await TestQuickDisplayPickerAsync(window);
                 await TestMultiBrightnessAsync(window);
                 await TestInputSwitchUiAsync(window);
+                window.Hide(); await TestQuickScaleFixtureAsync(window); window.Show();
                 await TestQuickDpiAsync(window);
                 await TestQuickModesAsync(window);
                 if (window.Displays.Count > 1)
@@ -450,14 +451,21 @@ internal static partial class Program
             Check(FindDpi(2).IsEnabled && FindDpi(2).Value == 1 && !window.IsVisible, "Release keeps the confirmed live scale without opening settings");
             SelectQuick(quick, 1); slider = FindDpi(1); slider.Value = 2; await Task.Delay(10); slider.Value = 1; await Task.Delay(180);
             Check(calls == 3 && ReferenceEquals(requestedDisplay, first) && requestedPercent == 150, "Fast keyboard input coalesces to latest supported step");
-            SelectQuick(quick, 2); quick.UpdateLayout(); fail = true; slider = FindDpi(2); slider.Value = 2; await Task.Delay(420); quick.UpdateLayout();
+            SelectQuick(quick, 2); quick.UpdateLayout(); fail = true; slider = FindDpi(2);
+            Click(Descendants<Button>(quick).Single(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b) == "quick-dpi-decrease-2"));
+            await Task.Delay(420); quick.UpdateLayout();
             Check(calls == 4 && Descendants<TextBlock>(quick).Any(t => t.Text == "测试：缩放命令被拒绝") && FindDpi(2).Value == 1, "Quick failure is displayed inline and value reloads actual current scale");
             quick.Render(); quick.UpdateLayout();
             Check(Descendants<TextBlock>(quick).Any(t => t.Text == "测试：缩放命令被拒绝") && !window.IsVisible, "Inline failure survives discovery rerender without opening main settings");
             SelectQuick(quick, 1); fail = false; slider = FindDpi(1); BeginDrag(slider); slider.Value = 0; await Task.Delay(160); EndDrag(slider, true); await Task.Delay(60);
             Check(calls == 5 && first.DpiScale.CurrentPercent == 175, "Cancel keeps an already confirmed live setting without a stale queued command");
-            slider = FindDpi(1); slider.Value = 1; quick.Close(); await Task.Delay(180);
-            Check(calls == 6 && !quick.IsVisible && first.DpiScale.CurrentPercent == 150, "Closing waits for final live target then closes without losing adjustment");
+            var decrease = Descendants<Button>(quick).Single(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b) == "quick-dpi-decrease-1");
+            decrease.Focus(); Click(decrease); await Task.Delay(180); quick.Render();
+            Check(calls == 6 && first.DpiScale.CurrentPercent == 150 && decrease.IsKeyboardFocused &&
+                ReferenceEquals(decrease, Descendants<Button>(quick).Single(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b) == "quick-dpi-decrease-1")),
+                "A keyboard nudge keeps its focused button through completion and discovery refresh");
+            slider = FindDpi(1); slider.Value = 2; quick.Close(); await Task.Delay(180);
+            Check(calls == 7 && !quick.IsVisible && first.DpiScale.CurrentPercent == 125, "Closing waits for final live target then closes without losing adjustment");
         }
         finally
         {
