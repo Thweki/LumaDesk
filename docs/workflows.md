@@ -29,6 +29,12 @@ On the **Presets** page, expand **More options** for an existing preset, enter a
 
 On the **Presets** page, use **Move up** or **Move down** on a preset card to put frequently used presets first. The order is saved immediately, survives restarts, and also appears in the tray preset menu. Reordering does not capture or apply display settings or change preset IDs, saved values, shortcuts, or trigger settings. Existing automation still selects the first matching preset in list order when multiple rules match. No experimental flag is required.
 
+## 预设备注 / Preset notes
+
+在“预设”页展开预设的“更多选项”，输入备注并点击“保存备注”。备注最多 500 个字符，支持多行文字，例如记录适用场景或连接提示。卡片显示备注预览，完整内容可在编辑框或悬停提示中查看。清空文字后保存即可删除备注。备注随预设保存，复制预设时一并复制；更新显示设置不会删除已有备注。保存备注无需连接屏幕，也不会读取或应用显示设置，更不会改变快捷键或自动触发配置。
+
+Open **Presets → More options**, enter a **Note**, then click **Save note**. Use up to 500 characters across multiple lines to record when to use a setup or a connection reminder. The card shows a short preview; the editor and preview tooltip show the full note. Clear the text and save to remove it. Outer whitespace is trimmed. Notes survive restarts, copy with duplicated presets, and remain when updating the preset's display settings. Saving a note works with disconnected screens and does not capture or apply display settings or change shortcuts or automation. Failed saves keep your typed text for retry. No experimental flag is required.
+
 ## 可选自动化
 
 预设可设置每天的时间（本机 24 小时制）或接通电源/使用电池触发。应用运行期间约每 20 秒检查一次；休眠错过的最近一次时间可在恢复后触发，不补跑历史任务。同一轮多个预设命中时只应用列表中第一个匹配屏幕集合的预设。

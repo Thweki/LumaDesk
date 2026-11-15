@@ -28,6 +28,15 @@ internal sealed class SceneResult
 
 internal static class SceneService
 {
+    internal const int NoteMaxLength = 500;
+
+    internal static void SetNote(Preset preset, string? note)
+    {
+        note = note?.Trim();
+        if (note?.Length > NoteMaxLength) throw new ArgumentException(L.F("scene.noteTooLong", NoteMaxLength));
+        preset.Note = string.IsNullOrEmpty(note) ? null : note;
+    }
+
     internal static bool Move(List<Preset> presets, Preset preset, int direction)
     {
         if (direction is not (-1 or 1)) return false;
@@ -49,6 +58,7 @@ internal static class SceneService
         return new Preset
         {
             Name = name,
+            Note = source.Note,
             Displays = source.Displays.Select(d => new PresetDisplay
             {
                 Id = d.Id, Name = d.Name, Brightness = d.Brightness, Dimming = d.Dimming,
