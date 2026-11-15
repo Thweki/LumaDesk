@@ -533,5 +533,8 @@
   "timing.on": "Windows 動態更新頻率（DRR）：已啟用",
   "timing.off": "Windows 動態更新頻率（DRR）：已停用",
   "timing.unknown": "Windows 動態更新頻率（DRR）：未回報",
-  "timing.help": "唯讀檢視設定的更新頻率，並非即時幀率。DRR 會自動提升桌面更新頻率。此檢查器不回報遊戲 VRR / Adaptive-Sync 的支援情況或活動狀態；DRR 已停用不代表不支援 VRR。"
+  "timing.help": "唯讀檢視設定的更新頻率，並非即時幀率。DRR 會自動提升桌面更新頻率。此檢查器不回報遊戲 VRR / Adaptive-Sync 的支援情況或活動狀態；DRR 已停用不代表不支援 VRR。",
+  "scene.lastApplied": "上次成功套用：{0}\n{1}",
+  "scene.lastAppliedNone": "尚無成功套用預設的記錄。",
+  "scene.lastAppliedHelp": "僅為歷史記錄；之後的調整或復原可能改變目前配置。"
 }

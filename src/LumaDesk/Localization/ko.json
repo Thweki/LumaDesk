@@ -533,5 +533,8 @@
   "timing.on": "Windows 동적 주사율(DRR): 활성화",
   "timing.off": "Windows 동적 주사율(DRR): 비활성화",
   "timing.unknown": "Windows 동적 주사율(DRR): 보고되지 않음",
-  "timing.help": "설정된 주사율의 읽기 전용 스냅샷이며 실시간 FPS가 아닙니다. DRR은 데스크톱 주사율을 자동으로 높입니다. 이 검사기는 게임용 VRR / Adaptive-Sync 지원 여부나 작동 상태를 보고하지 않습니다. DRR 비활성화가 VRR 미지원을 의미하지는 않습니다."
+  "timing.help": "설정된 주사율의 읽기 전용 스냅샷이며 실시간 FPS가 아닙니다. DRR은 데스크톱 주사율을 자동으로 높입니다. 이 검사기는 게임용 VRR / Adaptive-Sync 지원 여부나 작동 상태를 보고하지 않습니다. DRR 비활성화가 VRR 미지원을 의미하지는 않습니다.",
+  "scene.lastApplied": "마지막으로 적용에 성공한 프리셋: {0}\n{1}",
+  "scene.lastAppliedNone": "아직 프리셋 적용에 성공한 기록이 없습니다.",
+  "scene.lastAppliedHelp": "기록일 뿐이며, 이후 조정하거나 실행 취소하면 현재 설정이 달라질 수 있습니다."
 }

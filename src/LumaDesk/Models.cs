@@ -106,6 +106,12 @@ public sealed class HotkeyBinding
     public uint Modifiers { get; set; } = 3;
     public uint Key { get; set; }
 }
+public sealed class PresetApplication
+{
+    public string PresetId { get; set; } = "";
+    public string PresetName { get; set; } = "";
+    public DateTimeOffset AppliedAtUtc { get; set; }
+}
 public sealed class DisplayPreference
 {
     public string Alias { get; set; } = "";
@@ -132,6 +138,7 @@ public sealed class Preferences
     public string? QuickMoreDisplayId { get; set; }
     public string? QuickSelectedDisplayId { get; set; }
     public List<Preset> Presets { get; set; } = new();
+    public PresetApplication? LastPresetApplication { get; set; }
     public List<DisplayGroup> Groups { get; set; } = new();
     public Dictionary<string, DisplayPreference> DisplayOptions { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public bool RestoreBrightness { get; set; } = true;
