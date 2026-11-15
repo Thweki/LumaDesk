@@ -117,6 +117,7 @@ internal static partial class Program
                 await TestQuickPlacementAsync(window);
                 await TestFocusDisplayAsync(window);
                 await TestQuickDisplayPickerAsync(window);
+                await TestHdrBadgesAsync(window);
                 await TestMultiBrightnessAsync(window);
                 await TestBrightnessStepsFixtureAsync(window);
                 await TestInputSwitchUiAsync(window);
@@ -361,7 +362,9 @@ internal static partial class Program
             xBox.Focus(); xBox.SelectAll(); xBox.SelectedText = "-1200";
             ApplicationCommands.Undo.Execute(null, xBox);
             Check(xBox.Text != "-1200" && layout.Placements.SequenceEqual(beforeCoordinates), "Undo inside a coordinate field edits text without undoing the layout");
-            xBox.ClearUndo(); ApplicationCommands.Undo.Execute(null, xBox);
+            // Toggling undo clears WPF's text history before checking command routing.
+            xBox.IsUndoEnabled = false; xBox.IsUndoEnabled = true;
+            ApplicationCommands.Undo.Execute(null, xBox);
             Check(layout.Placements.SequenceEqual(beforeCoordinates), "An empty text undo history does not fall through to layout undo");
             var apply = Descendants<Button>(layout).Single(btn => System.Windows.Automation.AutomationProperties.GetAutomationId(btn) == "layout-apply");
             Click(apply); await Task.Delay(20);
