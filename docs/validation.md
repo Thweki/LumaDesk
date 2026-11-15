@@ -1,5 +1,49 @@
 # LumaDesk 验证记录
 
+## Quick-panel brightness steps
+
+The quick panel's **−5 / +5** buttons use the existing brightness slider queue,
+sync/group scope and per-display limits. `BrightnessStepTests.cs` runs in both the
+desktop UI suite and `--fixtures`, with injected writes covering rapid clicks,
+slider interleaving, boundaries, software dimming, failures and unload cancellation.
+The desktop picker tests also cover selected-screen routing, pending-write guards
+and retained button focus. No hardware writes are used by these new tests.
+
+Local validation: whitespace, localization resources and test wiring checked.
+Runtime commands could not run in this Linux environment: `dotnet` and `pwsh`
+are unavailable. Windows compilation, WPF execution and visual inspection remain
+unverified locally; run the fixture command below and `./test.ps1` on Windows.
+
+## Desktop-independent WPF fixtures (CI)
+
+Run on Windows with .NET 8:
+
+```powershell
+dotnet run --project tests/LumaDesk.UiTests -c Debug -- --fixtures artifacts/wpf-fixtures
+```
+
+The `wpf-fixtures` Windows CI job runs the existing input-switch and live-brightness
+callback checks on an STA WPF dispatcher with detached controls, injected reads and
+writes, and isolated settings. The main window is constructed but never shown or
+loaded, so its display discovery, tray, and automation startup do not run. The
+fixture suite does not require an interactive desktop, monitor topology, focus,
+or screen capture. A 30-second dispatcher timeout fails stalled asynchronous tests;
+the CI job also has a 10-minute limit covering build and execution.
+
+The normal UI runner and `./test.ps1` retain the desktop suite, including actual
+display queries, placement, focus/dismissal, overlays, and PIP capture. `-Headless`
+still runs only the non-WPF suites. Fixture success does not validate those desktop
+behaviors or hardware writes.
+
+On failure, CI retains `artifacts/wpf-fixtures/` as `wpf-fixture-failure` for 14 days:
+build/run output (`run.log`), check count and exception (`result.txt`), isolated
+settings/logs, and any completed offscreen control snapshot. Build failures may
+produce only the run log. These artifacts do not capture the user's desktop.
+
+Local validation for this change is limited to static checks: this Linux worktree
+has no `dotnet` or PowerShell. Windows CI must confirm compilation and fixture
+execution; no WPF pass is claimed locally.
+
 ## CI UI 编译检查（ci-ui-build）
 
 Windows CI 在五个 Release 无桌面测试套件之后运行 `dotnet build tests/LumaDesk.UiTests/LumaDesk.UiTests.csproj -c Release`，补上 `test.ps1 -Headless` 提前返回时遗漏的 UI 项目编译检查。此步骤只编译；完整 UI 回归仍需交互式 Windows 桌面。现有打包和 MSI 安装、启动、卸载检查保持不变。

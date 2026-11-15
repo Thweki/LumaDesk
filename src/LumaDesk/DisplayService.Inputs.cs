@@ -154,8 +154,12 @@ internal static class InputRules
         int depth = 1, end = start + 4;
         for (; end < capabilities.Length && depth > 0; end++) { if (capabilities[end] == '(') depth++; if (capabilities[end] == ')') depth--; }
         if (depth != 0) return Array.Empty<uint>();
-        string body = capabilities.Substring(start + 4, end - start - 5);
-        foreach (Match feature in Regex.Matches(body, @"(?:^|\s)([0-9A-Fa-f]{2})(?:\s*\(([^()]*)\))?(?=\s|$)", RegexOptions.None, TimeSpan.FromMilliseconds(100)))
+        string body = capabilities.Substring(start + 4, end - start - 5).Trim();
+        // Consume the entire feature list before trusting any input choices. Searching
+        // past malformed features could mistake their nested values for VCP 60.
+        var features = Regex.Matches(body, @"\G\s*([0-9A-Fa-f]{2})(?:\s*\(([^()]*)\))?(?=\s|$)", RegexOptions.None, TimeSpan.FromMilliseconds(100));
+        if (features.Cast<Match>().Sum(feature => feature.Length) != body.Length) return Array.Empty<uint>();
+        foreach (Match feature in features)
         {
             if (!feature.Groups[1].Value.Equals("60", StringComparison.OrdinalIgnoreCase)) continue;
             var values = feature.Groups[2].Value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);

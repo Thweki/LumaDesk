@@ -66,6 +66,7 @@ int errors = 0; writes.Clear();
 writer = new LatestValueWriter(v => { if (v == 5) throw new InvalidOperationException(); writes.Add(v); return Task.CompletedTask; }, (_, ex) => { if (ex != null) errors++; }, () => Task.CompletedTask);
 writer.Request(5); await writer.WhenIdle; writer.Request(55); await writer.WhenIdle;
 Check(errors == 1 && writes.SequenceEqual(new[] { 55 }), "Slider writer reports failures and accepts later input");
+await LatestValueWriterTests.Run(Check);
 Check(BrightnessRules.Split(100, true) == new CombinedLevel(100, 0) && BrightnessRules.Split(20, true) == new CombinedLevel(0, 0), "Combined brightness reaches full and minimum hardware backlight without dimming");
 Check(BrightnessRules.Split(0, true) == new CombinedLevel(0, 85) && BrightnessRules.Split(10, true) == new CombinedLevel(0, 42.5), "Combined low range extends below backlight minimum");
 Check(Enumerable.Range(0,101).All(v => { var level = BrightnessRules.Split(v, true); return Math.Abs(BrightnessRules.Combine(level.Hardware, level.Dimming)-v) <= 1; }), "Combined brightness mapping roundtrips full control range");
