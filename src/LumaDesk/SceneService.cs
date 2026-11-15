@@ -70,6 +70,11 @@ internal static class SceneService
         var saved = CopyDisplay(matches[0]);
         saved.X = saved.Y = null; saved.Primary = null;
         return new Preset { Name = source.Name, Displays = new() { saved } };
+    internal static async Task<Preset> CaptureDraft(ISceneBackend backend)
+    {
+        var draft = await Capture(backend, L.T("s3cbfca23b6"));
+        if (draft.Displays.Count == 0) throw new InvalidOperationException(L.T("scene.draftNoDisplays"));
+        return draft;
     }
 
     internal static async Task<Preset> Capture(ISceneBackend backend, string name)
