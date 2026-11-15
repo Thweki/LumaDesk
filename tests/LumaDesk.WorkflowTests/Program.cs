@@ -58,6 +58,15 @@ backend = new FakeBackend { FailColor = true }; scene = await SceneService.Captu
 Check(scene.Displays.All(d => d.Hdr == null && d.UserProfiles == null) && scene.Displays.All(d => d.Mode != null), "Unavailable color query does not prevent saving other capabilities");
 Check(InputRules.Parse("(model(60(99))vcp(10 12 60(0F 10 11 12) D6(01 04)))").SequenceEqual(new uint[] { 15, 16, 17, 18 }), "Input parsing reads only reported VCP choices");
 Check(InputRules.Parse("(vcp(10 60(11 11 12)))").SequenceEqual(new uint[] { 17, 18 }), "Repeated input choices are deduplicated");
+Check(InputRules.Parse("(vcp( \t10 12(01 02)\n60 (0f 10) D6(01 04) \r\n))").SequenceEqual(new uint[] { 15, 16 }), "Complete VCP lists retain whitespace, lowercase values and unrelated features");
+foreach (var malformed in new[] {
+    "(vcp(10(01 60(11 12) 02)))",
+    "(vcp(10(01 60(11 12) 02) 60(0F 10)))",
+    "(vcp(garbage 60(11 12)))",
+    "(vcp(60(11 12) garbage))",
+    "(vcp(60(11 12) 10(01 (02))))"
+})
+    Check(InputRules.Parse(malformed).Length == 0, "Malformed VCP features never expose input-switch choices: " + malformed);
 var legacyInputs = InputRules.Resolve(7, new uint[] { 17, 18, 15 });
 Check(legacyInputs.LegacyCodes && legacyInputs.Current == 15 && legacyInputs.Choices.Select(i => i.TransportCode).SequenceEqual(new uint[] { 5, 6, 7 }), "Observed nonstandard digital inputs map UI labels to the firmware's write codes");
 Check(InputRules.Resolve(5, new uint[] { 17, 18, 15 }).Current == 17 && InputRules.Resolve(6, new uint[] { 17, 18, 15 }).Current == 18, "Compatibility readback normalizes HDMI inputs as well as DisplayPort");
