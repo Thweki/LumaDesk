@@ -23,12 +23,18 @@ On **Presets**, click **Capture current setup** to read the connected displays i
 
 On the **Presets** page, expand **More options** for an existing preset, enter a **New preset name**, and click **Duplicate preset**. Names must contain 1–40 characters and be unique, ignoring case and surrounding whitespace. The copy gets its own ID and saved display settings, even if those screens are disconnected. Duplication does not capture or apply the current setup. Automatic triggers and the shortcut start off; configure them separately on the copy if needed. The original preset and its automation stay unchanged. No experimental flag is required.
 
+## 应用到单个显示器 / Apply a preset to one display
+
+在“预设”页展开“更多选项”，在“应用到单个显示器”中选择已连接的屏幕，再点击同名按钮。仅列出此预设已保存的设备，按设备 ID 匹配，不按名称或编号猜测。应用该屏幕的亮度、调暗、输出模式、旋转、DPI 和已保存的 HDR/ICC 设置；不恢复预设的排列或主屏。原预设不会被修改，“撤销上次切换”也仅恢复此次选择的屏幕。
+
+Open **Presets → More options → Apply to one display**, choose a connected screen, then click **Apply to one display**. This is useful when you want one screen's saved setup while keeping the other screens' current settings. Only connected devices saved in that preset are offered; matching uses stable device IDs, not names or numbers. No experimental flag is required.
+
+The action applies that screen's saved brightness, dimming, resolution, refresh rate, rotation, scaling, and HDR/ICC settings using the usual validation and recovery paths. Unspecified legacy settings stay untouched. Saved positions and the main-display choice are skipped, and the saved preset and its automation remain unchanged. Windows may still rearrange the desktop as a consequence of a resolution or rotation change. **Undo last switch** restores only the selected screen for this action and remains available after partial failure. Disconnection never redirects the operation to another screen.
 ## 排序预设 / Reorder presets
 
 在“预设”页点击预设卡片上的“上移”或“下移”，即可将常用预设放在前面。顺序会自动保存，重启后保留，托盘预设菜单也使用同一顺序。排序不读取或应用屏幕设置，也不改变预设 ID、显示设置、快捷键或自动触发配置。多个自动化规则同时匹配时，仍按列表顺序选择第一个匹配项。
 
 On the **Presets** page, use **Move up** or **Move down** on a preset card to put frequently used presets first. The order is saved immediately, survives restarts, and also appears in the tray preset menu. Reordering does not capture or apply display settings or change preset IDs, saved values, shortcuts, or trigger settings. Existing automation still selects the first matching preset in list order when multiple rules match. No experimental flag is required.
-
 ## 可选自动化
 
 预设可设置每天的时间（本机 24 小时制）或接通电源/使用电池触发。应用运行期间约每 20 秒检查一次；休眠错过的最近一次时间可在恢复后触发，不补跑历史任务。同一轮多个预设命中时只应用列表中第一个匹配屏幕集合的预设。
