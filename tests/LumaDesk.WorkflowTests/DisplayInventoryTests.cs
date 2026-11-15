@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (c) 2026 LumaDesk contributors
 
+using System.IO;
 using System.Text.Json;
 using LumaDesk;
 
