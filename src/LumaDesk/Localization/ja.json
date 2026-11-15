@@ -524,6 +524,8 @@
   "input.compatibility": "このディスプレイの互換切り替え方式を使用しています。",
   "input.switching": "切り替えと確認中…",
   "input.unverified": "切り替え要求を送信しましたが、現在の入力を確認できません。ディスプレイで確認してください。",
+  "scene.previousPreset": "前のプリセット",
+  "scene.nextPreset": "次のプリセット",
   "timing.title": "リフレッシュタイミング（実験的）",
   "timing.disabled": "リフレッシュタイミングの確認は無効です。",
   "timing.ambiguous": "このディスプレイには一意のアクティブなパスがありません。一覧を更新してください。複製されたディスプレイは個別に確認できません。",
