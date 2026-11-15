@@ -31,17 +31,10 @@ public partial class MainWindow
         public Task Layout(IReadOnlyList<ScreenPlacement> placements) => owner.ChangeLayoutAsync(placements);
         public Task Profiles(DisplayInfo d, PresetDisplay saved) => Task.Run(() =>
             AdvancedColorService.RestoreProfiles(d, saved.UserProfiles, saved.SdrProfile, saved.HdrProfile));
-        public async Task Brightness(DisplayInfo d, PresetDisplay saved)
+        public Task Brightness(DisplayInfo d, PresetDisplay saved)
         {
-            if (saved.Brightness.HasValue)
-            {
-                if (saved.Brightness < 0 || saved.Brightness > 100) throw new InvalidOperationException(L.T("group.invalid"));
-                if (!d.Brightness.HasValue) throw new InvalidOperationException(L.T("scene.unsupported"));
-                if (d.Brightness != saved.Brightness) await owner.Service.SetPercentAsync(d, 0x10, saved.Brightness.Value);
-                d.Brightness = saved.Brightness;
-            }
-            owner.SetDimming(d, saved.Dimming);
-            owner.RememberBrightness(d);
+            owner.CancelReconnect(d.Id);
+            return owner.RestoreBrightnessAsync(d, saved);
         }
     }
 

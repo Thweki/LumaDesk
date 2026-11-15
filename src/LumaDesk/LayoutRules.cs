@@ -16,9 +16,15 @@ public static class LayoutRules
         if (items.Count == 0 || items.Count(i => i.Primary) != 1 || items.Select(i => i.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() != items.Count)
             throw new InvalidOperationException(L.T("sc918c29047"));
         var primary = items.Single(i => i.Primary);
-        var normalized = items.Select(i => i with { X = checked(i.X - primary.X), Y = checked(i.Y - primary.Y) }).ToList();
-        if (normalized.Any(i => i.Width <= 0 || i.Height <= 0 || Math.Abs((long)i.X) + i.Width > 65535 || Math.Abs((long)i.Y) + i.Height > 65535))
-            throw new InvalidOperationException(L.T("sa9fa1bf809"));
+        var normalized = items.Select(i =>
+        {
+            // Validate in a wider type so extreme saved coordinates follow the
+            // same rejection path as other unsupported layouts, without overflow.
+            long x = (long)i.X - primary.X, y = (long)i.Y - primary.Y;
+            if (i.Width <= 0 || i.Height <= 0 || Math.Abs(x) + i.Width > 65535 || Math.Abs(y) + i.Height > 65535)
+                throw new InvalidOperationException(L.T("sa9fa1bf809"));
+            return i with { X = (int)x, Y = (int)y };
+        }).ToList();
         for (int i = 0; i < normalized.Count; i++)
         for (int j = i + 1; j < normalized.Count; j++)
         {

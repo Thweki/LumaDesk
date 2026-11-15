@@ -51,6 +51,12 @@ backend = new FakeBackend(); scene = await SceneService.Capture(backend, "Overla
 Check(SceneService.LayoutFor(scene, backend.Displays) == null, "Overlapping saved layout is rejected before native calls");
 scene.Displays[1].X = 1920; backend.Screens[0].Current = new(1280, 720, 60);
 Check(SceneService.LayoutFor(scene, backend.Displays) == null, "Failed or changed output modes suppress incompatible arrangements");
+backend = new FakeBackend(); scene = await SceneService.Capture(backend, "Extreme coordinates");
+scene.Displays[0].X = int.MinValue; scene.Displays[1].X = int.MaxValue;
+var invalidLayout = await SceneService.Apply(backend, scene);
+Check(invalidLayout.Applied == 2 && invalidLayout.Issues.SequenceEqual(new[] { L.T("scene.layoutSkipped") }) &&
+    backend.Calls.Contains("brightness:A") && backend.Calls.Contains("brightness:B") && !backend.Calls.Contains("layout"),
+    "Extreme saved coordinates skip native layout writes and preserve the scene's partial result");
 backend = new FakeBackend(); scene = await SceneService.Capture(backend, "Duplicate"); scene.Displays.Add(scene.Displays[0]);
 await SceneService.Apply(backend, scene);
 Check(backend.Calls.Count(c => c == "brightness:A") == 1 && !backend.Calls.Contains("layout"), "Duplicate saved identities never produce duplicate writes or layouts");
