@@ -29,6 +29,7 @@ bool failRestore = true;
 lease = new ModeLease(() => {}, () => { if (failRestore) throw new InvalidOperationException(); restored++; });
 try { lease.Revert(); } catch (InvalidOperationException) { }
 Check(lease.Pending, "Failed rollback remains pending"); failRestore = false; lease.Revert(); Check(!lease.Pending && restored == 3, "Failed rollback can retry");
+await RecoveryLifecycleTests.RunAsync(Check);
 var original = Native.DevMode.Create(); original.Width = 2560; original.X = -2560; original.Frequency = 144; original.Fields = 0x80000;
 var copy = JsonSerializer.Deserialize<Native.DevMode>(JsonSerializer.Serialize(original, Storage.Json), Storage.Json);
 Check(copy.Width == 2560 && copy.X == -2560 && copy.Size == 220 && copy.Fields == original.Fields, "Watchdog recovery data roundtrip preserves native mode");
@@ -65,15 +66,65 @@ int errors = 0; writes.Clear();
 writer = new LatestValueWriter(v => { if (v == 5) throw new InvalidOperationException(); writes.Add(v); return Task.CompletedTask; }, (_, ex) => { if (ex != null) errors++; }, () => Task.CompletedTask);
 writer.Request(5); await writer.WhenIdle; writer.Request(55); await writer.WhenIdle;
 Check(errors == 1 && writes.SequenceEqual(new[] { 55 }), "Slider writer reports failures and accepts later input");
+await LatestValueWriterTests.Run(Check);
 Check(BrightnessRules.Split(100, true) == new CombinedLevel(100, 0) && BrightnessRules.Split(20, true) == new CombinedLevel(0, 0), "Combined brightness reaches full and minimum hardware backlight without dimming");
-Check(BrightnessRules.Split(0, true) == new CombinedLevel(0, 85) && BrightnessRules.Split(10, true) == new CombinedLevel(0, 42), "Combined low range extends below backlight minimum");
+Check(BrightnessRules.Split(0, true) == new CombinedLevel(0, 85) && BrightnessRules.Split(10, true) == new CombinedLevel(0, 42.5), "Combined low range extends below backlight minimum");
 Check(Enumerable.Range(0,101).All(v => { var level = BrightnessRules.Split(v, true); return Math.Abs(BrightnessRules.Combine(level.Hardware, level.Dimming)-v) <= 1; }), "Combined brightness mapping roundtrips full control range");
 Check(BrightnessRules.Split(50, false).Hardware == null && BrightnessRules.Split(100, false).Dimming == 0 && BrightnessRules.Split(0, false).Dimming == 85, "Software-only display has a functional full-range combined control");
 Check(BrightnessRules.Split(-5,true) == BrightnessRules.Split(0,true) && BrightnessRules.Split(150,true) == BrightnessRules.Split(100,true), "Combined brightness clamps extremes");
+Check(BrightnessRules.Combine(100, 85) == 12 && BrightnessRules.Combine(50, 85) == 6,
+    "Maximum overlay still transmits part of the backlight in legacy presets");
+Check(Enumerable.Range(0, 101).All(v => BrightnessRules.Combine(null, BrightnessRules.Split(v, false).Dimming) == v),
+    "Every software-only slider percentage has a distinct opacity and exact readback");
+foreach (bool hasBacklight in new[] { true, false })
+{
+    var level = BrightnessRules.Split(100, hasBacklight);
+    foreach (int v in Enumerable.Range(0, 101).Reverse().Concat(Enumerable.Range(0, 101)))
+    {
+        level = BrightnessRules.Adjust(v, level.Hardware, level.Dimming);
+        if (level != BrightnessRules.Split(v, hasBacklight)) throw new Exception($"Incorrect brightness transition at {v}");
+    }
+    Check(true, "Full down/up sweep preserves endpoints and crosses the backlight minimum smoothly, hardware=" + hasBacklight);
+}
+for (int hardware = 0; hardware <= 100; hardware++)
+for (int dimming = 0; dimming <= BrightnessRules.MaxDimming; dimming++)
+{
+    int current = BrightnessRules.Combine(hardware, dimming);
+    foreach (int requested in Enumerable.Range(0, 101))
+    {
+        var level = BrightnessRules.Adjust(requested, hardware, dimming);
+        bool brighter = level.Hardware >= hardware && level.Dimming <= dimming;
+        bool darker = level.Hardware <= hardware && level.Dimming >= dimming;
+        if (BrightnessRules.Combine(level.Hardware, level.Dimming) != requested ||
+            (requested > current && !brighter) || (requested < current && !darker) ||
+            (requested == current && requested is > 0 and < 100 && level != new CombinedLevel(hardware, dimming)))
+            throw new Exception($"Unexpected adjustment from ({hardware}, {dimming}) to {requested}: {level}");
+    }
+}
+Check(true, "Every integer hardware/overlay pair adjusts monotonically to every target, including legacy mixed states");
 var layout = new[] { new ScreenPlacement("A", -1920,0,1920,1080,false), new ScreenPlacement("B",0,0,2560,1440,true) };
 Check(LayoutRules.Normalize(layout).SequenceEqual(layout), "Valid adjacent monitors preserve pixel coordinates");
 var primaryChanged = LayoutRules.Normalize(layout.Select(p => p with { Primary = p.Id == "A" }));
 Check(primaryChanged[0].X == 0 && primaryChanged[1].X == 1920 && primaryChanged[0].Primary, "Changing primary translates the whole desktop while preserving relative positions");
+foreach (var (primaryCoordinate, secondaryCoordinate) in new[] { (int.MinValue, int.MaxValue), (int.MaxValue, int.MinValue) })
+foreach (bool horizontal in new[] { true, false })
+{
+    var extreme = new[]
+    {
+        new ScreenPlacement("A", horizontal ? primaryCoordinate : 0, horizontal ? 0 : primaryCoordinate, 1920, 1080, true),
+        new ScreenPlacement("B", horizontal ? secondaryCoordinate : 0, horizontal ? 0 : secondaryCoordinate, 1920, 1080, false)
+    };
+    bool rejected = false;
+    try { LayoutRules.Normalize(extreme); } catch (InvalidOperationException) { rejected = true; }
+    Check(rejected, $"Extreme relative layout coordinates are rejected as validation errors: {primaryCoordinate}, horizontal={horizontal}");
+}
+foreach (int origin in new[] { int.MinValue, int.MaxValue - 1920 })
+{
+    var translated = new[] { new ScreenPlacement("A", origin, origin, 1920, 1080, true), new ScreenPlacement("B", origin + 1920, origin, 1920, 1080, false) };
+    var normalized = LayoutRules.Normalize(translated);
+    Check(normalized[0].X == 0 && normalized[0].Y == 0 && normalized[1].X == 1920 && normalized[1].Y == 0,
+        "Valid relative layout survives an extreme absolute origin: " + origin);
+}
 foreach (var invalid in new[] {
     new[] { layout[0] with { Primary = true }, layout[1] },
     new[] { layout[0] with { X = -1000 }, layout[1] },
