@@ -289,7 +289,7 @@ public partial class MainWindow : Window
         string recovery = ModeRecovery.Prepare(display.Device, display.Id, original); modePending = true; ModeLease? lease = null;
         try
         {
-            lease = new ModeLease(() => DisplayService.ApplyMode(display.Device, target, expectedId: display.Id), () => DisplayService.ApplyMode(display.Device, original, expectedId: display.Id));
+            lease = new ModeLease(() => DisplayService.ApplyMode(display.Device, target, expectedId: display.Id), () => DisplayService.ApplyMode(display.Device, original, expectedId: display.Id), () => File.Delete(recovery));
             // Menu selection commits after driver readback; no extra Apply/Keep dialog.
             // The recovery process remains armed until this check succeeds.
             bool matches = false;
@@ -302,11 +302,11 @@ public partial class MainWindow : Window
                 await Task.Delay(50);
             }
             if (!matches) throw new InvalidOperationException(L.T("sd26c587007"));
-            File.Delete(recovery); lease.Keep(); Status(L.T("s3e899a02c0"));
+            lease.Keep(); Status(L.T("s3e899a02c0"));
         }
         finally
         {
-            if (lease?.Pending == true) { try { lease.Revert(); File.Delete(recovery); } catch (Exception ex) { Storage.Log("Rollback: " + ex); } }
+            if (lease?.Pending == true) { try { lease.Revert(); } catch (Exception ex) { Storage.Log("Rollback: " + ex); } }
             modePending = false; await RefreshAsync(sceneRefresh: sceneBusy);
         }
     }

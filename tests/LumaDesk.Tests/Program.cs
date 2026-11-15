@@ -29,6 +29,7 @@ bool failRestore = true;
 lease = new ModeLease(() => {}, () => { if (failRestore) throw new InvalidOperationException(); restored++; });
 try { lease.Revert(); } catch (InvalidOperationException) { }
 Check(lease.Pending, "Failed rollback remains pending"); failRestore = false; lease.Revert(); Check(!lease.Pending && restored == 3, "Failed rollback can retry");
+await RecoveryLifecycleTests.RunAsync(Check);
 var original = Native.DevMode.Create(); original.Width = 2560; original.X = -2560; original.Frequency = 144; original.Fields = 0x80000;
 var copy = JsonSerializer.Deserialize<Native.DevMode>(JsonSerializer.Serialize(original, Storage.Json), Storage.Json);
 Check(copy.Width == 2560 && copy.X == -2560 && copy.Size == 220 && copy.Fields == original.Fields, "Watchdog recovery data roundtrip preserves native mode");
