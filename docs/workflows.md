@@ -28,6 +28,7 @@
 ```powershell
 $app = '.\LumaDesk.exe'
 & $app --list --output .\screens.json
+& $app --inventory --output .\inventory.json
 & $app --brightness '1' 60 --output .\brightness-result.json
 & $app --apply-preset '办公' --output .\preset-result.json
 ```
@@ -35,6 +36,14 @@ $app = '.\LumaDesk.exe'
 显示器参数可以是列表中的设备 ID、唯一名称或编号。长期脚本优先使用设备 ID；编号可能随连接变化。亮度命令遵循应用内分组和同步设置。预设可使用名称或 ID。
 
 已有应用时，命令通过限定当前 Windows 用户及桌面会话的本地命名管道交给应用执行；不会另建调暗覆盖层。未运行时，查询直接读取，修改命令启动托盘应用后再执行。发送命令后不自动重试，避免超时导致重复写入。管道不对网络开放。
+
+### Connected-display inventory
+
+`--inventory --output inventory.json` exports a fresh, read-only report of active desktop displays, including HDR support/enabled/active state, signal bit depth, and default SDR/HDR ICC profile names alongside identity, adapter, geometry, rotation (degrees), current/preferred pixel sizes, scaling and hardware control readings. Unlike `--list`, it includes color status and always queries locally, even when the tray app is running; it never starts the tray app or applies display settings.
+
+The JSON uses the usual `Success` / `Data` / `Error` envelope. `Data` contains `SchemaVersion` (currently `1`), `CapturedAtUtc` (UTC scan start) and `Displays`. Unknown capability values are `null`, known unsupported/disabled HDR values are `false`, and a readable but unassigned ICC profile is `""`. Optional color-query failures retain the display with an unavailable reason; successful enumeration still exits with `0`. A scan or output-file failure exits with `1`. No active displays produces an empty array.
+
+`HardwareBrightnessPercent` is the queried backlight level, not the combined software-dimming slider. Software dimming and user aliases are not included. Preferred pixel dimensions are `0` when unavailable. Device IDs identify the current connections and may change after moving ports. The report includes device IDs and profile names but excludes registry/WMI paths, settings, logs and ICC file contents. It covers active desktop displays, not disconnected or disabled outputs; mirrored outputs follow Windows monitor enumeration. Capture is sequential, so a hot-plug during capture can leave a display with unavailable color details. Like other JSON commands, the output file is overwritten if it exists.
 
 ## 硬件与性能边界
 
