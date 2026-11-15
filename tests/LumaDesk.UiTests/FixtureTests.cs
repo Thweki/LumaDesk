@@ -60,6 +60,7 @@ internal static partial class Program
                     await TestLiveBrightnessFixtureAsync(owner);
                     await TestBrightnessStepsFixtureAsync(owner);
                     await TestInputSwitchUiAsync(owner, offscreen: true);
+                    await TestRefreshTimingUiAsync(owner);
                     Check(!owner.IsLoaded && new WindowInteropHelper(owner).Handle == IntPtr.Zero && owner.Displays.Count == 0,
                         "Fixture owner never loads a desktop window or discovers displays");
                     Result($"PASS: {checks} desktop-independent WPF fixture checks. No hardware queries or writes.");

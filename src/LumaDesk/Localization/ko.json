@@ -527,5 +527,15 @@
   "scene.note": "메모",
   "scene.noteHelp": "최대 {0}자. 메모를 삭제하려면 내용을 지우고 저장하세요.",
   "scene.saveNote": "메모 저장",
-  "scene.noteTooLong": "메모는 {0}자 이하여야 합니다."
+  "scene.noteTooLong": "메모는 {0}자 이하여야 합니다.",
+  "timing.title": "새로 고침 타이밍 (실험적)",
+  "timing.disabled": "새로 고침 타이밍 검사가 비활성화되어 있습니다.",
+  "timing.ambiguous": "이 디스플레이에 고유한 활성 경로가 없습니다. 디스플레이 목록을 새로 고치세요. 복제된 디스플레이는 개별적으로 검사할 수 없습니다.",
+  "timing.failed": "새로 고침 타이밍을 읽을 수 없습니다: {0}",
+  "timing.hz": "{0:0.###} Hz",
+  "timing.rates": "데스크톱 주사율: {0}\n신호 주사율: {1}",
+  "timing.on": "Windows 동적 주사율(DRR): 활성화",
+  "timing.off": "Windows 동적 주사율(DRR): 비활성화",
+  "timing.unknown": "Windows 동적 주사율(DRR): 보고되지 않음",
+  "timing.help": "설정된 주사율의 읽기 전용 스냅샷이며 실시간 FPS가 아닙니다. DRR은 데스크톱 주사율을 자동으로 높입니다. 이 검사기는 게임용 VRR / Adaptive-Sync 지원 여부나 작동 상태를 보고하지 않습니다. DRR 비활성화가 VRR 미지원을 의미하지는 않습니다."
 }

@@ -527,5 +527,15 @@
   "scene.note": "备注",
   "scene.noteHelp": "最多 {0} 个字符。清空后保存即可删除备注。",
   "scene.saveNote": "保存备注",
-  "scene.noteTooLong": "备注不能超过 {0} 个字符。"
+  "scene.noteTooLong": "备注不能超过 {0} 个字符。",
+  "timing.title": "刷新时序（实验性）",
+  "timing.disabled": "刷新时序检查已禁用。",
+  "timing.ambiguous": "此显示器没有唯一的活动路径。请刷新显示器列表；无法单独检查镜像显示器。",
+  "timing.failed": "无法读取刷新时序：{0}",
+  "timing.hz": "{0:0.###} Hz",
+  "timing.rates": "桌面刷新率：{0}\n信号刷新率：{1}",
+  "timing.on": "Windows 动态刷新率（DRR）：已启用",
+  "timing.off": "Windows 动态刷新率（DRR）：已禁用",
+  "timing.unknown": "Windows 动态刷新率（DRR）：未报告",
+  "timing.help": "只读查看配置的刷新率，并非实时帧率。DRR 会自动提升桌面刷新率。此检查器不报告游戏 VRR / Adaptive-Sync 的支持情况或活动状态；DRR 已禁用不代表不支持 VRR。"
 }
