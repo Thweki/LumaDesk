@@ -215,6 +215,7 @@ public partial class MainWindow : Window
             var selected = display.Modes.First(m => m.Resolution == (string?)resolution.SelectedItem && m.Frequency == (uint)refresh.SelectedItem);
             await ChangeModeAsync(display, selected, (uint)orientation.SelectedIndex);
         }), true))); PageContent.Children.Add(Ui.Card(mode));
+        if (CreateRefreshTimingControls(display) is UIElement timing) PageContent.Children.Add(Ui.Card(timing));
         var extras = new StackPanel(); extras.Children.Add(Ui.Row(Ui.Labels(L.T("s850875a753"), Help(L.T("sce70a24e69"))), Ui.Button(L.T("s86227fc6df"), () => OpenPip(display)))); extras.Children.Add(Ui.Line());
         extras.Children.Add(CreateColorControls(display)); extras.Children.Add(Ui.Line());
         extras.Children.Add(Ui.Row(Ui.Labels(L.T("sed1989d773"), Help(L.T("sb3bd567058"))), Ui.Button(L.T("sab88522dca"), () => ExportEdid(display)))); PageContent.Children.Add(Ui.Card(extras));
@@ -235,7 +236,7 @@ public partial class MainWindow : Window
         void ReleasePopup() { keepOpen?.Dispose(); keepOpen = null; }
         void RefreshPopup()
         {
-            if (!failed && slider.IsLoaded && !dragging && !slider.IsMouseCaptureWithin && !slider.IsKeyboardFocusWithin)
+            if (!failed && slider.IsLoaded && !dragging && !slider.IsMouseCaptureWithin && !stack.IsKeyboardFocusWithin)
                 (Window.GetWindow(slider) as QuickWindow)?.Render();
         }
         var writer = new LatestValueWriter(changed, (requested, error) =>
@@ -285,8 +286,42 @@ public partial class MainWindow : Window
             }
             RefreshPopup();
         }));
-        slider.LostKeyboardFocus += (_, _) => Dispatcher.BeginInvoke(new Action(RefreshPopup));
-        stack.Children.Add(slider); return stack;
+        stack.LostKeyboardFocus += (_, _) => Dispatcher.BeginInvoke(new Action(RefreshPopup));
+        if (compact && brightnessDisplay != null)
+        {
+            int StepValue(int delta)
+            {
+                var options = Options(brightnessDisplay);
+                return GroupRules.Target((int)Math.Round(slider.Value) + delta, options, options);
+            }
+            Button StepButton(string text, string key, int delta, string id)
+            {
+                var button = Ui.Button(text, () =>
+                {
+                    int next = StepValue(delta);
+                    // Use the thumb's pending value so rapid clicks accumulate in
+                    // the same serialized queue as dragging, even on slow DDC displays.
+                    if (delta < 0 ? next < slider.Value : next > slider.Value) slider.Value = next;
+                });
+                button.Padding = new Thickness(6, 2, 6, 2); button.MinWidth = 36;
+                button.ToolTip = L.T(key);
+                System.Windows.Automation.AutomationProperties.SetName(button, L.T(key));
+                System.Windows.Automation.AutomationProperties.SetAutomationId(button, id);
+                void UpdateEnabled() => button.IsEnabled = delta < 0 ? StepValue(delta) < slider.Value : StepValue(delta) > slider.Value;
+                slider.ValueChanged += (_, _) => UpdateEnabled();
+                UpdateEnabled();
+                return button;
+            }
+            var controls = new DockPanel();
+            var down = StepButton("−5", "s970eb36fb3", -5, "quick-brightness-down");
+            var up = StepButton("+5", "s768e8a9c2a", 5, "quick-brightness-up");
+            DockPanel.SetDock(down, Dock.Left); controls.Children.Add(down);
+            DockPanel.SetDock(up, Dock.Right); controls.Children.Add(up);
+            slider.Margin = new Thickness(8, 1, 8, 0); controls.Children.Add(slider);
+            stack.Children.Add(controls);
+        }
+        else stack.Children.Add(slider);
+        return stack;
     }
     private void SetDimming(DisplayInfo display, double value)
     {
