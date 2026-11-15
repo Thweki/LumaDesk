@@ -59,6 +59,13 @@ internal static class SceneService
         };
     }
 
+    internal static async Task<Preset> CaptureDraft(ISceneBackend backend)
+    {
+        var draft = await Capture(backend, L.T("s3cbfca23b6"));
+        if (draft.Displays.Count == 0) throw new InvalidOperationException(L.T("scene.draftNoDisplays"));
+        return draft;
+    }
+
     internal static async Task<Preset> Capture(ISceneBackend backend, string name)
     {
         var scene = new Preset { Name = name };
