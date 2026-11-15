@@ -416,6 +416,8 @@
   "automation.ac": "電源接続時",
   "automation.battery": "バッテリー使用時",
   "automation.daily": "毎日指定時刻に",
+  "automation.next": "次の予定：{0} · {1}",
+  "automation.nextHint": "接続中のディスプレイに対する次の毎日の予定をローカル時刻で表示します。LumaDesk の実行中は約20秒ごとに確認します。スリープや処理中の操作により適用が遅れる場合があります。",
   "automation.never": "自動切り替えなし",
   "automation.power": "電源の変化",
   "automation.restore": "再接続時に明るさを復元",

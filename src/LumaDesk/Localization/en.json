@@ -416,6 +416,8 @@
   "automation.ac": "When plugged in",
   "automation.battery": "On battery",
   "automation.daily": "Daily schedule",
+  "automation.next": "Next scheduled: {0} · {1}",
+  "automation.nextHint": "Next future daily schedule for the connected displays, in local time. Checks run about every 20 seconds while LumaDesk is running; sleep or a busy operation may delay application.",
   "automation.never": "Do not switch",
   "automation.power": "Power changes",
   "automation.restore": "Restore brightness on reconnect",

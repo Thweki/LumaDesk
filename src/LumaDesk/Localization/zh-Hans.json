@@ -416,6 +416,8 @@
   "automation.ac": "接通电源时",
   "automation.battery": "使用电池时",
   "automation.daily": "每天定时",
+  "automation.next": "下次计划：{0} · {1}",
+  "automation.nextHint": "显示当前连接屏幕的下一次每日计划（本地时间）。LumaDesk 运行时约每 20 秒检查一次；休眠或正在执行的操作可能延迟应用。",
   "automation.never": "不自动切换",
   "automation.power": "电源变化",
   "automation.restore": "重连后恢复亮度",

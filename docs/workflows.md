@@ -33,6 +33,10 @@ On the **Presets** page, use **Move up** or **Move down** on a preset card to pu
 
 预设可设置每天的时间（本机 24 小时制）或接通电源/使用电池触发。应用运行期间约每 20 秒检查一次；休眠错过的最近一次时间可在恢复后触发，不补跑历史任务。同一轮多个预设命中时只应用列表中第一个匹配屏幕集合的预设。
 
+在预设的“更多选项”中启用“每日计划”后，打开托盘面板即可看到“下次计划”：与当前连接屏幕集合完全匹配的下一个预设及本地日期和时间。同一时刻按预设列表顺序选择；当天计划时间已到则显示下一次未来计划。没有有效且匹配屏幕的每日计划时隐藏此行。面板打开期间约每 20 秒刷新，只更新提示，不修改或应用任何设置。
+
+Enable **Daily schedule** under a preset's **More options**, then open the tray panel to see **Next scheduled** with the preset name and local date/time in your Windows regional format. Only schedules whose saved display set exactly matches the connected displays are considered; equal times use preset list order. At or after a scheduled time, the indicator advances to the next future occurrence, including tomorrow when needed. It hides when no valid, matching daily schedule exists and refreshes about every 20 seconds while the panel is visible. This read-only indicator needs no new setting or experimental flag. It shows the planned time, not a completion promise: sleep or a busy operation can delay application, and power/connection triggers are not predicted.
+
 设置、托盘、快捷键和命令行共用 0–100% 的亮度刻度。支持背光的屏幕在 20% 达到最低背光，继续向左拖动会用软件调暗。0% 仍能看到画面。没有背光接口的屏幕全程用软件调节。旧预设同时设置了背光和调暗时，调亮会先减弱调暗，调暗会先降低背光。
 
 分组同步使用同一刻度，正偏移表示相对其他屏幕更亮，上下限限定各屏的目标百分比。亮度快捷键默认作用于鼠标所在屏幕，录入快捷键时临时停止全局按键处理。

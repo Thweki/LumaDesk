@@ -143,6 +143,21 @@ public partial class MainWindow
 internal static class AutomationRules
 {
     internal static bool ValidTime(string? value) => TimeSpan.TryParseExact(value, @"hh\:mm", CultureInfo.InvariantCulture, out _);
+    internal static (Preset Preset, DateTime At)? NextScheduledPreset(IEnumerable<Preset> presets, IReadOnlyList<DisplayInfo> displays, DateTime now)
+    {
+        (Preset Preset, DateTime At)? next = null;
+        foreach (var preset in presets)
+        {
+            if (!TimeSpan.TryParseExact(preset.AtTime, @"hh\:mm", CultureInfo.InvariantCulture, out var time) ||
+                !SceneService.SameScreens(preset, displays)) continue;
+            DateTime at = now.Date + time;
+            if (at <= now) at = at.AddDays(1);
+            // As in TickAutomationAsync, the first preset in list order wins ties.
+            if (next == null || at < next.Value.At) next = (preset, at);
+        }
+        return next;
+    }
+
     internal static bool CrossedTime(string? value, DateTime previous, DateTime now)
     {
         if (!TimeSpan.TryParseExact(value, @"hh\:mm", CultureInfo.InvariantCulture, out var time) || now <= previous) return false;

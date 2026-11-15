@@ -50,6 +50,7 @@ internal sealed partial class QuickWindow : Window
         this.applyBrightness = applyBrightness ?? owner.ChangeCombinedBrightness;
         this.applySelectedBrightness = applySelectedBrightness ?? owner.ChangeSelectedBrightness;
         this.dismissOnDeactivate = dismissOnDeactivate;
+        InitializeScheduleStatus();
         Title = AppBrand.Name + L.T("s2c58655791"); Width = 360; Height = 620; MinHeight = 180;
         WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize; AllowsTransparency = false; ShowInTaskbar = false; Topmost = true;
         controlsScroll = new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
@@ -170,6 +171,8 @@ internal sealed partial class QuickWindow : Window
         }
         if (!brightnessMultiSelect && owner.Displays.Count == 0) body.Children.Add(Ui.Card(Ui.Text(L.T("s7d06b98afa"), 12, "#8B93A2")));
         if (!brightnessMultiSelect && owner.Preferences.Presets.Count > 0) { var scenes = owner.SceneMenuButton(); scenes.Margin = new Thickness(8, 6, 8, 0); body.Children.Add(scenes); }
+        RefreshScheduleStatus(DateTime.Now);
+        body.Children.Add(scheduleStatus);
         var footer = new UniformGrid { Columns = 4, Margin = new Thickness(4, 8, 4, 4) };
         foreach (var item in new (string Label, Action Action)[] { (L.T("sdf3d58c7d8"), owner.ShowSettings), (L.T("s70473d8ed9"), owner.ShowLayout), (L.T("quick.virtual"), owner.ShowVirtualDisplays), (pinned ? L.T("panel.unpin") : L.T("panel.pin"), () => { pinned = !pinned; Render(); }) })
         {
