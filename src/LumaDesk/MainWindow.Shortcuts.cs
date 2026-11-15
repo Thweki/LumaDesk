@@ -68,11 +68,13 @@ public partial class MainWindow
                 var current = Displays.FirstOrDefault(d => d.Id == id);
                 if (current == null) return;
                 await ChangeCombinedBrightness(current, value);
+                current = CurrentBrightnessDisplay(id);
                 brightnessOsd ??= new BrightnessOsd(); brightnessOsd.ShowLevel(current, GetCombinedBrightness(current));
-            }, (_, error) => { if (error != null) Status(error.Message, true); }, idle: () => { shortcutValues.Remove(id); if (IsVisible) Render(); quick?.Render(); });
+            }, (_, error) => { if (error != null) Status(error.Message, true); }, idle: () => { shortcutValues.Remove(id); quick?.Render(); });
             shortcutWriters[id] = writer;
         }
-        int next = Math.Clamp(shortcutValues.GetValueOrDefault(id, GetCombinedBrightness(display)) + delta, 0, 100);
+        var options = Options(display);
+        int next = GroupRules.Target(shortcutValues.GetValueOrDefault(id, GetCombinedBrightness(display)) + delta, options, options);
         shortcutValues[id] = next; writer.Request(next);
     }
     private static string ShortcutText(HotkeyBinding? binding)

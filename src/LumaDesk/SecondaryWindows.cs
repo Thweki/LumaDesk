@@ -42,13 +42,14 @@ internal sealed partial class QuickWindow : Window
     private readonly StackPanel body = new() { Margin = new Thickness(6) };
     private readonly StackPanel picker = new() { Margin = new Thickness(18, 12, 18, 0) };
     private readonly ScrollViewer controlsScroll;
-    public QuickWindow(MainWindow owner, Func<DisplayInfo, int, Window, Task>? applyDpi = null, Func<DisplayInfo, DisplayMode, uint, Window, Task>? applyMode = null, bool dismissOnDeactivate = true, Func<DisplayInfo, int, Task>? applyBrightness = null, Func<IReadOnlyList<string>, int, Task>? applySelectedBrightness = null)
+    public QuickWindow(MainWindow owner, Func<DisplayInfo, int, Window, Task>? applyDpi = null, Func<DisplayInfo, DisplayMode, uint, Window, Task>? applyMode = null, bool dismissOnDeactivate = true, Func<DisplayInfo, int, Task>? applyBrightness = null, Func<IReadOnlyList<string>, int, Task>? applySelectedBrightness = null, Func<DisplayInfo, Task<bool>>? readHdrActive = null)
     {
         Ui.ConfigureWindow(this);
         this.owner = owner; this.applyDpi = applyDpi ?? ((display, percent, parent) => owner.ChangeDpiAsync(display, percent, parent));
         this.applyMode = applyMode ?? ((display, mode, orientation, parent) => owner.ChangeModeAsync(display, mode, orientation, parent));
-        this.applyBrightness = applyBrightness ?? (async (display, value) => { await owner.ChangeCombinedBrightness(display, value); owner.RefreshView(); });
-        this.applySelectedBrightness = applySelectedBrightness ?? (async (ids, value) => { await owner.ChangeSelectedBrightness(ids, value); owner.RefreshView(); });
+        this.applyBrightness = applyBrightness ?? owner.ChangeCombinedBrightness;
+        this.applySelectedBrightness = applySelectedBrightness ?? owner.ChangeSelectedBrightness;
+        this.readHdrActive = readHdrActive ?? (display => Task.Run(() => AdvancedColorService.ReadHdrActive(display)));
         this.dismissOnDeactivate = dismissOnDeactivate;
         Title = AppBrand.Name + L.T("s2c58655791"); Width = 360; Height = 620; MinHeight = 180;
         WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize; AllowsTransparency = false; ShowInTaskbar = false; Topmost = true;
@@ -108,7 +109,7 @@ internal sealed partial class QuickWindow : Window
         else if (selected is { } d)
         {
             var stack = new StackPanel();
-            stack.Children.Add(owner.CreateSlider(L.T("s8e2f643ad1"), owner.GetCombinedBrightness(d), 100, v => this.applyBrightness(d, v), compact: true));
+            stack.Children.Add(owner.CreateBrightnessSlider(d, applyBrightness, compact: true));
             if (owner.Options(d).ShowScaling) stack.Children.Add(CreateDpiControls(d));
             bool expanded = owner.Preferences.QuickMoreDisplayId != null;
             AddDpiError(stack, d.Id);
@@ -146,12 +147,10 @@ internal sealed partial class QuickWindow : Window
                         owner.Status(d.Name + L.T("s5caf7d72ba") + value + "%"); owner.RefreshView();
                     }, compact: true));
                 }
-                if (d.Brightness.HasValue) more.Children.Add(owner.CreateSlider(L.T("s06dab760bb"), d.Brightness, 100, async v => { await owner.ChangeBrightness(d, v); owner.RefreshView(); }, compact: true));
                 if (d.Contrast.HasValue) more.Children.Add(owner.CreateSlider(L.T("s4cbc753240"), d.Contrast, 100, async value =>
                 {
                     await owner.Service.SetPercentAsync(d, 0x12, value); d.Contrast = value; owner.RefreshView();
                 }, compact: true));
-                more.Children.Add(owner.CreateSlider(L.T("s417de11214"), d.Dimming, 85, v => { owner.SetDimming(d, v); owner.RefreshView(); return Task.CompletedTask; }, compact: true));
                 more.Children.Add(CompactLine());
                 bool colorExpanded = colorSections.Contains(d.Id);
                 var colorButton = Ui.Button("", () => { if (!colorSections.Remove(d.Id)) colorSections.Add(d.Id); Render(); });
@@ -293,19 +292,16 @@ internal sealed partial class QuickWindow : Window
         var slider = new Slider { Minimum = 0, Maximum = steps.Length - 1, TickFrequency = 1, IsSnapToTickEnabled = true, IsMoveToPointEnabled = true, Value = Array.IndexOf(steps, info.CurrentPercent), Height = 22, Margin = new Thickness(0, 2, 0, 0), IsEnabled = steps.Length > 1 };
         System.Windows.Automation.AutomationProperties.SetName(slider, display.Name + L.T("s4fa3927f98"));
         System.Windows.Automation.AutomationProperties.SetAutomationId(slider, "quick-dpi-slider-" + display.Number);
-        var preview = Ui.Text("", 10, "#64748B"); preview.Margin = new Thickness(0, 1, 0, 1);
-        preview.ToolTip = L.F("se4551ed916", display.Current.Resolution, display.Current.Frequency);
         bool resetting = false;
         int SelectedPercent() => steps[Math.Clamp((int)Math.Round(slider.Value), 0, steps.Length - 1)];
         void ResetToCurrent()
         {
-            resetting = true; slider.Value = Array.IndexOf(steps, display.DpiScale.CurrentPercent); resetting = false; UpdatePreview();
+            resetting = true; slider.Value = Array.IndexOf(steps, display.DpiScale.CurrentPercent); resetting = false; UpdateScaleLabel();
         }
-        void UpdatePreview()
+        void UpdateScaleLabel()
         {
             int percent = SelectedPercent();
-            preview.Text = L.T("s8673626e8f") + DpiRules.LooksLike(display.Current, percent);
-            amount.Text = L.T("se726470b6d") + percent + "%";
+            amount.Text = L.F("sdaee699fa0", percent);
             slider.ToolTip = $"{percent}% · {DpiRules.LooksLike(display.Current, percent)}";
         }
         var writer = new LatestValueWriter(async percent =>
@@ -334,7 +330,7 @@ internal sealed partial class QuickWindow : Window
             activeDpiDisplay = display.Id; activeDpiSlider = slider; dpiBusy = true;
             writer.Request(percent);
         }
-        slider.ValueChanged += (_, _) => { UpdatePreview(); RequestCurrent(); };
+        slider.ValueChanged += (_, _) => { UpdateScaleLabel(); RequestCurrent(); };
         slider.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler((_, _) =>
         {
             if (dpiBusy && activeDpiDisplay != display.Id) return;
@@ -355,8 +351,7 @@ internal sealed partial class QuickWindow : Window
         };
         slider.Unloaded += (_, _) => writer.Stop();
         section.Children.Add(slider);
-        section.Children.Add(preview);
-        UpdatePreview();
+        UpdateScaleLabel();
         return section;
     }
     private void AddDpiError(StackPanel section, string id)
@@ -450,6 +445,18 @@ internal sealed class PipWindow : Window
         Closed += (_, _) => { closed = true; timer.Stop(); preview.Source = null; if (!capturing) DisposeBuffers(); };
     }
     private void DisposeBuffers() { full?.Dispose(); full = null; scaled?.Dispose(); scaled = null; }
+    internal static Bitmap EnsureBuffer(ref Bitmap? buffer, int width, int height)
+    {
+        if (buffer == null || buffer.Width != width || buffer.Height != height)
+        {
+            buffer?.Dispose();
+            // Allocation can fail. Never retain a disposed bitmap: the next
+            // capture must be able to retry instead of failing on Width/Height.
+            buffer = null;
+            buffer = new Bitmap(width, height);
+        }
+        return buffer;
+    }
     private async Task CaptureAsync()
     {
         if (paused || capturing || closed || selectionStart != null || WindowState == WindowState.Minimized) return;
@@ -463,12 +470,12 @@ internal sealed class PipWindow : Window
                 var area = new Drawing.Rectangle(0, 0, (int)current.Width, (int)current.Height);
                 if (requestedCrop.HasValue) area = Drawing.Rectangle.Intersect(area, requestedCrop.Value);
                 if (area.Width <= 0 || area.Height <= 0) throw new InvalidOperationException(L.T("s88561e63c9"));
-                if (full == null || full.Width != area.Width || full.Height != area.Height) { full?.Dispose(); full = new Bitmap(area.Width, area.Height); }
-                using (var graphics = Graphics.FromImage(full)) graphics.CopyFromScreen(current.X + area.X, current.Y + area.Y, 0, 0, full.Size);
+                var capture = EnsureBuffer(ref full, area.Width, area.Height);
+                using (var graphics = Graphics.FromImage(capture)) graphics.CopyFromScreen(current.X + area.X, current.Y + area.Y, 0, 0, capture.Size);
                 int width = Math.Min(960, area.Width), height = Math.Max(1, width * area.Height / area.Width);
-                if (scaled == null || scaled.Width != width || scaled.Height != height) { scaled?.Dispose(); scaled = new Bitmap(width, height); }
-                using (var g = Graphics.FromImage(scaled)) { g.InterpolationMode = Drawing.Drawing2D.InterpolationMode.Bilinear; g.DrawImage(full, 0, 0, width, height); }
-                var handle = scaled.GetHbitmap();
+                var output = EnsureBuffer(ref scaled, width, height);
+                using (var g = Graphics.FromImage(output)) { g.InterpolationMode = Drawing.Drawing2D.InterpolationMode.Bilinear; g.DrawImage(capture, 0, 0, width, height); }
+                var handle = output.GetHbitmap();
                 try { var source = Imaging.CreateBitmapSourceFromHBitmap(handle, IntPtr.Zero, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions()); source.Freeze(); return (Source: source, Area: area); }
                 finally { Native.DeleteObject(handle); }
             });

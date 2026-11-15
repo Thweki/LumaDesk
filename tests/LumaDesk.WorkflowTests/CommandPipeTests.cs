@@ -85,14 +85,17 @@ internal static class CommandPipeTests
     private static async Task<string?> Exchange(string pipeName, string input)
     {
         using var timeout = new CancellationTokenSource(Deadline);
-        using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
-        await pipe.ConnectAsync(timeout.Token);
-        using var reader = new StreamReader(pipe, leaveOpen: true);
-        // Leave the connection open while reading, including the no-newline case.
-        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(input);
-        await pipe.WriteAsync(bytes, timeout.Token);
-        try { return await reader.ReadLineAsync(timeout.Token); }
-        catch (IOException) { return null; } // Rejection can close or reset the pipe.
+        try
+        {
+            using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+            await pipe.ConnectAsync(timeout.Token);
+            using var reader = new StreamReader(pipe, leaveOpen: true);
+            // Leave the connection open while reading, including the no-newline case.
+            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(input);
+            await pipe.WriteAsync(bytes, timeout.Token);
+            return await reader.ReadLineAsync(timeout.Token);
+        }
+        catch (IOException) { return null; } // Rejection can close or reset the pipe during write or read.
     }
 
     private static async Task LostReply(string pipeName, string folder, Action<bool, string> check)

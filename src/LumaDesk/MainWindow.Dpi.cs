@@ -69,24 +69,24 @@ public partial class MainWindow
     internal async Task ChangeDpiAsync(DisplayInfo display, int percent, Window? dialogOwner = null)
     {
         if (modePending) throw new InvalidOperationException(L.T("s70da07b61e"));
-        modePending = true; ModeLease? lease = null; string? recovery = null;
+        modePending = true; ModeLease? lease = null;
         try
         {
             var info = await Task.Run(() => DpiService.Read(display)); DpiRules.ToRelative(info, percent);
             if (info.CurrentPercent == percent) { display.DpiScale = info; return; }
             var original = DisplayService.CurrentMode(display.Device);
-            recovery = await Task.Run(() => DpiRecovery.Prepare(display, info.CurrentPercent));
-            lease = await Task.Run(() => new ModeLease(() => DpiService.Set(display, percent), () => DpiService.Set(display, info.CurrentPercent)));
+            var recovery = await Task.Run(() => DpiRecovery.Prepare(display, info.CurrentPercent));
+            lease = await Task.Run(() => new ModeLease(() => DpiService.Set(display, percent), () => DpiService.Set(display, info.CurrentPercent), () => File.Delete(recovery)));
             var actual = DisplayService.CurrentMode(display.Device);
             if (actual.Width != original.Width || actual.Height != original.Height || actual.Frequency != original.Frequency || actual.Orientation != original.Orientation)
                 throw new InvalidOperationException(L.T("s546905110c"));
             // DPI changes are committed after successful readback, matching the quick-menu
             // interaction. Hardware mode switching has a separate safety confirmation.
-            File.Delete(recovery); lease.Keep();
+            lease.Keep();
         }
         finally
         {
-            if (lease?.Pending == true) { try { await Task.Run(lease.Revert); if (recovery != null) File.Delete(recovery); } catch (Exception ex) { Storage.Log("DPI rollback: " + ex); } }
+            if (lease?.Pending == true) { try { await Task.Run(lease.Revert); } catch (Exception ex) { Storage.Log("DPI rollback: " + ex); } }
             try { display.DpiScale = await Task.Run(() => DpiService.Read(display)); }
             catch (Exception ex) { Storage.Log("DPI refresh: " + ex.Message); }
             modePending = false;

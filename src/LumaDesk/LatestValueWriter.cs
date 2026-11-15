@@ -41,6 +41,9 @@ public sealed class LatestValueWriter
                 int value = pending.Value; pending = null;
                 Exception? failure = null;
                 try { await write(value); } catch (Exception ex) { failure = ex; }
+                // Slider events can round to the value still being written. Only
+                // discard that duplicate after success, before callbacks can queue new work.
+                if (failure == null && pending == value) pending = null;
                 completed(value, failure);
             }
         }

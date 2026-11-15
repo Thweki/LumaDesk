@@ -34,6 +34,16 @@ public sealed class DisplayColorState
     public string ProfileUnavailableReason { get; set; } = "";
 }
 
+// Injectable boundary for scene restoration; the native implementation remaps the
+// display identity before each write. Empty defaults and unspecified defaults differ.
+internal interface IDisplayProfileOperations
+{
+    DisplayColorState Read(DisplayInfo display);
+    void SetScope(DisplayInfo display, bool user);
+    void SetDefault(DisplayInfo display, string name, bool hdr);
+    void RemoveAssociation(DisplayInfo display, string name, bool hdr);
+}
+
 // Layouts and constants come from Microsoft's WinSDK wingdi.h / Icm.h.
 // Advanced-color support alone is NOT proof that a display supports HDR.
 internal static class AdvancedColorNative
@@ -53,6 +63,7 @@ internal static class AdvancedColorNative
     [DllImport("mscms.dll")] internal static extern int ColorProfileGetDisplayList(int scope, DpiNative.Luid adapter, uint source, out IntPtr profiles, out uint count);
     [DllImport("mscms.dll", CharSet = CharSet.Unicode)] internal static extern int ColorProfileAddDisplayAssociation(int scope, string profile, DpiNative.Luid adapter, uint source, [MarshalAs(UnmanagedType.Bool)] bool setDefault, [MarshalAs(UnmanagedType.Bool)] bool extended);
     [DllImport("mscms.dll", CharSet = CharSet.Unicode)] internal static extern int ColorProfileSetDisplayDefaultAssociation(int scope, string profile, int type, int subtype, DpiNative.Luid adapter, uint source);
+    [DllImport("mscms.dll", CharSet = CharSet.Unicode)] internal static extern int ColorProfileRemoveDisplayAssociation(int scope, string profile, DpiNative.Luid adapter, uint source, [MarshalAs(UnmanagedType.Bool)] bool extended);
     [DllImport("mscms.dll", CharSet = CharSet.Unicode, SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] internal static extern bool WcsGetUsePerUserProfiles(string device, uint deviceClass, [MarshalAs(UnmanagedType.Bool)] out bool enabled);
     [DllImport("mscms.dll", CharSet = CharSet.Unicode, SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] internal static extern bool WcsSetUsePerUserProfiles(string device, uint deviceClass, [MarshalAs(UnmanagedType.Bool)] bool enabled);
     [DllImport("mscms.dll", CharSet = CharSet.Unicode, SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] internal static extern bool InstallColorProfileW(string? machine, string profile);
@@ -127,6 +138,18 @@ internal static class AdvancedColorService
             catch (EntryPointNotFoundException) { state.ProfileUnavailableReason = L.T("s37bf50ef90"); }
             catch (Exception ex) { state.ProfileUnavailableReason = ex.Message; }
             return state;
+        }
+    }
+
+    // Lightweight tile probe: no ICC enumeration, caching, or display writes.
+    internal static bool ReadHdrActive(DisplayInfo display)
+    {
+        lock (Gate)
+        {
+            var state = new DisplayColorState();
+            try { ReadHdr(FindPath(display), state); }
+            catch { return false; }
+            return state.HdrKnown && state.HdrActive;
         }
     }
 
@@ -292,17 +315,85 @@ internal static class AdvancedColorService
         { throw new InvalidOperationException(L.T("s95bb15f7cf"), ex); }
     }
 
-    public static void UseSystemProfiles(DisplayInfo display)
+    public static void UseSystemProfiles(DisplayInfo display) => SetProfileScope(display, false);
+
+    private static void SetProfileScope(DisplayInfo display, bool user)
     {
         lock (Gate)
         {
             var before = Read(display);
             if (!before.ProfilesAvailable) throw new InvalidOperationException(before.ProfileUnavailableReason);
-            if (!before.UseUserProfiles) return;
+            if (before.UseUserProfiles == user) return;
             FindPath(display);
-            CheckBool(AdvancedColorNative.WcsSetUsePerUserProfiles(FindWcsDevice(display, true), MonitorClass, false), L.T("s16bada7b8a"));
+            CheckBool(AdvancedColorNative.WcsSetUsePerUserProfiles(FindWcsDevice(display, before.UseUserProfiles), MonitorClass, user), L.T(user ? "sb16b8a2817" : "s16bada7b8a"));
             var result = Read(display);
-            if (!result.ProfilesAvailable || result.UseUserProfiles) throw new InvalidOperationException(L.T("s17b3b61bdb"));
+            if (!result.ProfilesAvailable || result.UseUserProfiles != user) throw new InvalidOperationException(L.T("s17b3b61bdb"));
+        }
+    }
+
+    internal static void RestoreProfiles(DisplayInfo display, bool? user, string? sdr, string? hdr, IDisplayProfileOperations? operations = null)
+    {
+        if (!user.HasValue) return;
+        lock (Gate)
+        {
+            var profiles = operations ?? new NativeDisplayProfileOperations();
+            var current = profiles.Read(display);
+            if (!current.ProfilesAvailable) throw new InvalidOperationException(current.ProfileUnavailableReason);
+            if (current.UseUserProfiles != user.Value) profiles.SetScope(display, user.Value);
+
+            DisplayColorState ReadScope()
+            {
+                var state = profiles.Read(display);
+                if (!state.ProfilesAvailable || state.UseUserProfiles != user.Value)
+                    throw new InvalidOperationException(L.T("scene.unsupported"));
+                return state;
+            }
+
+            // Read the selected scope, not the defaults from the previously active scope.
+            current = ReadScope();
+            if (!user.Value) return; // System defaults are not writable per-user settings.
+            void RestoreDefault(string? saved, bool extended)
+            {
+                if (saved == null) return; // Not captured: leave this subtype unspecified.
+                current = ReadScope();
+                string Default() => extended ? current.HdrProfile : current.SdrProfile;
+                if (saved.Length > 0)
+                {
+                    if (!string.Equals(Default(), saved, StringComparison.OrdinalIgnoreCase))
+                        profiles.SetDefault(display, saved, extended);
+                    return;
+                }
+
+                // There is no empty-name setter. Remove the default association in
+                // this subtype's list; Windows may promote another association.
+                var removed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                while (Default().Length > 0)
+                {
+                    string name = Default();
+                    if (!removed.Add(name) || removed.Count > 4096)
+                        throw new InvalidOperationException(L.T("scene.unsupported"));
+                    profiles.RemoveAssociation(display, name, extended);
+                    current = ReadScope();
+                }
+            }
+            RestoreDefault(sdr, false);
+            RestoreDefault(hdr, true);
+            var actual = ReadScope();
+            if ((sdr != null && !string.Equals(actual.SdrProfile, sdr, StringComparison.OrdinalIgnoreCase)) ||
+                (hdr != null && !string.Equals(actual.HdrProfile, hdr, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException(L.T("scene.unsupported"));
+        }
+    }
+
+    private sealed class NativeDisplayProfileOperations : IDisplayProfileOperations
+    {
+        public DisplayColorState Read(DisplayInfo display) => AdvancedColorService.Read(display);
+        public void SetScope(DisplayInfo display, bool user) => SetProfileScope(display, user);
+        public void SetDefault(DisplayInfo display, string name, bool hdr) => SetDefaultProfile(display, name, hdr);
+        public void RemoveAssociation(DisplayInfo display, string name, bool hdr)
+        {
+            var path = FindPath(display);
+            CheckHr(AdvancedColorNative.ColorProfileRemoveDisplayAssociation(1, name, path.Target.Adapter, path.Source.Id, hdr), L.T("sf8cc0b8acc"));
         }
     }
 

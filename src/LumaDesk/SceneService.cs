@@ -28,6 +28,47 @@ internal sealed class SceneResult
 
 internal static class SceneService
 {
+    internal static bool MatchesName(Preset preset, string? query) =>
+        preset.Name.Contains(query?.Trim() ?? "", StringComparison.OrdinalIgnoreCase);
+
+    internal static bool Move(List<Preset> presets, Preset preset, int direction)
+    {
+        if (direction is not (-1 or 1)) return false;
+        int index = presets.IndexOf(preset), target = index + direction;
+        if (index < 0 || target < 0 || target >= presets.Count) return false;
+        (presets[index], presets[target]) = (presets[target], presets[index]);
+        return true;
+    }
+
+    internal static Preset Duplicate(Preset source, string name, IEnumerable<Preset> presets)
+    {
+        name = name.Trim();
+        if (name.Length is < 1 or > 40) throw new ArgumentException(L.T("scene.duplicateNameRequired"));
+        if (presets.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            throw new ArgumentException(L.T("s1f09d8e896"));
+
+        // Copy saved values, including unspecified legacy fields, without reading hardware.
+        // A new identity and default automation prevent competing triggers or hotkeys.
+        return new Preset
+        {
+            Name = name,
+            Displays = source.Displays.Select(d => new PresetDisplay
+            {
+                Id = d.Id, Name = d.Name, Brightness = d.Brightness, Dimming = d.Dimming,
+                Mode = d.Mode, Orientation = d.Orientation, Dpi = d.Dpi, Hdr = d.Hdr,
+                UserProfiles = d.UserProfiles, SdrProfile = d.SdrProfile, HdrProfile = d.HdrProfile,
+                X = d.X, Y = d.Y, Primary = d.Primary
+            }).ToList()
+        };
+    }
+
+    internal static async Task<Preset> CaptureDraft(ISceneBackend backend)
+    {
+        var draft = await Capture(backend, L.T("s3cbfca23b6"));
+        if (draft.Displays.Count == 0) throw new InvalidOperationException(L.T("scene.draftNoDisplays"));
+        return draft;
+    }
+
     internal static async Task<Preset> Capture(ISceneBackend backend, string name)
     {
         var scene = new Preset { Name = name };

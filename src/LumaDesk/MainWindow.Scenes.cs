@@ -15,11 +15,14 @@ public partial class MainWindow
     private bool sceneBusy;
     private Preset? undoScene;
     private string sceneReport = "";
+    private string sceneSearch = "";
     private sealed class SceneBackend : ISceneBackend
     {
         private readonly MainWindow owner;
-        internal SceneBackend(MainWindow owner) => this.owner = owner;
-        public IReadOnlyList<DisplayInfo> Displays => owner.Displays;
+        private readonly IReadOnlyList<DisplayInfo>? snapshot;
+        internal SceneBackend(MainWindow owner, IReadOnlyList<DisplayInfo>? snapshot = null)
+        { this.owner = owner; this.snapshot = snapshot; }
+        public IReadOnlyList<DisplayInfo> Displays => snapshot ?? owner.Displays;
         public Task<DisplayColorState> Color(DisplayInfo d) => Task.Run(() => AdvancedColorService.Read(d));
         public Task Mode(DisplayInfo d, DisplayMode mode, uint orientation) => owner.ChangeModeAsync(d, mode, orientation, exactOutput: true);
         public Task Dpi(DisplayInfo d, int percent) => owner.ChangeDpiAsync(d, percent);
@@ -30,30 +33,11 @@ public partial class MainWindow
         }
         public Task Layout(IReadOnlyList<ScreenPlacement> placements) => owner.ChangeLayoutAsync(placements);
         public Task Profiles(DisplayInfo d, PresetDisplay saved) => Task.Run(() =>
+            AdvancedColorService.RestoreProfiles(d, saved.UserProfiles, saved.SdrProfile, saved.HdrProfile));
+        public Task Brightness(DisplayInfo d, PresetDisplay saved)
         {
-            var current = AdvancedColorService.Read(d);
-            if (saved.UserProfiles == false) { AdvancedColorService.UseSystemProfiles(d); return; }
-            if (!string.IsNullOrEmpty(saved.SdrProfile) && (!current.UseUserProfiles || current.SdrProfile != saved.SdrProfile))
-                AdvancedColorService.SetDefaultProfile(d, saved.SdrProfile, false);
-            if (!string.IsNullOrEmpty(saved.HdrProfile) && (!current.UseUserProfiles || current.HdrProfile != saved.HdrProfile))
-                AdvancedColorService.SetDefaultProfile(d, saved.HdrProfile, true);
-            var actual = AdvancedColorService.Read(d);
-            if (!actual.ProfilesAvailable || !actual.UseUserProfiles ||
-                (saved.SdrProfile != null && !string.Equals(actual.SdrProfile, saved.SdrProfile, StringComparison.OrdinalIgnoreCase)) ||
-                (saved.HdrProfile != null && !string.Equals(actual.HdrProfile, saved.HdrProfile, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException(L.T("scene.unsupported"));
-        });
-        public async Task Brightness(DisplayInfo d, PresetDisplay saved)
-        {
-            if (saved.Brightness.HasValue)
-            {
-                if (saved.Brightness < 0 || saved.Brightness > 100) throw new InvalidOperationException(L.T("group.invalid"));
-                if (!d.Brightness.HasValue) throw new InvalidOperationException(L.T("scene.unsupported"));
-                if (d.Brightness != saved.Brightness) await owner.Service.SetPercentAsync(d, 0x10, saved.Brightness.Value);
-                d.Brightness = saved.Brightness;
-            }
-            owner.SetDimming(d, saved.Dimming);
-            owner.RememberBrightness(d);
+            owner.CancelReconnect(d.Id);
+            return owner.RestoreBrightnessAsync(d, saved);
         }
     }
 
@@ -140,6 +124,59 @@ public partial class MainWindow
         return button;
     }
 
+    internal StackPanel CreateSceneDuplicateEditor(Preset source)
+    {
+        var name = new TextBox { MaxLength = 40, MinWidth = 180 };
+        System.Windows.Automation.AutomationProperties.SetName(name, L.T("scene.duplicateName"));
+        var panel = new StackPanel();
+        panel.Children.Add(Ui.Labels(L.T("scene.duplicateName"), L.T("scene.duplicateHelp")));
+        panel.Children.Add(Ui.Row(name, Ui.Button(L.T("scene.duplicate"), () => DuplicateScene(source, name.Text))));
+        return panel;
+    }
+
+    private void DuplicateScene(Preset source, string name)
+    {
+        Preset copy;
+        try { copy = SceneService.Duplicate(source, name, Preferences.Presets); }
+        catch (ArgumentException ex) { Status(ex.Message, true); return; }
+        Preferences.Presets.Add(copy);
+        try { Storage.Save(Preferences); }
+        catch (Exception ex)
+        {
+            Preferences.Presets.Remove(copy);
+            Status(L.T("s888403f2f3") + ex.Message, true);
+            return;
+        }
+        Render(); quick?.Render(); Status(L.T("sa0d6e1ed82"));
+    }
+
+    private StackPanel CreateSceneOrderControls(Preset scene)
+    {
+        int index = Preferences.Presets.IndexOf(scene);
+        var controls = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
+        var up = Ui.Button(L.T("panel.up"), () => MoveScene(scene, -1));
+        var down = Ui.Button(L.T("panel.down"), () => MoveScene(scene, 1));
+        up.IsEnabled = index > 0 && !sceneBusy;
+        down.IsEnabled = index >= 0 && index < Preferences.Presets.Count - 1 && !sceneBusy;
+        System.Windows.Automation.AutomationProperties.SetName(up, scene.Name + ": " + L.T("panel.up"));
+        System.Windows.Automation.AutomationProperties.SetName(down, scene.Name + ": " + L.T("panel.down"));
+        controls.Children.Add(up); controls.Children.Add(down);
+        return controls;
+    }
+
+    private void MoveScene(Preset scene, int direction)
+    {
+        if (sceneBusy || !SceneService.Move(Preferences.Presets, scene, direction)) return;
+        try { Storage.Save(Preferences); }
+        catch (Exception ex)
+        {
+            SceneService.Move(Preferences.Presets, scene, -direction);
+            Status(L.T("s888403f2f3") + ex.Message, true);
+            return;
+        }
+        Render(); quick?.Render(); Status(L.T("sa0d6e1ed82"));
+    }
+
     private void RenderScenes()
     {
         Heading(L.T("s0b2fca3986"), L.T("scene.description"));
@@ -147,16 +184,37 @@ public partial class MainWindow
         while (Preferences.Presets.Any(p => p.Name == defaultName)) defaultName = L.T("s3cbfca23b6") + " " + suffix++;
         var name = new TextBox { Text = defaultName, MaxLength = 40, MinWidth = 180 };
         PageContent.Children.Add(Ui.Card(Ui.Row(name, Ui.Button(L.T("sce211a5a47"), () => _ = RunAsync(() => SaveSceneAsync(name.Text)), true))));
+        PageContent.Children.Add(Ui.Card(CreateSceneCaptureButton()));
+        if (sceneDraft != null) PageContent.Children.Add(Ui.Card(CreateSceneDraftEditor(sceneDraft)));
         if (undoScene != null) PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.previous")), Ui.Button(L.T("scene.undo"), () => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); })))));
         if (!string.IsNullOrEmpty(sceneReport)) PageContent.Children.Add(Ui.Card(new Expander { Header = L.T("scene.details"), Content = Ui.Text(sceneReport, 12) }));
+        var search = new TextBox { Text = sceneSearch, MinWidth = 180 };
+        System.Windows.Automation.AutomationProperties.SetName(search, L.T("scene.search"));
+        var clear = Ui.Button(L.T("scene.clearSearch"), () => { search.Clear(); search.Focus(); });
+        var count = Ui.Text("", 11);
+        count.Margin = new Thickness(0, 5, 0, 0);
+        var searchPanel = new StackPanel();
+        searchPanel.Children.Add(new Label { Content = L.T("scene.search"), Target = search });
+        searchPanel.Children.Add(Ui.Row(search, clear));
+        searchPanel.Children.Add(count);
+        PageContent.Children.Add(Ui.Card(searchPanel));
+        var emptyMessage = Ui.Text(L.T("scene.noSearchResults"));
+        emptyMessage.TextWrapping = TextWrapping.Wrap;
+        var noMatches = Ui.Card(emptyMessage);
+        PageContent.Children.Add(noMatches);
+        var cards = new List<(Preset Scene, Border Card, StackPanel Order)>();
         if (Preferences.Presets.Count == 0) PageContent.Children.Add(Ui.Card(Ui.Labels(L.T("s502f445e9e"), L.T("scene.empty"))));
         foreach (var scene in Preferences.Presets.ToArray())
         {
             var card = new StackPanel();
             card.Children.Add(Ui.Row(Ui.Labels(scene.Name, L.F("sb91b8e2562", scene.Displays.Count)), Ui.Button(L.T("s63c73c4730"), () => _ = RunAsync(async () => await ApplySceneAsync(scene)), true)));
+            var order = CreateSceneOrderControls(scene);
+            card.Children.Add(order);
             var details = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
             var rename = new TextBox { Text = scene.Name, MaxLength = 40 };
             details.Children.Add(Ui.Row(rename, Ui.Button(L.T("scene.update"), () => _ = RunAsync(() => SaveSceneAsync(rename.Text, scene)))));
+            details.Children.Add(Ui.Line());
+            details.Children.Add(CreateSceneDuplicateEditor(scene));
             details.Children.Add(Ui.Line());
             details.Children.Add(Ui.Row(Ui.Labels(L.T("scene.onConnect"), L.T("scene.onConnectHelp")), Toggle(scene.OnConnect, v =>
             {
@@ -169,7 +227,29 @@ public partial class MainWindow
             var delete = Ui.Button(L.T("s2f9daa8289"), () => { Preferences.Presets.Remove(scene); Save(); ConfigureHotkeys(); Render(); quick?.Render(); });
             delete.Margin = new Thickness(0, 12, 0, 0); details.Children.Add(delete);
             card.Children.Add(new Expander { Header = L.T("scene.more"), Content = details, Margin = new Thickness(0, 10, 0, 0) });
-            PageContent.Children.Add(Ui.Card(card));
+            var container = Ui.Card(card);
+            cards.Add((scene, container, order));
+            PageContent.Children.Add(container);
         }
+        void Filter()
+        {
+            sceneSearch = search.Text;
+            bool filtering = !string.IsNullOrWhiteSpace(sceneSearch);
+            int matches = 0;
+            foreach (var entry in cards)
+            {
+                bool match = SceneService.MatchesName(entry.Scene, sceneSearch);
+                entry.Card.Visibility = match ? Visibility.Visible : Visibility.Collapsed;
+                // Reordering across hidden neighbors would be surprising.
+                entry.Order.Visibility = filtering ? Visibility.Collapsed : Visibility.Visible;
+                if (match) matches++;
+            }
+            count.Text = L.F("scene.searchCount", matches, cards.Count);
+            clear.IsEnabled = sceneSearch.Length > 0;
+            noMatches.Visibility = matches == 0 && cards.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+        // Change visibility in place so typing retains focus and unsaved card edits.
+        search.TextChanged += (_, _) => Filter();
+        Filter();
     }
 }

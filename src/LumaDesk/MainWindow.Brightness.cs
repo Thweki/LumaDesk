@@ -4,19 +4,26 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LumaDesk;
 
 public partial class MainWindow
 {
-    internal int GetCombinedBrightness(DisplayInfo display) => BrightnessRules.Combine(display.Brightness, display.Dimming);
+    private readonly Dictionary<string, SemaphoreSlim> brightnessGates = new(StringComparer.OrdinalIgnoreCase);
+    internal event Action<DisplayInfo>? BrightnessChanged;
+    internal int GetCombinedBrightness(DisplayInfo display)
+    {
+        var current = Displays.FirstOrDefault(d => d.Id == display.Id) ?? display;
+        return BrightnessRules.Combine(current.Brightness, current.Dimming);
+    }
     internal async Task ChangeCombinedBrightness(DisplayInfo display, int value)
     {
-        var targets = BrightnessTargets(display);
-        await ApplyCombinedBrightness(targets.Select(target => new BrightnessTarget(target,
-            GroupRules.Target(value, Options(display), Options(target)))).ToArray());
-        Status(L.F("sb85c114a54", value) + (targets.Count == 1 ? display.Name : L.F("s57a83fca96", targets.Count)));
+        var source = CurrentBrightnessDisplay(display.Id);
+        var targets = BrightnessTargets(source).Select(target => new BrightnessTarget(target,
+            GroupRules.Target(value, Options(source), Options(target)))).ToArray();
+        await ApplyCombinedBrightness(targets);
     }
 
     // Explicit selection deliberately bypasses global sync, group membership and
@@ -37,36 +44,81 @@ public partial class MainWindow
         await ApplyCombinedBrightness(targets);
         if (targets.Count < ids.Distinct(StringComparer.OrdinalIgnoreCase).Count())
             throw new InvalidOperationException(L.T("quick.multiDisconnected"));
-        Status(L.F("sb85c114a54", value) + L.F("s57a83fca96", targets.Count));
     }
 
     private async Task ApplyCombinedBrightness(IReadOnlyList<BrightnessTarget> targets)
     {
         if (sceneBusy) throw new InvalidOperationException(L.T("s92f637408f"));
         foreach (var request in targets) CancelReconnect(request.Display.Id);
+        while (brightnessScan is { } scan) await scan.Task;
+        if (sceneBusy) throw new InvalidOperationException(L.T("s92f637408f"));
         var failures = new List<string>();
         await Task.WhenAll(targets.Select(async request =>
         {
             var target = request.Display;
-            int previousDimming = target.Dimming;
-            var level = BrightnessRules.Split(request.Value, target.Brightness.HasValue);
             try
             {
-                if (level.Dimming > previousDimming) SetDimming(target, level.Dimming);
-                if (level.Hardware.HasValue && target.Brightness != level.Hardware)
-                {
-                    await Service.SetPercentAsync(target, 0x10, level.Hardware.Value);
-                    target.Brightness = level.Hardware;
-                }
-                SetDimming(target, level.Dimming);
+                await WriteBrightnessAsync(target.Id, d => BrightnessRules.Adjust(request.Value, d.Brightness, d.Dimming));
             }
             catch (Exception ex)
             {
-                try { SetDimming(target, previousDimming); } catch (Exception restore) { Storage.Log(restore.Message); }
                 failures.Add(target.Name); Storage.Log(ex.ToString());
             }
         }));
         if (failures.Count > 0) throw new InvalidOperationException(L.T("s0ed98f4c87") + string.Join("、", failures) + L.T("s335ece13e6"));
+        var levels = targets.Select(t => GetCombinedBrightness(t.Display)).Distinct().ToArray();
+        string scope = targets.Count == 1 ? targets[0].Display.Name : L.F("s57a83fca96", targets.Count);
+        Status(L.T("s8e2f643ad1") + " " + (levels.Length == 1 ? levels[0] + "%" : L.T("quick.multiMixed")) + " · " + scope);
+    }
+
+    private DisplayInfo CurrentBrightnessDisplay(string id) =>
+        Displays.FirstOrDefault(d => string.Equals(d.Id, id, StringComparison.OrdinalIgnoreCase))
+        ?? throw new InvalidOperationException(L.T("scene.disconnected"));
+
+    private Task RestoreBrightnessAsync(DisplayInfo display, PresetDisplay saved, CancellationToken cancellation = default) =>
+        WriteBrightnessAsync(display.Id, d =>
+        {
+            if (saved.Brightness is < 0 or > 100) throw new InvalidOperationException(L.T("group.invalid"));
+            if (saved.Brightness.HasValue && !d.Brightness.HasValue) throw new InvalidOperationException(L.T("scene.unsupported"));
+            return new(saved.Brightness ?? d.Brightness, Math.Clamp(saved.Dimming, 0, BrightnessRules.MaxDimming));
+        }, cancellation);
+
+    private async Task WriteBrightnessAsync(string id, Func<DisplayInfo, CombinedLevel> plan, CancellationToken cancellation = default)
+    {
+        // Slider, keyboard, restore and reset operations can overlap at a slow DDC write.
+        // Plan from the last completed pair while holding this display's gate.
+        if (!brightnessGates.TryGetValue(id, out var gate)) brightnessGates[id] = gate = new(1, 1);
+        await gate.WaitAsync(cancellation);
+        try
+        {
+            var display = CurrentBrightnessDisplay(id);
+            var level = plan(display);
+            if (level.Hardware is int hardware && display.Brightness != hardware)
+            {
+                await Service.SetPercentAsync(display, 0x10, hardware, cancellation);
+                display.Brightness = hardware;
+                // Keep the actual backlight even if a later overlay change fails.
+                // Reconnect retries use their saved target until both steps finish.
+                if (!cancellation.CanBeCanceled && level.Dimming != display.Dimming) RememberBrightness(display);
+            }
+            cancellation.ThrowIfCancellationRequested();
+            if (level.Dimming != display.Dimming) SetDimming(display, level.Dimming);
+            RememberBrightness(display);
+            BrightnessChanged?.Invoke(display);
+        }
+        finally { gate.Release(); }
+    }
+
+    private async Task ResetDimmingAsync()
+    {
+        if (sceneBusy) throw new InvalidOperationException(L.T("s92f637408f"));
+        await Task.WhenAll(Displays.Select(d =>
+        {
+            CancelReconnect(d.Id);
+            return WriteBrightnessAsync(d.Id, current => new(current.Brightness, 0));
+        }));
+        RefreshView(); quick?.Render();
+        Status(L.T("s4499bbc369"));
     }
 }
 

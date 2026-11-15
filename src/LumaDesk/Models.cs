@@ -38,7 +38,7 @@ public sealed class DisplayInfo
     public bool HasDdc { get; set; }
     public bool HasWmi { get; set; }
     public string? WmiInstance { get; set; }
-    public int Dimming { get; set; }
+    public double Dimming { get; set; }
     public string BrightnessMethod => HasWmi ? L.T("sd58c035039") : Brightness.HasValue ? L.T("sab507029e7") : L.T("s214b837a12");
     public string Subtitle => $"{Current.Resolution}  ·  {Current.Frequency} Hz";
 }
@@ -88,12 +88,13 @@ public sealed class PresetDisplay
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
     public int? Brightness { get; set; }
-    public int Dimming { get; set; }
+    public double Dimming { get; set; }
     public DisplayMode? Mode { get; set; }
     public uint? Orientation { get; set; }
     public int? Dpi { get; set; }
     public bool? Hdr { get; set; }
     public bool? UserProfiles { get; set; }
+    // null is unspecified (legacy/unavailable); "" captures an absent default.
     public string? SdrProfile { get; set; }
     public string? HdrProfile { get; set; }
     public int? X { get; set; }
