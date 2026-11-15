@@ -2,6 +2,7 @@
 // Copyright (c) 2026 LumaDesk contributors
 
 using LumaDesk;
+using System.IO;
 using System.IO.Pipes;
 using System.Reflection;
 using System.Runtime.InteropServices;
