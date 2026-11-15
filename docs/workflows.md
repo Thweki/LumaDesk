@@ -21,6 +21,19 @@ On the **Presets** page, expand **More options** for an existing preset, enter a
 
 预设可设置每天的时间（本机 24 小时制）或接通电源/使用电池触发。应用运行期间约每 20 秒检查一次；休眠错过的最近一次时间可在恢复后触发，不补跑历史任务。同一轮多个预设命中时只应用列表中第一个匹配屏幕集合的预设。
 
+### 按星期运行（实验性） / Selected weekdays (experimental)
+
+在“预设 → 更多选项”中启用时间触发，填写本机 24 小时制时间，再开启“按星期运行（实验性）”并选择星期。例如，办公预设可选周一至周五，周末预设可选周六和周日。此选项对每个预设默认关闭；已有每日计划保持原样。首次启用默认选择周一至周五，不选任何星期会暂停该预设的时间触发。关闭实验选项会恢复每日触发；要完全停用时间触发，请关闭时间旁的开关。电源和连接触发不受星期限制。
+
+For separate workday and weekend display setups, open **Settings → Presets → More options**, enable the time trigger and enter a local **HH:mm** time. Turn on **Selected weekdays (experimental)** and choose the days for that named preset. Monday–Friday are initially selected. Configure another preset for Saturday–Sunday if desired.
+
+- **Default OFF, per preset:** existing daily schedules keep their behavior. Enabling the weekday option alone does not enable the time trigger. Choosing no days suspends only that time trigger. Turning the experiment off returns an enabled time trigger to daily operation; use the time switch to stop it entirely.
+- The app must be running. It polls about every 20 seconds and uses the computer's local clock. After sleep or a busy operation, only the latest daily occurrence within the past 24 hours is eligible, and its weekday must be selected. A Friday 23:59 occurrence checked just after midnight still belongs to Friday. Older selected days are never replayed. Starting the app does not catch up earlier events.
+- Existing exact-screen matching and list-order priority still apply: only the first matching preset runs per poll. Connection and power triggers remain independent of the weekday selection. Manual preset application and **Undo last switch** still work normally.
+- This is a local wall-clock schedule, not an exactly-once job service: nonexistent daylight-saving times can catch up after the clock jump; setting the clock backward may allow an occurrence to run again when its time is crossed again.
+
+The saved preset fields are `ExperimentalWeeklySchedule` (default `false`) and `ScheduleDays` (local weekdays, serialized as 0 = Sunday through 6 = Saturday). Use the editor to configure them; duplicating a preset leaves its time trigger and experimental flag off.
+
 设置、托盘、快捷键和命令行共用 0–100% 的亮度刻度。支持背光的屏幕在 20% 达到最低背光，继续向左拖动会用软件调暗。0% 仍能看到画面。没有背光接口的屏幕全程用软件调节。旧预设同时设置了背光和调暗时，调亮会先减弱调暗，调暗会先降低背光。
 
 分组同步使用同一刻度，正偏移表示相对其他屏幕更亮，上下限限定各屏的目标百分比。亮度快捷键默认作用于鼠标所在屏幕，录入快捷键时临时停止全局按键处理。
