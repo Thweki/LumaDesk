@@ -444,7 +444,7 @@ public partial class MainWindow : Window
         var dialog = new SaveFileDialog { FileName = "lumadesk-diagnostics.json", Filter = "JSON|*.json" }; if (dialog.ShowDialog(this) != true) return;
         try { File.WriteAllText(dialog.FileName, JsonSerializer.Serialize(Displays, Storage.Json)); Status(L.T("sc23961bae6")); } catch (Exception ex) { Status(ex.Message, true); }
     }
-    private void ShutdownResources() { hotplugTimer.Stop(); StopAutomation(); commands?.Dispose(); UnregisterShortcuts(); brightnessOsd?.Close(); tray?.Dispose(); foreach (var window in dimWindows.Values) window.Close(); dimWindows.Clear(); foreach (var window in pipWindows.ToArray()) window.Close(); quick?.Close(); Save(); System.Windows.Application.Current.Shutdown(); }
+    private void ShutdownResources() { brightnessTransitionLifetime.Cancel(); hotplugTimer.Stop(); StopAutomation(); commands?.Dispose(); UnregisterShortcuts(); brightnessOsd?.Close(); tray?.Dispose(); foreach (var window in dimWindows.Values) window.Close(); dimWindows.Clear(); foreach (var window in pipWindows.ToArray()) window.Close(); quick?.Close(); Save(); System.Windows.Application.Current.Shutdown(); }
     internal void Quit() { if (modePending || sceneBusy) return; exiting = true; Close(); }
     private void MinimizeWindow(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void MaximizeWindow(object sender, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
