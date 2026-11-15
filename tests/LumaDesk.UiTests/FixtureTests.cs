@@ -53,6 +53,7 @@ internal static partial class Program
                     // Never show the owner: Loaded starts discovery, tray, and automation.
                     // Only detached controls with injected hardware callbacks belong here.
                     var owner = new MainWindow();
+                    TestSceneDuplicateFixture(owner);
                     await TestLiveBrightnessFixtureAsync(owner);
                     await TestInputSwitchUiAsync(owner, offscreen: true);
                     TestNightDimmingFixture(owner);

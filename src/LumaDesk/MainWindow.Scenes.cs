@@ -133,6 +133,32 @@ public partial class MainWindow
         return button;
     }
 
+    internal StackPanel CreateSceneDuplicateEditor(Preset source)
+    {
+        var name = new TextBox { MaxLength = 40, MinWidth = 180 };
+        System.Windows.Automation.AutomationProperties.SetName(name, L.T("scene.duplicateName"));
+        var panel = new StackPanel();
+        panel.Children.Add(Ui.Labels(L.T("scene.duplicateName"), L.T("scene.duplicateHelp")));
+        panel.Children.Add(Ui.Row(name, Ui.Button(L.T("scene.duplicate"), () => DuplicateScene(source, name.Text))));
+        return panel;
+    }
+
+    private void DuplicateScene(Preset source, string name)
+    {
+        Preset copy;
+        try { copy = SceneService.Duplicate(source, name, Preferences.Presets); }
+        catch (ArgumentException ex) { Status(ex.Message, true); return; }
+        Preferences.Presets.Add(copy);
+        try { Storage.Save(Preferences); }
+        catch (Exception ex)
+        {
+            Preferences.Presets.Remove(copy);
+            Status(L.T("s888403f2f3") + ex.Message, true);
+            return;
+        }
+        Render(); quick?.Render(); Status(L.T("sa0d6e1ed82"));
+    }
+
     private void RenderScenes()
     {
         Heading(L.T("s0b2fca3986"), L.T("scene.description"));
@@ -150,6 +176,8 @@ public partial class MainWindow
             var details = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
             var rename = new TextBox { Text = scene.Name, MaxLength = 40 };
             details.Children.Add(Ui.Row(rename, Ui.Button(L.T("scene.update"), () => _ = RunAsync(() => SaveSceneAsync(rename.Text, scene)))));
+            details.Children.Add(Ui.Line());
+            details.Children.Add(CreateSceneDuplicateEditor(scene));
             details.Children.Add(Ui.Line());
             details.Children.Add(Ui.Row(Ui.Labels(L.T("scene.onConnect"), L.T("scene.onConnectHelp")), Toggle(scene.OnConnect, v =>
             {
