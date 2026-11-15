@@ -90,6 +90,19 @@ internal static class SceneService
         return scene;
     }
 
+    internal static async Task<SceneResult> ApplyAndRemember(ISceneBackend backend, Preferences preferences, Preset scene, bool undo = false)
+    {
+        var result = await Apply(backend, scene);
+        // This is application history, not a claim that the current setup still matches.
+        // Keep the name at application time, even if the saved preset is later edited or deleted.
+        if (!undo && result.Applied > 0 && result.Issues.Count == 0 && preferences.Presets.Contains(scene))
+            preferences.LastPresetApplication = new PresetApplication
+            {
+                PresetId = scene.Id, PresetName = scene.Name, AppliedAtUtc = DateTimeOffset.UtcNow
+            };
+        return result;
+    }
+
     // Resolve the device again between operations: a mode change can replace every DisplayInfo.
     internal static async Task<SceneResult> Apply(ISceneBackend backend, Preset scene)
     {

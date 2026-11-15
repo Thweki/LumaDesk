@@ -29,6 +29,12 @@ On the **Presets** page, expand **More options** for an existing preset, enter a
 
 On the **Presets** page, use **Move up** or **Move down** on a preset card to put frequently used presets first. The order is saved immediately, survives restarts, and also appears in the tray preset menu. Reordering does not capture or apply display settings or change preset IDs, saved values, shortcuts, or trigger settings. Existing automation still selects the first matching preset in list order when multiple rules match. No experimental flag is required.
 
+## 上次成功应用 / Last successful preset
+
+“预设”页和托盘预设菜单会显示上次完整应用成功的预设名称及本地日期、时间，重启后仍保留。手动、快捷键、命令行及自动触发共用此记录；部分完成、失败、空预设和撤销不会覆盖记录。名称保留应用时的值，即使之后编辑或删除预设也不变。这是历史记录，不表示当前屏幕设置仍与该预设一致；旧版设置在首次成功应用后才有记录。
+
+The **Presets** page and tray preset menu show the **last successfully applied** preset and its local date and time, saved across restarts. Manual, shortcut, command-line and automatic applications all update this record after a complete success. Partial or failed applications, empty presets and undo leave it unchanged. The name is kept as it was at application time, even if the preset is later edited or deleted. This is history: later adjustments or undo can change the current setup. Existing installations start with no recorded application until a preset succeeds. No experimental flag or configuration is required.
+
 ## 可选自动化
 
 预设可设置每天的时间（本机 24 小时制）或接通电源/使用电池触发。应用运行期间约每 20 秒检查一次；休眠错过的最近一次时间可在恢复后触发，不补跑历史任务。同一轮多个预设命中时只应用列表中第一个匹配屏幕集合的预设。

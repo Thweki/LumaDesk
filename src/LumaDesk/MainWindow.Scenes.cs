@@ -79,7 +79,7 @@ public partial class MainWindow
             var backend = new SceneBackend(this);
             var before = await SceneService.Capture(backend, L.T("scene.previous"));
             if (!undo) undoScene = before;
-            var result = await SceneService.Apply(backend, preset);
+            var result = await SceneService.ApplyAndRemember(backend, Preferences, preset, undo);
             if (undo && result.Issues.Count == 0) undoScene = null;
             sceneReport = string.Join("\n", result.Issues);
             Save();
@@ -103,24 +103,41 @@ public partial class MainWindow
         var button = Ui.Button(L.T("sf1de1e2621"), () => { });
         button.Click += (_, _) =>
         {
-            var menu = new ContextMenu();
-            foreach (var preset in Preferences.Presets)
-            {
-                var item = new MenuItem { Header = preset.Name, IsEnabled = !sceneBusy };
-                item.Click += (_, _) => _ = RunAsync(async () => await ApplySceneAsync(preset)); menu.Items.Add(item);
-            }
-            if (undoScene != null)
-            {
-                menu.Items.Add(new Separator());
-                var item = new MenuItem { Header = L.T("scene.undo"), IsEnabled = !sceneBusy };
-                item.Click += (_, _) => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); }); menu.Items.Add(item);
-            }
-            menu.Items.Add(new Separator());
-            var manage = new MenuItem { Header = L.T("scene.manage") };
-            manage.Click += (_, _) => { page = "presets"; Render(); ShowSettings(); }; menu.Items.Add(manage);
+            var menu = CreateSceneMenu();
             menu.PlacementTarget = button; button.ContextMenu = menu; menu.IsOpen = true;
         };
         return button;
+    }
+
+    private string LastAppliedSceneText() => Preferences.LastPresetApplication is { } last
+        ? L.F("scene.lastApplied", last.PresetName, last.AppliedAtUtc.ToLocalTime().ToString("G"))
+        : L.T("scene.lastAppliedNone");
+
+    internal ContextMenu CreateSceneMenu()
+    {
+        var menu = new ContextMenu();
+        var summary = Ui.Text(LastAppliedSceneText());
+        summary.TextWrapping = TextWrapping.Wrap; summary.MaxWidth = 360;
+        var history = new MenuItem { Header = summary, IsEnabled = false, ToolTip = L.T("scene.lastAppliedHelp") };
+        System.Windows.Automation.AutomationProperties.SetName(history, summary.Text);
+        ToolTipService.SetShowOnDisabled(history, true);
+        menu.Items.Add(history);
+        menu.Items.Add(new Separator());
+        foreach (var preset in Preferences.Presets)
+        {
+            var item = new MenuItem { Header = preset.Name, IsEnabled = !sceneBusy };
+            item.Click += (_, _) => _ = RunAsync(async () => await ApplySceneAsync(preset)); menu.Items.Add(item);
+        }
+        if (undoScene != null)
+        {
+            menu.Items.Add(new Separator());
+            var item = new MenuItem { Header = L.T("scene.undo"), IsEnabled = !sceneBusy };
+            item.Click += (_, _) => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); }); menu.Items.Add(item);
+        }
+        menu.Items.Add(new Separator());
+        var manage = new MenuItem { Header = L.T("scene.manage") };
+        manage.Click += (_, _) => { page = "presets"; Render(); ShowSettings(); }; menu.Items.Add(manage);
+        return menu;
     }
 
     internal StackPanel CreateSceneDuplicateEditor(Preset source)
@@ -179,6 +196,9 @@ public partial class MainWindow
     private void RenderScenes()
     {
         Heading(L.T("s0b2fca3986"), L.T("scene.description"));
+        var history = Ui.Labels(LastAppliedSceneText(), L.T("scene.lastAppliedHelp"));
+        foreach (var text in history.Children.OfType<TextBlock>()) text.TextWrapping = TextWrapping.Wrap;
+        PageContent.Children.Add(Ui.Card(history));
         string defaultName = L.T("s3cbfca23b6"); int suffix = 2;
         while (Preferences.Presets.Any(p => p.Name == defaultName)) defaultName = L.T("s3cbfca23b6") + " " + suffix++;
         var name = new TextBox { Text = defaultName, MaxLength = 40, MinWidth = 180 };
