@@ -164,6 +164,19 @@ internal sealed partial class QuickWindow
             if (focusedId != null) canvas.Children.OfType<Button>().FirstOrDefault(b => b.Tag as string == focusedId)?.Focus();
         }
         canvas.SizeChanged += (_, _) => Draw(); Draw(); picker.Children.Add(canvas);
+        if (!brightnessMultiSelect)
+        {
+            var move = Ui.Button(L.T("quick.movePanel"), () =>
+            {
+                if (!CanRebuild || brightnessMultiSelect) return;
+                var display = owner.Displays.FirstOrDefault(d => d.Id == selectedDisplayId);
+                if (display != null) placement.MoveToMonitor(display.Device);
+            });
+            move.FontSize = 11; move.Padding = new Thickness(8, 4, 8, 4);
+            move.Margin = new Thickness(0, 0, 0, 6);
+            AutomationProperties.SetAutomationId(move, "quick-move-panel");
+            picker.Children.Add(move);
+        }
         if (!brightnessMultiSelect && targets.Count > 1)
         {
             var note = Ui.Text(L.F("quick.syncCount", targets.Count), 11, "#617681");

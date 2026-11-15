@@ -15,6 +15,19 @@ and `test.ps1` are skipped because .NET and PowerShell are unavailable. Run
 `dotnet run --project tests/LumaDesk.UiTests -- --fixtures artifacts/wpf-fixtures`
 on Windows for the detached fixtures, and `./test.ps1` on an interactive Windows
 desktop for the complete suite. Real display scaling remains a manual check.
+## Quick-panel brightness steps
+
+The quick panel's **−5 / +5** buttons use the existing brightness slider queue,
+sync/group scope and per-display limits. `BrightnessStepTests.cs` runs in both the
+desktop UI suite and `--fixtures`, with injected writes covering rapid clicks,
+slider interleaving, boundaries, software dimming, failures and unload cancellation.
+The desktop picker tests also cover selected-screen routing, pending-write guards
+and retained button focus. No hardware writes are used by these new tests.
+
+Local validation: whitespace, localization resources and test wiring checked.
+Runtime commands could not run in this Linux environment: `dotnet` and `pwsh`
+are unavailable. Windows compilation, WPF execution and visual inspection remain
+unverified locally; run the fixture command below and `./test.ps1` on Windows.
 
 ## Desktop-independent WPF fixtures (CI)
 
