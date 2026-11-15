@@ -55,6 +55,7 @@ internal static partial class Program
                     var owner = new MainWindow();
                     TestSceneDuplicateFixture(owner);
                     TestSceneOrderFixture(owner);
+                    TestDisplayResetFixture(owner);
                     await TestLiveBrightnessFixtureAsync(owner);
                     await TestBrightnessStepsFixtureAsync(owner);
                     await TestInputSwitchUiAsync(owner, offscreen: true);

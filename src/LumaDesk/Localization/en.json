@@ -515,5 +515,12 @@
   "input.unchanged": "The display did not stay on the requested input. Check its signal and the monitor's automatic input settings.",
   "input.compatibility": "Using this display's compatible input switching method.",
   "input.switching": "Switching and verifying…",
-  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor."
+  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor.",
+  "reset.title": "Reset to preset",
+  "reset.empty": "Apply a preset successfully to this display to enable reset for this session.",
+  "reset.source": "Last applied preset: {0}",
+  "reset.help": "Restore brightness, scaling or rotation on this display only. All available restores these three saved controls.",
+  "reset.all": "All available",
+  "reset.done": "Display reset completed.",
+  "reset.partial": "Display reset partially completed. Hover here for details."
 }

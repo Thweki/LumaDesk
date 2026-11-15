@@ -43,6 +43,8 @@ For **Windows 10 / 11 x64**. The .NET runtime is included. Choose a file from [R
 2. Pick a screen at the top and drag brightness or HiDPI. Click **−5 / +5** beside brightness for five-point steps; these follow the slider's sync/group scope and display limits. Use **Link brightness** to adjust several screens.
 3. Save your setup under **Settings → Presets**. Startup and language options live under **Settings → Application**.
 
+After applying a preset, open a screen in **Settings → Displays → Reset to preset** to restore its brightness, scaling, rotation, or all available saved controls. The reset target is the last preset successfully applied to that screen during this session. [Reset behavior and limits](docs/workflows.md#reset-one-display-to-its-preset).
+
 Default shortcuts: `Ctrl+Alt+↑ / ↓` adjusts the screen under the pointer; `Ctrl+Alt+0` removes software dimming.
 
 All editions store settings in `%LOCALAPPDATA%\LumaDesk`. “Portable” means no installation, not settings beside the executable. There is no telemetry. The virtual driver downloads only when you choose to install it. Driver installation and first-time system ICC imports may request administrator approval.
