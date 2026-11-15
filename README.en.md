@@ -40,7 +40,7 @@ For **Windows 10 / 11 x64**. The .NET runtime is included. Choose a file from [R
 | `LumaDesk-VERSION-win-x64.msi` | Install to Program Files with a Start menu shortcut (administrator access required) |
 
 1. Run `LumaDesk.exe`. Click the tray icon for the panel; double-click for settings.
-2. Pick a screen at the top and drag brightness or HiDPI. Use **Link brightness** to adjust several screens.
+2. Pick a screen at the top and drag brightness or HiDPI. Click **−5 / +5** beside brightness for five-point steps; these follow the slider's sync/group scope and display limits. Use **Link brightness** to adjust several screens.
 3. Save your setup under **Settings → Presets**. Startup and language options live under **Settings → Application**.
 
 Default shortcuts: `Ctrl+Alt+↑ / ↓` adjusts the screen under the pointer; `Ctrl+Alt+0` removes software dimming.
