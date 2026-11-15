@@ -515,5 +515,9 @@
   "input.unchanged": "显示器未保持在目标输入，切换未生效。请检查目标接口信号或显示器的自动输入设置。",
   "input.compatibility": "已启用此显示器的兼容切换方式。",
   "input.switching": "正在切换并确认…",
-  "input.unverified": "已发送切换请求，但无法确认当前输入。请在显示器上确认。"
+  "input.unverified": "已发送切换请求，但无法确认当前输入。请在显示器上确认。",
+  "layout.swap.action": "交换位置（实验性）",
+  "layout.swap.with": "交换对象",
+  "layout.swap.preview": "已在预览中交换位置。点击应用以移动屏幕。",
+  "layout.swap.choose": "请选择两个不同的已连接屏幕进行交换。"
 }

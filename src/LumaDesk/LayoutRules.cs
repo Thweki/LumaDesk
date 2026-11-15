@@ -10,6 +10,31 @@ namespace LumaDesk;
 public sealed record ScreenPlacement(string Id, int X, int Y, int Width, int Height, bool Primary);
 public static class LayoutRules
 {
+    public static List<ScreenPlacement> SwapPositions(IEnumerable<ScreenPlacement> screens, string firstId, string secondId)
+    {
+        var items = Normalize(screens);
+        var first = items.FirstOrDefault(p => string.Equals(p.Id, firstId, StringComparison.OrdinalIgnoreCase));
+        var second = items.FirstOrDefault(p => string.Equals(p.Id, secondId, StringComparison.OrdinalIgnoreCase));
+        if (first == null || second == null || first == second)
+            throw new InvalidOperationException(L.T("layout.swap.choose"));
+
+        var movedFirst = first with { X = second.X, Y = second.Y };
+        var movedSecond = second with { X = first.X, Y = first.Y };
+        // Unequal neighbors must exchange places around their shared edge,
+        // keeping the pair's outer edges, rather than exchanging origins alone.
+        if (Touch(first, second) && first.X + first.Width == second.X)
+            movedFirst = movedFirst with { X = second.X + second.Width - first.Width };
+        else if (Touch(first, second) && second.X + second.Width == first.X)
+            movedSecond = movedSecond with { X = first.X + first.Width - second.Width };
+        else if (Touch(first, second) && first.Y + first.Height == second.Y)
+            movedFirst = movedFirst with { Y = second.Y + second.Height - first.Height };
+        else if (Touch(first, second) && second.Y + second.Height == first.Y)
+            movedSecond = movedSecond with { Y = first.Y + first.Height - second.Height };
+
+        // Validate the whole desktop before publishing any preview change. Other
+        // screens retain their positions apart from primary-origin translation.
+        return Normalize(items.Select(p => p == first ? movedFirst : p == second ? movedSecond : p));
+    }
     public static List<ScreenPlacement> Normalize(IEnumerable<ScreenPlacement> screens)
     {
         var items = screens.ToList();
