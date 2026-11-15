@@ -523,5 +523,7 @@
   "input.unchanged": "The display did not stay on the requested input. Check its signal and the monitor's automatic input settings.",
   "input.compatibility": "Using this display's compatible input switching method.",
   "input.switching": "Switching and verifying…",
-  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor."
+  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor.",
+  "scene.previousPreset": "Previous preset",
+  "scene.nextPreset": "Next preset"
 }
