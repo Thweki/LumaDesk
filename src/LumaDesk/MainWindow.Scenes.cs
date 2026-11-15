@@ -66,7 +66,7 @@ public partial class MainWindow
         }
     }
 
-    internal async Task<SceneResult?> ApplySceneAsync(Preset preset, bool undo = false)
+    internal async Task<SceneResult?> ApplySceneAsync(Preset preset, bool undo = false, bool preview = false)
     {
         if (sceneBusy || modePending || scanning || Service.IsWriting) throw new InvalidOperationException(L.T("s92f637408f"));
         sceneBusy = true;
@@ -75,6 +75,13 @@ public partial class MainWindow
         foreach (var window in windows) window.IsEnabled = false;
         try
         {
+            if (preview && !undo && SceneApplyPreview.Enabled &&
+                !await SceneApplyPreview.ConfirmAsync(preset, async () =>
+                {
+                    var displays = await Service.ScanAsync();
+                    foreach (var display in displays) ApplyAlias(display);
+                    return displays;
+                }, scope => CreateSceneApplyPreviewDialog(preset.Name, scope).ShowDialog() == true)) return null;
             await RefreshAsync(sceneRefresh: true);
             var backend = new SceneBackend(this);
             var before = await SceneService.Capture(backend, L.T("scene.previous"));
@@ -107,7 +114,8 @@ public partial class MainWindow
             foreach (var preset in Preferences.Presets)
             {
                 var item = new MenuItem { Header = preset.Name, IsEnabled = !sceneBusy };
-                item.Click += (_, _) => _ = RunAsync(async () => await ApplySceneAsync(preset)); menu.Items.Add(item);
+                if (SceneApplyPreview.Enabled) item.ToolTip = L.T("scene.previewApply");
+                item.Click += (_, _) => _ = RunAsync(async () => await ApplySceneAsync(preset, preview: true)); menu.Items.Add(item);
             }
             if (undoScene != null)
             {
@@ -191,7 +199,7 @@ public partial class MainWindow
         foreach (var scene in Preferences.Presets.ToArray())
         {
             var card = new StackPanel();
-            card.Children.Add(Ui.Row(Ui.Labels(scene.Name, L.F("sb91b8e2562", scene.Displays.Count)), Ui.Button(L.T("s63c73c4730"), () => _ = RunAsync(async () => await ApplySceneAsync(scene)), true)));
+            card.Children.Add(Ui.Row(Ui.Labels(scene.Name, L.F("sb91b8e2562", scene.Displays.Count)), Ui.Button(L.T(SceneApplyPreview.Enabled ? "scene.previewApply" : "s63c73c4730"), () => _ = RunAsync(async () => await ApplySceneAsync(scene, preview: true)), true)));
             card.Children.Add(CreateSceneOrderControls(scene));
             var details = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
             var rename = new TextBox { Text = scene.Name, MaxLength = 40 };
