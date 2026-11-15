@@ -66,10 +66,40 @@ writer = new LatestValueWriter(v => { if (v == 5) throw new InvalidOperationExce
 writer.Request(5); await writer.WhenIdle; writer.Request(55); await writer.WhenIdle;
 Check(errors == 1 && writes.SequenceEqual(new[] { 55 }), "Slider writer reports failures and accepts later input");
 Check(BrightnessRules.Split(100, true) == new CombinedLevel(100, 0) && BrightnessRules.Split(20, true) == new CombinedLevel(0, 0), "Combined brightness reaches full and minimum hardware backlight without dimming");
-Check(BrightnessRules.Split(0, true) == new CombinedLevel(0, 85) && BrightnessRules.Split(10, true) == new CombinedLevel(0, 42), "Combined low range extends below backlight minimum");
+Check(BrightnessRules.Split(0, true) == new CombinedLevel(0, 85) && BrightnessRules.Split(10, true) == new CombinedLevel(0, 42.5), "Combined low range extends below backlight minimum");
 Check(Enumerable.Range(0,101).All(v => { var level = BrightnessRules.Split(v, true); return Math.Abs(BrightnessRules.Combine(level.Hardware, level.Dimming)-v) <= 1; }), "Combined brightness mapping roundtrips full control range");
 Check(BrightnessRules.Split(50, false).Hardware == null && BrightnessRules.Split(100, false).Dimming == 0 && BrightnessRules.Split(0, false).Dimming == 85, "Software-only display has a functional full-range combined control");
 Check(BrightnessRules.Split(-5,true) == BrightnessRules.Split(0,true) && BrightnessRules.Split(150,true) == BrightnessRules.Split(100,true), "Combined brightness clamps extremes");
+Check(BrightnessRules.Combine(100, 85) == 12 && BrightnessRules.Combine(50, 85) == 6,
+    "Maximum overlay still transmits part of the backlight in legacy presets");
+Check(Enumerable.Range(0, 101).All(v => BrightnessRules.Combine(null, BrightnessRules.Split(v, false).Dimming) == v),
+    "Every software-only slider percentage has a distinct opacity and exact readback");
+foreach (bool hasBacklight in new[] { true, false })
+{
+    var level = BrightnessRules.Split(100, hasBacklight);
+    foreach (int v in Enumerable.Range(0, 101).Reverse().Concat(Enumerable.Range(0, 101)))
+    {
+        level = BrightnessRules.Adjust(v, level.Hardware, level.Dimming);
+        if (level != BrightnessRules.Split(v, hasBacklight)) throw new Exception($"Incorrect brightness transition at {v}");
+    }
+    Check(true, "Full down/up sweep preserves endpoints and crosses the backlight minimum smoothly, hardware=" + hasBacklight);
+}
+for (int hardware = 0; hardware <= 100; hardware++)
+for (int dimming = 0; dimming <= BrightnessRules.MaxDimming; dimming++)
+{
+    int current = BrightnessRules.Combine(hardware, dimming);
+    foreach (int requested in Enumerable.Range(0, 101))
+    {
+        var level = BrightnessRules.Adjust(requested, hardware, dimming);
+        bool brighter = level.Hardware >= hardware && level.Dimming <= dimming;
+        bool darker = level.Hardware <= hardware && level.Dimming >= dimming;
+        if (BrightnessRules.Combine(level.Hardware, level.Dimming) != requested ||
+            (requested > current && !brighter) || (requested < current && !darker) ||
+            (requested == current && requested is > 0 and < 100 && level != new CombinedLevel(hardware, dimming)))
+            throw new Exception($"Unexpected adjustment from ({hardware}, {dimming}) to {requested}: {level}");
+    }
+}
+Check(true, "Every integer hardware/overlay pair adjusts monotonically to every target, including legacy mixed states");
 var layout = new[] { new ScreenPlacement("A", -1920,0,1920,1080,false), new ScreenPlacement("B",0,0,2560,1440,true) };
 Check(LayoutRules.Normalize(layout).SequenceEqual(layout), "Valid adjacent monitors preserve pixel coordinates");
 var primaryChanged = LayoutRules.Normalize(layout.Select(p => p with { Primary = p.Id == "A" }));
