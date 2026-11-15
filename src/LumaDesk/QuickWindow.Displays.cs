@@ -115,10 +115,12 @@ internal sealed partial class QuickWindow
         var displays = owner.Displays.OrderBy(d => d.X).ThenBy(d => d.Y).ThenBy(d => d.Id, StringComparer.OrdinalIgnoreCase).ToArray();
         var targets = brightnessMultiSelect ? owner.Displays.Where(d => multiSelection.Contains(d.Id)).ToList() : owner.BrightnessTargets(selected);
         var linked = targets.Count > 1 ? targets.Select(d => d.Id).ToHashSet(StringComparer.OrdinalIgnoreCase) : new HashSet<string>();
+        var hdrStates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var hdrUpdates = new Dictionary<string, Action<bool>>(StringComparer.OrdinalIgnoreCase);
         void Draw()
         {
             string? focusedId = canvas.IsKeyboardFocusWithin ? (Keyboard.FocusedElement as Button)?.Tag as string : null;
-            canvas.Children.Clear(); multiLevelLabels.Clear();
+            canvas.Children.Clear(); multiLevelLabels.Clear(); hdrUpdates.Clear();
             foreach (var tile in QuickDisplayMap.Project(displays, canvas.ActualWidth > 0 ? canvas.ActualWidth : Math.Max(40, Width - 38), canvas.Height))
             {
                 var display = tile.Display; bool active = brightnessMultiSelect ? multiSelection.Contains(display.Id) : display.Id == selected.Id;
@@ -149,6 +151,8 @@ internal sealed partial class QuickWindow
                 AutomationProperties.SetAutomationId(button, "quick-display-select-" + display.Number);
                 AutomationProperties.SetName(button, display.Name);
                 AutomationProperties.SetItemStatus(button, active ? L.T("quick.selected") : linked.Contains(display.Id) ? L.T("quick.linked") : "");
+                var updateHdr = AddHdrBadge(button, tile.Bounds);
+                hdrUpdates[display.Id] = updateHdr; updateHdr(hdrStates.Contains(display.Id));
                 button.KeyDown += (_, e) =>
                 {
                     if (e.Key is not (Key.Left or Key.Right or Key.Up or Key.Down)) return;
@@ -164,6 +168,7 @@ internal sealed partial class QuickWindow
             if (focusedId != null) canvas.Children.OfType<Button>().FirstOrDefault(b => b.Tag as string == focusedId)?.Focus();
         }
         canvas.SizeChanged += (_, _) => Draw(); Draw(); picker.Children.Add(canvas);
+        ObserveHdrBadges(canvas, displays, hdrStates, hdrUpdates);
         if (!brightnessMultiSelect && targets.Count > 1)
         {
             var note = Ui.Text(L.F("quick.syncCount", targets.Count), 11, "#617681");
