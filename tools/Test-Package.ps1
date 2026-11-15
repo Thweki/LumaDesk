@@ -5,10 +5,7 @@ $root = Split-Path $PSScriptRoot
 $version = [string]$project.Project.PropertyGroup.Version
 $release = Join-Path $root 'artifacts\release'
 $prefix = "LumaDesk-$version"
-foreach ($line in Get-Content (Join-Path $release 'SHA256SUMS.txt')) {
-    $hash, $name = $line -split '  ', 2
-    if ((Get-FileHash -LiteralPath (Join-Path $release $name)).Hash -ne $hash) { throw "Checksum mismatch: $name" }
-}
+& (Join-Path $PSScriptRoot 'Test-ReleaseChecksums.ps1') -ReleaseDirectory $release -Version $version
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [IO.Compression.ZipFile]::OpenRead((Join-Path $release "$prefix-portable-win-x64.zip"))
 try {

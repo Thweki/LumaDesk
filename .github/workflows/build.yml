@@ -32,6 +32,8 @@ jobs:
           if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid release version.' }
           if ($env:REF_TYPE -eq 'tag' -and $env:REF_NAME -ne "v$version") { throw 'Tag and app version differ.' }
           if (-not (Test-Path "docs/releases/$version.md")) { throw 'Release notes are missing.' }
+      - name: Package checksum regression tests
+        run: ./tests/PackageChecksums.Tests.ps1
       - name: Headless tests (no hardware writes)
         run: ./test.ps1 -Headless
       - name: Build EXE, portable ZIP and MSI
