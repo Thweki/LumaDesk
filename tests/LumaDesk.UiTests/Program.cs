@@ -119,6 +119,7 @@ internal static partial class Program
                 await TestMultiBrightnessAsync(window);
                 await TestBrightnessStepsFixtureAsync(window);
                 await TestInputSwitchUiAsync(window);
+                await TestScanModeFixtureAsync(window);
                 await TestRefreshTimingUiAsync(window);
                 await TestQuickDpiAsync(window);
                 await TestQuickModesAsync(window);
