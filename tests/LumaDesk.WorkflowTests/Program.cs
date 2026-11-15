@@ -197,6 +197,7 @@ using (var cancelled = new CancellationTokenSource())
 }
 await SceneDuplicateTests.Run(Check);
 await DisplayResetTests.Run(Check);
+await SceneDraftTests.Run(Check);
 await SceneOrderTests.Run(Check);
 await ReconnectTests.RunAsync(Check);
 PipBufferTests.Run(Check);

@@ -18,8 +18,10 @@ public partial class MainWindow
     private sealed class SceneBackend : ISceneBackend
     {
         private readonly MainWindow owner;
-        internal SceneBackend(MainWindow owner) => this.owner = owner;
-        public IReadOnlyList<DisplayInfo> Displays => owner.Displays;
+        private readonly IReadOnlyList<DisplayInfo>? snapshot;
+        internal SceneBackend(MainWindow owner, IReadOnlyList<DisplayInfo>? snapshot = null)
+        { this.owner = owner; this.snapshot = snapshot; }
+        public IReadOnlyList<DisplayInfo> Displays => snapshot ?? owner.Displays;
         public Task<DisplayColorState> Color(DisplayInfo d) => Task.Run(() => AdvancedColorService.Read(d));
         public Task Mode(DisplayInfo d, DisplayMode mode, uint orientation) => owner.ChangeModeAsync(d, mode, orientation, exactOutput: true);
         public Task Dpi(DisplayInfo d, int percent) => owner.ChangeDpiAsync(d, percent);
@@ -182,6 +184,8 @@ public partial class MainWindow
         while (Preferences.Presets.Any(p => p.Name == defaultName)) defaultName = L.T("s3cbfca23b6") + " " + suffix++;
         var name = new TextBox { Text = defaultName, MaxLength = 40, MinWidth = 180 };
         PageContent.Children.Add(Ui.Card(Ui.Row(name, Ui.Button(L.T("sce211a5a47"), () => _ = RunAsync(() => SaveSceneAsync(name.Text)), true))));
+        PageContent.Children.Add(Ui.Card(CreateSceneCaptureButton()));
+        if (sceneDraft != null) PageContent.Children.Add(Ui.Card(CreateSceneDraftEditor(sceneDraft)));
         if (undoScene != null) PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.previous")), Ui.Button(L.T("scene.undo"), () => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); })))));
         if (!string.IsNullOrEmpty(sceneReport)) PageContent.Children.Add(Ui.Card(new Expander { Header = L.T("scene.details"), Content = Ui.Text(sceneReport, 12) }));
         if (Preferences.Presets.Count == 0) PageContent.Children.Add(Ui.Card(Ui.Labels(L.T("s502f445e9e"), L.T("scene.empty"))));
