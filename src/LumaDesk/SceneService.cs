@@ -28,6 +28,9 @@ internal sealed class SceneResult
 
 internal static class SceneService
 {
+    internal static bool MatchesName(Preset preset, string? query) =>
+        preset.Name.Contains(query?.Trim() ?? "", StringComparison.OrdinalIgnoreCase);
+
     internal static bool Move(List<Preset> presets, Preset preset, int direction)
     {
         if (direction is not (-1 or 1)) return false;
