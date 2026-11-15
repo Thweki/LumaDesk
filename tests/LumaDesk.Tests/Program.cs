@@ -7,6 +7,10 @@ using System.Text.Json;
 
 int tests = 0;
 void Check(bool condition, string name) { if (!condition) throw new Exception("FAIL: " + name); tests++; Console.WriteLine("PASS " + name); }
+Check(!new Preferences().QuickDisplayList && !JsonSerializer.Deserialize<Preferences>("{}", Storage.Json)!.QuickDisplayList,
+    "New and legacy preferences keep the spatial display map by default");
+Check(JsonSerializer.Deserialize<Preferences>(JsonSerializer.Serialize(new Preferences { QuickDisplayList = true }, Storage.Json), Storage.Json)!.QuickDisplayList,
+    "Named display list preference survives serialization");
 Check(Marshal.SizeOf<Native.DevMode>() == 220, "DEVMODEW native layout is 220 bytes");
 Check(Marshal.OffsetOf<Native.DevMode>(nameof(Native.DevMode.Width)).ToInt32() == 172, "DEVMODEW width offset");
 Check(Marshal.SizeOf<Native.DisplayDevice>() == 840, "DISPLAY_DEVICEW native layout");
