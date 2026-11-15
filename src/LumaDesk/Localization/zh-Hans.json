@@ -522,5 +522,9 @@
   "input.unchanged": "显示器未保持在目标输入，切换未生效。请检查目标接口信号或显示器的自动输入设置。",
   "input.compatibility": "已启用此显示器的兼容切换方式。",
   "input.switching": "正在切换并确认…",
-  "input.unverified": "已发送切换请求，但无法确认当前输入。请在显示器上确认。"
+  "input.unverified": "已发送切换请求，但无法确认当前输入。请在显示器上确认。",
+  "awake.toggle": "保持屏幕唤醒（实验性）",
+  "awake.help": "面板可见时阻止屏幕和系统因空闲而休眠。隐藏或关闭面板后自动关闭。可固定面板以保持打开。",
+  "awake.error": "无法保持屏幕唤醒：{0}",
+  "awake.reason": "LumaDesk：托盘面板打开时保持屏幕唤醒"
 }

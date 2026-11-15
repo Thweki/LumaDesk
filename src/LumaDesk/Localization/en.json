@@ -522,5 +522,9 @@
   "input.unchanged": "The display did not stay on the requested input. Check its signal and the monitor's automatic input settings.",
   "input.compatibility": "Using this display's compatible input switching method.",
   "input.switching": "Switching and verifying…",
-  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor."
+  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor.",
+  "awake.toggle": "Keep displays awake (experimental)",
+  "awake.help": "Prevent idle display and system sleep while this panel is visible. Turns off when the panel hides or closes. Pin the panel to keep it open.",
+  "awake.error": "Could not keep displays awake: {0}",
+  "awake.reason": "LumaDesk: keep displays awake while the tray panel is open"
 }
