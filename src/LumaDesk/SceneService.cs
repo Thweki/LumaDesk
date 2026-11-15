@@ -28,6 +28,15 @@ internal sealed class SceneResult
 
 internal static class SceneService
 {
+    internal static bool Move(List<Preset> presets, Preset preset, int direction)
+    {
+        if (direction is not (-1 or 1)) return false;
+        int index = presets.IndexOf(preset), target = index + direction;
+        if (index < 0 || target < 0 || target >= presets.Count) return false;
+        (presets[index], presets[target]) = (presets[target], presets[index]);
+        return true;
+    }
+
     internal static Preset Duplicate(Preset source, string name, IEnumerable<Preset> presets)
     {
         name = name.Trim();
@@ -48,6 +57,13 @@ internal static class SceneService
                 X = d.X, Y = d.Y, Primary = d.Primary
             }).ToList()
         };
+    }
+
+    internal static async Task<Preset> CaptureDraft(ISceneBackend backend)
+    {
+        var draft = await Capture(backend, L.T("s3cbfca23b6"));
+        if (draft.Displays.Count == 0) throw new InvalidOperationException(L.T("scene.draftNoDisplays"));
+        return draft;
     }
 
     internal static async Task<Preset> Capture(ISceneBackend backend, string name)
