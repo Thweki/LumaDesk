@@ -524,6 +524,8 @@
   "input.compatibility": "已啟用此螢幕的相容切換方式。",
   "input.switching": "正在切換並確認…",
   "input.unverified": "已傳送切換要求，但無法確認目前輸入。請在螢幕上確認。",
+  "quick.showList": "顯示螢幕清單",
+  "quick.showMap": "顯示螢幕配置圖",
   "timing.title": "重新整理時序（實驗性）",
   "timing.disabled": "重新整理時序檢查已停用。",
   "timing.ambiguous": "此顯示器沒有唯一的作用中路徑。請重新整理顯示器清單；無法個別檢查鏡像顯示器。",

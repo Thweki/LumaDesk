@@ -116,6 +116,7 @@ internal static partial class Program
                 await TestQuickPlacementAsync(window);
                 await TestFocusDisplayAsync(window);
                 await TestQuickDisplayPickerAsync(window);
+                await TestQuickDisplayListAsync(window);
                 await TestMultiBrightnessAsync(window);
                 await TestBrightnessStepsFixtureAsync(window);
                 await TestInputSwitchUiAsync(window);
