@@ -515,5 +515,10 @@
   "input.unchanged": "显示器未保持在目标输入，切换未生效。请检查目标接口信号或显示器的自动输入设置。",
   "input.compatibility": "已启用此显示器的兼容切换方式。",
   "input.switching": "正在切换并确认…",
-  "input.unverified": "已发送切换请求，但无法确认当前输入。请在显示器上确认。"
+  "input.unverified": "已发送切换请求，但无法确认当前输入。请在显示器上确认。",
+  "scene.targetDisplay": "目标显示器",
+  "scene.applyDisplay": "应用到单个显示器",
+  "scene.applyDisplayHelp": "选择此预设中已保存且已连接的显示器。仅应用其保存的设置，不恢复保存的位置或主屏。",
+  "scene.noMatchingDisplay": "没有已连接的显示器与此预设匹配。",
+  "scene.displayMissing": "所选显示器不存在或标识不唯一。请刷新并重新选择。"
 }

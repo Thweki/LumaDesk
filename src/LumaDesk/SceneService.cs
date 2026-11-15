@@ -40,14 +40,27 @@ internal static class SceneService
         return new Preset
         {
             Name = name,
-            Displays = source.Displays.Select(d => new PresetDisplay
-            {
-                Id = d.Id, Name = d.Name, Brightness = d.Brightness, Dimming = d.Dimming,
-                Mode = d.Mode, Orientation = d.Orientation, Dpi = d.Dpi, Hdr = d.Hdr,
-                UserProfiles = d.UserProfiles, SdrProfile = d.SdrProfile, HdrProfile = d.HdrProfile,
-                X = d.X, Y = d.Y, Primary = d.Primary
-            }).ToList()
+            Displays = source.Displays.Select(CopyDisplay).ToList()
         };
+    }
+
+    private static PresetDisplay CopyDisplay(PresetDisplay d) => new()
+    {
+        Id = d.Id, Name = d.Name, Brightness = d.Brightness, Dimming = d.Dimming,
+        Mode = d.Mode, Orientation = d.Orientation, Dpi = d.Dpi, Hdr = d.Hdr,
+        UserProfiles = d.UserProfiles, SdrProfile = d.SdrProfile, HdrProfile = d.HdrProfile,
+        X = d.X, Y = d.Y, Primary = d.Primary
+    };
+
+    // A single-screen application (and its undo snapshot) must never restore desktop layout.
+    internal static Preset ForDisplay(Preset source, string displayId)
+    {
+        var matches = source.Displays.Where(d => string.Equals(d.Id, displayId, StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (string.IsNullOrWhiteSpace(displayId) || matches.Length != 1)
+            throw new ArgumentException(L.T("scene.displayMissing"));
+        var saved = CopyDisplay(matches[0]);
+        saved.X = saved.Y = null; saved.Primary = null;
+        return new Preset { Name = source.Name, Displays = new() { saved } };
     }
 
     internal static async Task<Preset> Capture(ISceneBackend backend, string name)

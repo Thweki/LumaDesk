@@ -515,5 +515,10 @@
   "input.unchanged": "The display did not stay on the requested input. Check its signal and the monitor's automatic input settings.",
   "input.compatibility": "Using this display's compatible input switching method.",
   "input.switching": "Switching and verifying…",
-  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor."
+  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor.",
+  "scene.targetDisplay": "Target display",
+  "scene.applyDisplay": "Apply to one display",
+  "scene.applyDisplayHelp": "Choose a connected display saved in this preset. Applies its saved settings only; skips saved positions and the main display.",
+  "scene.noMatchingDisplay": "No connected displays match this preset.",
+  "scene.displayMissing": "The selected display is missing or ambiguous. Refresh and select it again."
 }
