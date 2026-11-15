@@ -105,6 +105,7 @@ public partial class MainWindow : Window
                 else dimWindows[id].Position(display);
             }
             foreach (var display in next) BrightnessChanged?.Invoke(display);
+            if (!testing) UpdateNightDimming(DateTime.Now, force: true);
             Render(); quick?.Render(); Status(L.F("sd1362bfd3f", Displays.Count, DateTime.Now));
         }
         catch (Exception ex) { Status(L.T("sf7293a061e") + ex.Message, true); Render(); }
@@ -324,10 +325,14 @@ public partial class MainWindow : Window
     }
     private void SetDimming(DisplayInfo display, double value)
     {
+        ApplyDimmingOverlay(display, nightDimming.EffectiveDimming(value));
+        display.Dimming = value;
+    }
+    private void ApplyDimmingOverlay(DisplayInfo display, double value)
+    {
         if (value > 0) DisplayService.ValidateIdentity(display.Device, display.Id);
         if (value == 0) { if (dimWindows.Remove(display.Id, out var existing)) existing.Close(); }
         else { if (!dimWindows.TryGetValue(display.Id, out var overlay)) { overlay = new DimWindow(); dimWindows[display.Id] = overlay; overlay.Show(); } overlay.Position(display); overlay.Opacity = value / 100.0; }
-        display.Dimming = value;
     }
     internal async Task ChangeModeAsync(DisplayInfo display, DisplayMode mode, uint orientation, Window? dialogOwner = null, bool exactOutput = false)
     {
