@@ -67,8 +67,10 @@ internal static partial class Program
                     window.ShowDisplay(display); window.UpdateLayout();
                     var combos = Descendants<ComboBox>(window.PageContent).ToList();
                     Check(combos.Count == 3 && combos.All(c => c.SelectedIndex >= 0), "Resolution, refresh and rotation selected: " + display.Name);
-                    var brightness = Descendants<Slider>(window.PageContent).Single(s => System.Windows.Automation.AutomationProperties.GetName(s) == "硬件亮度");
-                    Check(brightness.IsEnabled == display.Brightness.HasValue, "Hardware capability gates brightness: " + display.Name);
+                    var brightness = Descendants<Slider>(window.PageContent).Single(s => System.Windows.Automation.AutomationProperties.GetName(s) == L.T("s8e2f643ad1"));
+                    Check(brightness.IsEnabled && brightness.Value == window.GetCombinedBrightness(display) &&
+                        !Descendants<Slider>(window.PageContent).Any(s => System.Windows.Automation.AutomationProperties.GetName(s) is "硬件亮度" or "额外调暗"),
+                        "Settings shows one effective brightness control: " + display.Name);
                     if (display.DpiScale.CanSet)
                     {
                         Check(display.DpiScale.SupportedPercents.Contains(display.DpiScale.CurrentPercent), "Actual DPI belongs to available scales");
@@ -126,6 +128,7 @@ internal static partial class Program
                 await TestLayoutAsync(window);
                 await TestLiveBrightnessAndDismissAsync(window);
                 await TestBrightnessPopupLifetimeAsync(window);
+                await TestBrightnessReadbackAsync(window);
                 var pip = new PipWindow(window.Displays[0]); pip.Show(); await Task.Delay(700);
                 Check(Descendants<System.Windows.Controls.Image>(pip).Single().Source != null, "PIP receives actual screen frames"); pip.Close();
                 // Validate empty and unsupported-device states with fixtures; no native writes.
@@ -250,7 +253,12 @@ internal static partial class Program
         window.Displays = new() { display }; window.Hide();
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         int writes = 0; bool fail = false;
-        var popup = new QuickWindow(window, applyBrightness: async (d, value) => { writes++; await release.Task; if (fail) throw new InvalidOperationException("Brightness fixture failure"); d.Brightness = value; });
+        var popup = new QuickWindow(window, applyBrightness: async (d, value) =>
+        {
+            writes++; await release.Task; if (fail) throw new InvalidOperationException("Brightness fixture failure");
+            var level = BrightnessRules.Adjust(Math.Min(value, 70), d.Brightness, d.Dimming);
+            d.Brightness = level.Hardware; d.Dimming = level.Dimming;
+        });
         var outside = new Window { Width = 180, Height = 100, ShowInTaskbar = false };
         try
         {
@@ -269,8 +277,8 @@ internal static partial class Program
             // Exercise the real nonactivating dimming window without darkening any pixels.
             var overlay = new DimWindow(); overlay.Show(); await Task.Delay(40); overlay.Close(); await Task.Delay(40);
             Check(popup.IsVisible && popup.IsActive, "Creating and removing an invisible dimming layer preserves popup activation");
-            slider.Value = 70; await Task.Delay(100);
-            Check(writes == 2 && popup.IsVisible, "A second adjustment uses the same open brightness panel");
+            slider.Value = 85; await Task.Delay(100);
+            Check(writes == 2 && popup.IsVisible && slider.Value == 70, "The focused thumb reads back a capped brightness without sending another write");
             fail = true; slider.Value = 75; await Task.Delay(100);
             Check(popup.IsVisible && slider.Value == 70, "Failed brightness write restores the last value without closing the panel");
             outside.Show(); outside.Activate(); await Task.Delay(100);
@@ -282,6 +290,33 @@ internal static partial class Program
         }
         finally { release.TrySetResult(); await Task.Delay(50); popup.Close(); outside.Close(); window.Displays = real; window.Show(); }
     }
+    private static async Task TestBrightnessReadbackAsync(MainWindow window)
+    {
+        var real = window.Displays;
+        bool sync = window.Preferences.SyncBrightness;
+        var display = new DisplayInfo { Id = "brightness-readback", Name = "Readback", Number = 1, Dimming = 42.5 };
+        window.Displays = new() { display }; window.Preferences.SyncBrightness = false;
+        var host = new Window { Content = window.CreateBrightnessSlider(display, window.ChangeCombinedBrightness), Width = 250, Height = 120 };
+        try
+        {
+            host.Show(); host.UpdateLayout();
+            var slider = Descendants<Slider>(host).Single(); slider.Focus();
+            Check(slider.Value == 50, "Software-only slider reads fractional overlay opacity");
+            // The fixture has no native device. Returning to 100% removes its dimming without a hardware write.
+            var reply = await window.ExecuteCommand(new ControlCommand("brightness", display.Id, 100));
+            Check(reply.Success && display.Dimming == 0 && slider.Value == 100, "CLI and a focused slider agree after removing dimming");
+            window.Options(display).Minimum = 100;
+            slider.Value = 12; await Task.Delay(100);
+            Check(slider.Value == 100 && window.Preferences.RememberedBrightness[display.Id].Dimming == 0,
+                "A limited slider reports and remembers the applied software brightness");
+        }
+        finally
+        {
+            host.Close(); window.Displays = real; window.Preferences.SyncBrightness = sync;
+            window.Preferences.DisplayOptions.Remove(display.Id); window.Preferences.RememberedBrightness.Remove(display.Id);
+        }
+    }
+
     private static async Task TestLayoutAsync(MainWindow window)
     {
         var real = window.Displays;
@@ -393,7 +428,8 @@ internal static partial class Program
             SelectQuick(quick, 2);
             var slider = FindDpi(2); BeginDrag(slider); slider.Value = 0; await Task.Delay(150);
             Check(calls == 1 && !window.IsVisible, "DPI is applied while dragging, before pointer release");
-            Check(Descendants<TextBlock>(quick).Any(t => t.Text == "看起来像约 2560 × 1440"), "Quick DPI slider previews logical dimensions immediately");
+            var scaleLabels = Descendants<TextBlock>((StackPanel)slider.Parent).Select(t => t.Text).ToArray();
+            Check(scaleLabels.Contains("缩放 150%") && !scaleLabels.Any(t => t.Contains("2560 × 1440")), "Quick DPI slider updates its percentage without a logical resolution caption");
             Check(calls == 1 && ReferenceEquals(requestedDisplay, second) && requestedPercent == 150 && ReferenceEquals(requestedOwner, quick), "Live change applies exact display and supported percentage in quick window context");
             quick.Render(); quick.UpdateLayout();
             Check(ReferenceEquals(slider, FindDpi(2)) && slider.IsEnabled, "Pending live DPI retains an enabled stable drag control");

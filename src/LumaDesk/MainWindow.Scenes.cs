@@ -43,17 +43,10 @@ public partial class MainWindow
                 (saved.HdrProfile != null && !string.Equals(actual.HdrProfile, saved.HdrProfile, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException(L.T("scene.unsupported"));
         });
-        public async Task Brightness(DisplayInfo d, PresetDisplay saved)
+        public Task Brightness(DisplayInfo d, PresetDisplay saved)
         {
-            if (saved.Brightness.HasValue)
-            {
-                if (saved.Brightness < 0 || saved.Brightness > 100) throw new InvalidOperationException(L.T("group.invalid"));
-                if (!d.Brightness.HasValue) throw new InvalidOperationException(L.T("scene.unsupported"));
-                if (d.Brightness != saved.Brightness) await owner.Service.SetPercentAsync(d, 0x10, saved.Brightness.Value);
-                d.Brightness = saved.Brightness;
-            }
-            owner.SetDimming(d, saved.Dimming);
-            owner.RememberBrightness(d);
+            owner.CancelReconnect(d.Id);
+            return owner.RestoreBrightnessAsync(d, saved);
         }
     }
 

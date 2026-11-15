@@ -30,6 +30,12 @@ Local validation for this change is limited to static checks: this Linux worktre
 has no `dotnet` or PowerShell. Windows CI must confirm compilation and fixture
 execution; no WPF pass is claimed locally.
 
+## CI UI 编译检查（ci-ui-build）
+
+Windows CI 在五个 Release 无桌面测试套件之后运行 `dotnet build tests/LumaDesk.UiTests/LumaDesk.UiTests.csproj -c Release`，补上 `test.ps1 -Headless` 提前返回时遗漏的 UI 项目编译检查。此步骤只编译；完整 UI 回归仍需交互式 Windows 桌面。现有打包和 MSI 安装、启动、卸载检查保持不变。
+
+本次修改环境未提供 .NET SDK 或 PowerShell；本地仅验证工作流缩进、步骤顺序和文本约束，未运行完整 YAML lint。Windows Release 编译及现有测试、打包检查的结果必须在 Windows CI 中确认。
+
 ## 0.5.0 发布检查（2026-11-04）
 
 完整 `test.ps1` 通过 436 项检查：逻辑 48、色彩 17、虚拟屏幕 15、本地化 32、工作流 44、中文 WPF 界面 184，其他四种语言各 24。界面截图与中英文 GIF 已按当前控件重新生成；动图使用示例屏幕和模拟亮度回调，不发送硬件写入。

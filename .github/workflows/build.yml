@@ -58,6 +58,8 @@ jobs:
           if (-not (Test-Path "docs/releases/$version.md")) { throw 'Release notes are missing.' }
       - name: Headless tests (no hardware writes)
         run: ./test.ps1 -Headless
+      - name: Build UI tests (Release)
+        run: dotnet build tests/LumaDesk.UiTests/LumaDesk.UiTests.csproj -c Release
       - name: Build EXE, portable ZIP and MSI
         run: ./package.ps1
       - name: Verify packages and MSI install / launch / uninstall

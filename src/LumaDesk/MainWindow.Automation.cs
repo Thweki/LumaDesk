@@ -76,14 +76,8 @@ public partial class MainWindow
                     if (!ReferenceEquals(Preferences.RememberedBrightness.GetValueOrDefault(d.Id), pair.Value)) { pending.Remove(pair.Key); continue; }
                     try
                     {
-                        var saved = pair.Value;
-                        if (saved.Brightness.HasValue)
-                        {
-                            if (!d.Brightness.HasValue) throw new InvalidOperationException(L.T("scene.unsupported"));
-                            if (d.Brightness != saved.Brightness) await Service.SetPercentAsync(d, 0x10, saved.Brightness.Value, cancellation);
-                            cancellation.ThrowIfCancellationRequested(); d.Brightness = saved.Brightness;
-                        }
-                        cancellation.ThrowIfCancellationRequested(); SetDimming(d, saved.Dimming, restoring: true); pending.Remove(pair.Key);
+                        await RestoreBrightnessAsync(d, pair.Value, cancellation);
+                        pending.Remove(pair.Key);
                     }
                     catch (OperationCanceledException) { pending.Remove(pair.Key); }
                     catch (Exception ex) { Storage.Log("Reconnect brightness: " + d.Name + ": " + ex.Message); }
@@ -98,7 +92,7 @@ public partial class MainWindow
                 await ApplySceneAsync(scene);
             }
             else if (scene == null) lastConnectionScene = "";
-            quick?.Render();
+            RefreshView(); quick?.Render();
         }
         catch (Exception ex) { Status(ex.Message, true); }
         finally
