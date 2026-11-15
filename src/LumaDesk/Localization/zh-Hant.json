@@ -523,5 +523,15 @@
   "input.unchanged": "螢幕未保持在目標輸入，切換未生效。請檢查目標連接埠訊號或螢幕的自動輸入設定。",
   "input.compatibility": "已啟用此螢幕的相容切換方式。",
   "input.switching": "正在切換並確認…",
-  "input.unverified": "已傳送切換要求，但無法確認目前輸入。請在螢幕上確認。"
+  "input.unverified": "已傳送切換要求，但無法確認目前輸入。請在螢幕上確認。",
+  "timing.title": "重新整理時序（實驗性）",
+  "timing.disabled": "重新整理時序檢查已停用。",
+  "timing.ambiguous": "此顯示器沒有唯一的作用中路徑。請重新整理顯示器清單；無法個別檢查鏡像顯示器。",
+  "timing.failed": "無法讀取重新整理時序：{0}",
+  "timing.hz": "{0:0.###} Hz",
+  "timing.rates": "桌面更新頻率：{0}\n訊號更新頻率：{1}",
+  "timing.on": "Windows 動態更新頻率（DRR）：已啟用",
+  "timing.off": "Windows 動態更新頻率（DRR）：已停用",
+  "timing.unknown": "Windows 動態更新頻率（DRR）：未回報",
+  "timing.help": "唯讀檢視設定的更新頻率，並非即時幀率。DRR 會自動提升桌面更新頻率。此檢查器不回報遊戲 VRR / Adaptive-Sync 的支援情況或活動狀態；DRR 已停用不代表不支援 VRR。"
 }
