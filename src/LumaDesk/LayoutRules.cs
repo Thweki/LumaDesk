@@ -8,8 +8,40 @@ using System.Linq;
 namespace LumaDesk;
 
 public sealed record ScreenPlacement(string Id, int X, int Y, int Width, int Height, bool Primary);
+public enum LayoutSide { Left, Right, Above, Below }
+public enum LayoutAlignment { Start, Center, End }
 public static class LayoutRules
 {
+    public static ScreenPlacement PlaceRelative(ScreenPlacement moving, ScreenPlacement anchor, LayoutSide side, LayoutAlignment alignment)
+    {
+        if (string.Equals(moving.Id, anchor.Id, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(L.T("layout.relative.same"));
+        if (moving.Width <= 0 || moving.Height <= 0 || anchor.Width <= 0 || anchor.Height <= 0)
+            throw new InvalidOperationException(L.T("sa9fa1bf809"));
+        if (!Enum.IsDefined(side)) throw new ArgumentOutOfRangeException(nameof(side));
+        if (!Enum.IsDefined(alignment)) throw new ArgumentOutOfRangeException(nameof(alignment));
+
+        bool horizontal = side is LayoutSide.Left or LayoutSide.Right;
+        long difference = horizontal ? (long)anchor.Height - moving.Height : (long)anchor.Width - moving.Width;
+        // Odd pixel differences round toward the top/left, never creating a gap.
+        long offset = alignment == LayoutAlignment.Start ? 0 : alignment == LayoutAlignment.End ? difference : (long)Math.Floor(difference / 2.0);
+        long x = side switch
+        {
+            LayoutSide.Left => (long)anchor.X - moving.Width,
+            LayoutSide.Right => (long)anchor.X + anchor.Width,
+            _ => (long)anchor.X + offset
+        };
+        long y = side switch
+        {
+            LayoutSide.Above => (long)anchor.Y - moving.Height,
+            LayoutSide.Below => (long)anchor.Y + anchor.Height,
+            _ => (long)anchor.Y + offset
+        };
+        if (x < int.MinValue || x > int.MaxValue || y < int.MinValue || y > int.MaxValue)
+            throw new InvalidOperationException(L.T("sa9fa1bf809"));
+        return moving with { X = (int)x, Y = (int)y };
+    }
+
     public static List<ScreenPlacement> Normalize(IEnumerable<ScreenPlacement> screens)
     {
         var items = screens.ToList();

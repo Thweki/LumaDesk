@@ -126,6 +126,7 @@ internal static partial class Program
                     Check(window.Displays.All(d => { var m = DisplayService.CurrentMode(d.Device); return m.X == d.X && m.Y == d.Y; }), "Alternate primary layout passes whole-topology SDC_VALIDATE without moving monitors");
                 }
                 await TestLayoutAsync(window);
+                await TestRelativePlacementFixtureAsync(window);
                 await TestLiveBrightnessAndDismissAsync(window);
                 await TestBrightnessPopupLifetimeAsync(window);
                 await TestBrightnessReadbackAsync(window);
@@ -330,7 +331,7 @@ internal static partial class Program
         {
             layout.Show(); layout.UpdateLayout(); Snapshot(layout, "layout.png");
             Check(Descendants<FrameworkElement>(layout).Count(e => System.Windows.Automation.AutomationProperties.GetAutomationId(e).StartsWith("layout-screen-")) == 2, "Layout renders each monitor in its physical position");
-            var primary = Descendants<ComboBox>(layout).Last(); primary.SelectedItem = a;
+            var primary = Descendants<ComboBox>(layout).Single(c => System.Windows.Automation.AutomationProperties.GetAutomationId(c) == "layout-primary"); primary.SelectedItem = a;
             Check(calls == 0 && layout.Placements.Single(p => p.Id == a.Id).Primary, "Primary selection only previews and sends no display command");
             var apply = Descendants<Button>(layout).Single(btn => System.Windows.Automation.AutomationProperties.GetAutomationId(btn) == "layout-apply");
             Click(apply); await Task.Delay(20);

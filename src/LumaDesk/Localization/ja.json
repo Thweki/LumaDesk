@@ -515,5 +515,20 @@
   "input.unchanged": "指定した入力が維持されませんでした。接続先の信号とディスプレイの入力自動切り替え設定を確認してください。",
   "input.compatibility": "このディスプレイの互換切り替え方式を使用しています。",
   "input.switching": "切り替えと確認中…",
-  "input.unverified": "切り替え要求を送信しましたが、現在の入力を確認できません。ディスプレイで確認してください。"
+  "input.unverified": "切り替え要求を送信しましたが、現在の入力を確認できません。ディスプレイで確認してください。",
+  "layout.relative.to": "選択した画面の配置基準",
+  "layout.relative.left": "左側",
+  "layout.relative.right": "右側",
+  "layout.relative.above": "上側",
+  "layout.relative.below": "下側",
+  "layout.relative.top": "上端揃え",
+  "layout.relative.leftEdge": "左端揃え",
+  "layout.relative.center": "中央揃え",
+  "layout.relative.bottom": "下端揃え",
+  "layout.relative.rightEdge": "右端揃え",
+  "layout.relative.place": "プレビューに配置",
+  "layout.relative.side": "隣接する方向",
+  "layout.relative.alignment": "端の位置合わせ",
+  "layout.relative.preview": "プレビューを更新しました。適用をクリックして配置を検証し、使用します。",
+  "layout.relative.same": "異なる2つの画面を選択してください。"
 }

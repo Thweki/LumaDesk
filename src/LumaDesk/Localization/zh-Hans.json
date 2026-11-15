@@ -515,5 +515,20 @@
   "input.unchanged": "显示器未保持在目标输入，切换未生效。请检查目标接口信号或显示器的自动输入设置。",
   "input.compatibility": "已启用此显示器的兼容切换方式。",
   "input.switching": "正在切换并确认…",
-  "input.unverified": "已发送切换请求，但无法确认当前输入。请在显示器上确认。"
+  "input.unverified": "已发送切换请求，但无法确认当前输入。请在显示器上确认。",
+  "layout.relative.to": "将所选屏幕放置在此屏幕旁",
+  "layout.relative.left": "左侧",
+  "layout.relative.right": "右侧",
+  "layout.relative.above": "上方",
+  "layout.relative.below": "下方",
+  "layout.relative.top": "顶部对齐",
+  "layout.relative.leftEdge": "左侧对齐",
+  "layout.relative.center": "居中对齐",
+  "layout.relative.bottom": "底部对齐",
+  "layout.relative.rightEdge": "右侧对齐",
+  "layout.relative.place": "在预览中放置",
+  "layout.relative.side": "相邻方向",
+  "layout.relative.alignment": "边缘对齐",
+  "layout.relative.preview": "预览已更新。点击应用以验证并使用此排列。",
+  "layout.relative.same": "请选择两个不同的屏幕。"
 }

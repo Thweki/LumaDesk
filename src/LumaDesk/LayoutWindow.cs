@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 
@@ -21,6 +22,10 @@ internal sealed class LayoutWindow : Window
     private readonly TextBox xBox = new() { Width = 95 }, yBox = new() { Width = 95 };
     private readonly ComboBox selected = new() { DisplayMemberPath = "Name", Width = 185 };
     private readonly ComboBox primary = new() { DisplayMemberPath = "Name", Width = 185 };
+    private readonly ComboBox relativeTo = new() { DisplayMemberPath = "Name", Width = 185 };
+    private readonly ComboBox relativeSide = new() { MinWidth = 100 };
+    private readonly ComboBox relativeAlignment = new() { MinWidth = 100 };
+    private readonly StackPanel relativeControls = new() { Margin = new Thickness(0, 12, 0, 0) };
     private List<ScreenPlacement> placements = new();
     private List<DisplayInfo> displays = new();
     private bool loading, busy;
@@ -37,6 +42,9 @@ internal sealed class LayoutWindow : Window
         var coordinates = new StackPanel { Orientation = Orientation.Horizontal };
         coordinates.Children.Add(selected); coordinates.Children.Add(Ui.Text("  X  ", 12)); coordinates.Children.Add(xBox); coordinates.Children.Add(Ui.Text("  Y  ", 12)); coordinates.Children.Add(yBox);
         var update = Ui.Button(L.T("s4a05c9ce76"), UpdateCoordinates); update.Margin = new Thickness(8, 0, 0, 0); coordinates.Children.Add(update); body.Children.Add(coordinates);
+        AutomationProperties.SetAutomationId(selected, "layout-selected");
+        AutomationProperties.SetAutomationId(primary, "layout-primary");
+        CreateRelativeControls(); body.Children.Add(relativeControls);
         var primaryRow = Ui.Row(Ui.Text(L.T("s93ff5822ca"), 13), primary); primaryRow.Margin = new Thickness(0, 14, 0, 14); body.Children.Add(primaryRow);
         var arrange = new StackPanel { Orientation = Orientation.Horizontal };
         arrange.Children.Add(Ui.Button(L.T("se25efd6551"), () => Arrange(false))); var vertical = Ui.Button(L.T("s86d5bec31e"), () => Arrange(true)); vertical.Margin = new Thickness(8, 0, 8, 0); arrange.Children.Add(vertical);
@@ -51,7 +59,7 @@ internal sealed class LayoutWindow : Window
         }), true);
         System.Windows.Automation.AutomationProperties.SetAutomationId(applyButton, "layout-apply");
         body.Children.Add(Ui.Row(Ui.Text(L.T("s67773de970"), 11, "#718096"), applyButton));
-        selected.SelectionChanged += (_, _) => UpdateFields();
+        selected.SelectionChanged += (_, _) => { UpdateFields(); if (!loading) UpdateRelativeTargets(); };
         primary.SelectionChanged += (_, _) =>
         {
             if (loading || primary.SelectedItem is not DisplayInfo display) return;
@@ -67,7 +75,57 @@ internal sealed class LayoutWindow : Window
         placements = displays.Select(d => new ScreenPlacement(d.Id, d.X, d.Y, (int)d.Current.Width, (int)d.Current.Height, d.Primary)).ToList();
         selected.ItemsSource = displays; selected.SelectedIndex = displays.Count > 0 ? 0 : -1;
         primary.ItemsSource = displays; primary.SelectedItem = displays.FirstOrDefault(d => d.Primary);
-        loading = false; UpdateFields(); Draw();
+        loading = false; UpdateFields(); UpdateRelativeTargets(); Draw();
+    }
+    private void CreateRelativeControls()
+    {
+        relativeControls.Children.Add(Ui.Row(Ui.Text(L.T("layout.relative.to"), 13), relativeTo));
+        relativeSide.ItemsSource = new[] { L.T("layout.relative.left"), L.T("layout.relative.right"), L.T("layout.relative.above"), L.T("layout.relative.below") };
+        relativeSide.SelectedIndex = (int)LayoutSide.Right;
+        void UpdateAlignment()
+        {
+            int index = relativeAlignment.SelectedIndex;
+            bool horizontal = relativeSide.SelectedIndex < 2;
+            relativeAlignment.ItemsSource = new[] { L.T(horizontal ? "layout.relative.top" : "layout.relative.leftEdge"), L.T("layout.relative.center"), L.T(horizontal ? "layout.relative.bottom" : "layout.relative.rightEdge") };
+            relativeAlignment.SelectedIndex = index < 0 ? (int)LayoutAlignment.Center : index;
+        }
+        relativeSide.SelectionChanged += (_, _) => UpdateAlignment(); UpdateAlignment();
+        var choices = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+        relativeSide.Margin = new Thickness(0, 0, 8, 0); relativeAlignment.Margin = new Thickness(0, 0, 8, 0);
+        choices.Children.Add(relativeSide); choices.Children.Add(relativeAlignment);
+        var place = Ui.Button(L.T("layout.relative.place"), PlaceRelative);
+        choices.Children.Add(place); relativeControls.Children.Add(choices);
+        foreach (var (control, id, name) in new (FrameworkElement Control, string Id, string Name)[]
+        {
+            (relativeTo, "layout-relative-to", "layout.relative.to"),
+            (relativeSide, "layout-relative-side", "layout.relative.side"),
+            (relativeAlignment, "layout-relative-alignment", "layout.relative.alignment"),
+            (place, "layout-relative-place", "layout.relative.place")
+        })
+        {
+            AutomationProperties.SetAutomationId(control, id);
+            AutomationProperties.SetName(control, L.T(name));
+        }
+    }
+    private void UpdateRelativeTargets()
+    {
+        var previous = (relativeTo.SelectedItem as DisplayInfo)?.Id;
+        var targets = displays.Where(d => selected.SelectedItem is DisplayInfo moving && !string.Equals(d.Id, moving.Id, StringComparison.OrdinalIgnoreCase)).ToList();
+        relativeTo.ItemsSource = targets;
+        relativeTo.SelectedItem = targets.FirstOrDefault(d => d.Id == previous) ?? targets.FirstOrDefault();
+        relativeControls.IsEnabled = targets.Count > 0;
+    }
+    private void PlaceRelative()
+    {
+        if (busy || selected.SelectedItem is not DisplayInfo moving || relativeTo.SelectedItem is not DisplayInfo anchor) return;
+        try
+        {
+            var moved = LayoutRules.PlaceRelative(placements.Single(p => p.Id == moving.Id), placements.Single(p => p.Id == anchor.Id),
+                (LayoutSide)relativeSide.SelectedIndex, (LayoutAlignment)relativeAlignment.SelectedIndex);
+            placements = placements.Select(p => p.Id == moved.Id ? moved : p).ToList();
+            UpdateFields(); Draw(); feedback.Text = L.T("layout.relative.preview");
+        }
+        catch (Exception ex) { feedback.Text = ex.Message; }
     }
     private void UpdateFields()
     {
