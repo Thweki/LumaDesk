@@ -29,6 +29,16 @@ On the **Presets** page, expand **More options** for an existing preset, enter a
 
 On the **Presets** page, use **Move up** or **Move down** on a preset card to put frequently used presets first. The order is saved immediately, survives restarts, and also appears in the tray preset menu. Reordering does not capture or apply display settings or change preset IDs, saved values, shortcuts, or trigger settings. Existing automation still selects the first matching preset in list order when multiple rules match. No experimental flag is required.
 
+## 应用前预览（实验性） / Preview before applying (experimental)
+
+默认关闭。启动前设置环境变量 `LUMADESK_EXPERIMENTAL_PRESET_APPLY_PREVIEW=1`，即可在预设页点击“预览并应用（实验性）”或从托盘选择预设时，先检查目标屏幕、缺席屏幕和将恢复的设置类别。点击“应用”才会执行，取消不会改变屏幕或撤销快照。确认期间连接发生变化时需重新预览。移除环境变量并重启即可关闭；不会更改已保存的设置。
+
+Default **OFF**. Launch with `LUMADESK_EXPERIMENTAL_PRESET_APPLY_PREVIEW=1` (PowerShell: `$env:LUMADESK_EXPERIMENTAL_PRESET_APPLY_PREVIEW = '1'`). Use **Presets → Preview and apply (experimental)** or select a preset from the tray menu. Review connected targets, skipped missing screens, and the setting groups to restore, then explicitly click **Apply**. Cancel is the default action; it leaves display settings and the existing undo snapshot intact. Apply is disabled when no saved screens are connected. Connection changes during confirmation require a fresh preview. Remove the variable and restart to disable; no preference is persisted.
+
+This confirmation previews the scope of a manual application, not differences between saved and current values. Already matching values may remain unchanged. Layout is conditional on the existing apply-time validation; hardware failures still use the existing partial-result report and undo. Shortcuts, schedules, reconnect, command-line application, and undo remain direct. The preview reads hardware and can take time on slow monitors.
+
+Validation: workflow tests cover target matching, legacy presets, cancellation, connection changes, scan failure and default-off behavior; WPF fixtures cover the dialog and opt-in action label. These C# tests were added but not executed in the implementation environment because `dotnet` and `pwsh` were unavailable. Run the workflow suite and UI `--fixtures` suite on Windows.
+
 ## 可选自动化
 
 预设可设置每天的时间（本机 24 小时制）或接通电源/使用电池触发。应用运行期间约每 20 秒检查一次；休眠错过的最近一次时间可在恢复后触发，不补跑历史任务。同一轮多个预设命中时只应用列表中第一个匹配屏幕集合的预设。

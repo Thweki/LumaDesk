@@ -523,5 +523,12 @@
   "input.unchanged": "The display did not stay on the requested input. Check its signal and the monitor's automatic input settings.",
   "input.compatibility": "Using this display's compatible input switching method.",
   "input.switching": "Switching and verifying…",
-  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor."
+  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor.",
+  "scene.previewApply": "Preview and apply (experimental)",
+  "scene.previewCancel": "Cancel",
+  "scene.previewSummary": "{0} connected display(s) will be targeted; {1} missing display(s) will be skipped.",
+  "scene.previewHelp": "Review the displays and settings to restore. Values already matching may stay unchanged. No display settings are written until you click Apply.",
+  "scene.previewBrightness": "Brightness / dimming",
+  "scene.previewLayout": "Screen arrangement will also be restored if all saved displays, modes and layout checks match at apply time.",
+  "scene.previewChanged": "Display connections changed. Open the preview again before applying."
 }
