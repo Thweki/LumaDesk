@@ -114,9 +114,12 @@ internal static partial class Program
                 Check(quick.Height < 620 && quickScroll.ScrollableHeight == 0, "Compact selected-screen panel sizes to content without blank height or scrolling");
                 Snapshot(quick, "quick-panel.png"); quick.Close();
                 await TestQuickPlacementAsync(window);
+                await TestFocusDisplayAsync(window);
                 await TestQuickDisplayPickerAsync(window);
                 await TestMultiBrightnessAsync(window);
+                await TestBrightnessStepsFixtureAsync(window);
                 await TestInputSwitchUiAsync(window);
+                await TestRefreshTimingUiAsync(window);
                 await TestQuickDpiAsync(window);
                 await TestQuickModesAsync(window);
                 if (window.Displays.Count > 1)

@@ -18,8 +18,10 @@ public partial class MainWindow
     private sealed class SceneBackend : ISceneBackend
     {
         private readonly MainWindow owner;
-        internal SceneBackend(MainWindow owner) => this.owner = owner;
-        public IReadOnlyList<DisplayInfo> Displays => owner.Displays;
+        private readonly IReadOnlyList<DisplayInfo>? snapshot;
+        internal SceneBackend(MainWindow owner, IReadOnlyList<DisplayInfo>? snapshot = null)
+        { this.owner = owner; this.snapshot = snapshot; }
+        public IReadOnlyList<DisplayInfo> Displays => snapshot ?? owner.Displays;
         public Task<DisplayColorState> Color(DisplayInfo d) => Task.Run(() => AdvancedColorService.Read(d));
         public Task Mode(DisplayInfo d, DisplayMode mode, uint orientation) => owner.ChangeModeAsync(d, mode, orientation, exactOutput: true);
         public Task Dpi(DisplayInfo d, int percent) => owner.ChangeDpiAsync(d, percent);
@@ -30,19 +32,7 @@ public partial class MainWindow
         }
         public Task Layout(IReadOnlyList<ScreenPlacement> placements) => owner.ChangeLayoutAsync(placements);
         public Task Profiles(DisplayInfo d, PresetDisplay saved) => Task.Run(() =>
-        {
-            var current = AdvancedColorService.Read(d);
-            if (saved.UserProfiles == false) { AdvancedColorService.UseSystemProfiles(d); return; }
-            if (!string.IsNullOrEmpty(saved.SdrProfile) && (!current.UseUserProfiles || current.SdrProfile != saved.SdrProfile))
-                AdvancedColorService.SetDefaultProfile(d, saved.SdrProfile, false);
-            if (!string.IsNullOrEmpty(saved.HdrProfile) && (!current.UseUserProfiles || current.HdrProfile != saved.HdrProfile))
-                AdvancedColorService.SetDefaultProfile(d, saved.HdrProfile, true);
-            var actual = AdvancedColorService.Read(d);
-            if (!actual.ProfilesAvailable || !actual.UseUserProfiles ||
-                (saved.SdrProfile != null && !string.Equals(actual.SdrProfile, saved.SdrProfile, StringComparison.OrdinalIgnoreCase)) ||
-                (saved.HdrProfile != null && !string.Equals(actual.HdrProfile, saved.HdrProfile, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException(L.T("scene.unsupported"));
-        });
+            AdvancedColorService.RestoreProfiles(d, saved.UserProfiles, saved.SdrProfile, saved.HdrProfile));
         public Task Brightness(DisplayInfo d, PresetDisplay saved)
         {
             owner.CancelReconnect(d.Id);
@@ -159,6 +149,33 @@ public partial class MainWindow
         Render(); quick?.Render(); Status(L.T("sa0d6e1ed82"));
     }
 
+    private StackPanel CreateSceneOrderControls(Preset scene)
+    {
+        int index = Preferences.Presets.IndexOf(scene);
+        var controls = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
+        var up = Ui.Button(L.T("panel.up"), () => MoveScene(scene, -1));
+        var down = Ui.Button(L.T("panel.down"), () => MoveScene(scene, 1));
+        up.IsEnabled = index > 0 && !sceneBusy;
+        down.IsEnabled = index >= 0 && index < Preferences.Presets.Count - 1 && !sceneBusy;
+        System.Windows.Automation.AutomationProperties.SetName(up, scene.Name + ": " + L.T("panel.up"));
+        System.Windows.Automation.AutomationProperties.SetName(down, scene.Name + ": " + L.T("panel.down"));
+        controls.Children.Add(up); controls.Children.Add(down);
+        return controls;
+    }
+
+    private void MoveScene(Preset scene, int direction)
+    {
+        if (sceneBusy || !SceneService.Move(Preferences.Presets, scene, direction)) return;
+        try { Storage.Save(Preferences); }
+        catch (Exception ex)
+        {
+            SceneService.Move(Preferences.Presets, scene, -direction);
+            Status(L.T("s888403f2f3") + ex.Message, true);
+            return;
+        }
+        Render(); quick?.Render(); Status(L.T("sa0d6e1ed82"));
+    }
+
     private void RenderScenes()
     {
         Heading(L.T("s0b2fca3986"), L.T("scene.description"));
@@ -166,6 +183,8 @@ public partial class MainWindow
         while (Preferences.Presets.Any(p => p.Name == defaultName)) defaultName = L.T("s3cbfca23b6") + " " + suffix++;
         var name = new TextBox { Text = defaultName, MaxLength = 40, MinWidth = 180 };
         PageContent.Children.Add(Ui.Card(Ui.Row(name, Ui.Button(L.T("sce211a5a47"), () => _ = RunAsync(() => SaveSceneAsync(name.Text)), true))));
+        PageContent.Children.Add(Ui.Card(CreateSceneCaptureButton()));
+        if (sceneDraft != null) PageContent.Children.Add(Ui.Card(CreateSceneDraftEditor(sceneDraft)));
         if (undoScene != null) PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.previous")), Ui.Button(L.T("scene.undo"), () => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); })))));
         if (!string.IsNullOrEmpty(sceneReport)) PageContent.Children.Add(Ui.Card(new Expander { Header = L.T("scene.details"), Content = Ui.Text(sceneReport, 12) }));
         if (Preferences.Presets.Count == 0) PageContent.Children.Add(Ui.Card(Ui.Labels(L.T("s502f445e9e"), L.T("scene.empty"))));
@@ -173,6 +192,7 @@ public partial class MainWindow
         {
             var card = new StackPanel();
             card.Children.Add(Ui.Row(Ui.Labels(scene.Name, L.F("sb91b8e2562", scene.Displays.Count)), Ui.Button(L.T("s63c73c4730"), () => _ = RunAsync(async () => await ApplySceneAsync(scene)), true)));
+            card.Children.Add(CreateSceneOrderControls(scene));
             var details = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
             var rename = new TextBox { Text = scene.Name, MaxLength = 40 };
             details.Children.Add(Ui.Row(rename, Ui.Button(L.T("scene.update"), () => _ = RunAsync(() => SaveSceneAsync(rename.Text, scene)))));

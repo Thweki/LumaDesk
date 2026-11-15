@@ -40,7 +40,8 @@ For **Windows 10 / 11 x64**. The .NET runtime is included. Choose a file from [R
 | `LumaDesk-VERSION-win-x64.msi` | Install to Program Files with a Start menu shortcut (administrator access required) |
 
 1. Run `LumaDesk.exe`. Click the tray icon for the panel; double-click for settings.
-2. Pick a screen at the top and drag brightness or HiDPI. Use **Link brightness** to adjust several screens.
+2. Pick a screen at the top and drag brightness or HiDPI. Click **−5 / +5** beside brightness for five-point steps; these follow the slider's sync/group scope and display limits. Use **Link brightness** to adjust several screens.
+   Choose **Move panel here** to bring the panel to that screen. It stays there until closed or the screen disconnects; reopening starts at the tray again.
 3. Save your setup under **Settings → Presets**. Startup and language options live under **Settings → Application**.
 
 Default shortcuts: `Ctrl+Alt+↑ / ↓` adjusts the screen under the pointer; `Ctrl+Alt+0` removes software dimming.
@@ -73,6 +74,7 @@ More: [Presets and automation](docs/workflows.md) · [HDR / ICC](docs/color-hdr.
 Under **Settings → Application → Night window (experimental)**, set different start/end times in local 24-hour `HH:mm` format, click **Apply window**, then enable the toggle. It defaults **off**, with a suggested window of **21:00–07:00**. While LumaDesk runs, the window applies at least 35% software shading to all connected screens, preserving any stronger manual shading. It does not change hardware brightness, slider values, presets or remembered brightness.
 
 The window is checked at startup, after display refresh, and approximately every 20 seconds. Overnight windows are supported; starting or resuming inside a window activates it, and leaving the window restores the current manual shading. **Reset dimming** (`Ctrl+Alt+0` by default) clears shading and suspends the current window. The next daily window, editing the schedule, toggling it off/on, or restarting the app enables it again. Turning the feature off removes its shading immediately. This is clock-based shading, independent of activity or inactivity; it does not schedule monitor power-off.
+Optional experiment: [inspect fractional refresh timing and Windows DRR status](docs/refresh-timing.md) (disabled by default).
 
 ## License
 

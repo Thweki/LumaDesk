@@ -54,6 +54,19 @@ internal static partial class Program
             Check(Has("quick-dpi-slider-2") && !Has("quick-dpi-slider-1") && !Has("quick-dpi-slider-3"), "Only the chosen screen exposes adjustment controls");
             Check(!Descendants<TextBlock>(quick).Any(t => displays.Any(d => t.Text == d.Name) || new[] { "左侧", "中间", "右侧", "1", "2", "3" }.Contains(t.Text)), "Picker omits visible names, numbers and positional text");
             Check(AutomationProperties.GetItemStatus(Find("quick-display-select-2")) == L.T("quick.selected"), "Selected screen is exposed to accessibility tools");
+            pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            int stepValue = window.GetCombinedBrightness(second) - 5;
+            var stepDown = Find("quick-brightness-down"); stepDown.Focus(); Click(stepDown); await Task.Delay(100);
+            SelectQuick(quick, 1);
+            Check(ReferenceEquals(requested, second) && requestedValue == stepValue && quick.SelectedDisplayId == second.Id && !window.IsVisible,
+                "Quick step targets the selected screen with settings closed and blocks switching during its write");
+            pending.SetResult(true); pending = null; await Task.Delay(100);
+            Check(ReferenceEquals(stepDown, Find("quick-brightness-down")) && stepDown.IsKeyboardFocusWithin,
+                "Completing a step preserves the focused button for keyboard and repeated adjustments");
+            SelectQuick(quick, 1); Click(Find("quick-brightness-up")); await Task.Delay(100);
+            Check(ReferenceEquals(requested, first) && requestedValue == 77 && second.Brightness == stepValue && third.Brightness == 45,
+                "Step buttons follow a new selection without adjusting unselected screens");
+            SelectQuick(quick, 2);
             Snapshot(quick, "quick-picker-three-screens.png");
             Click(Find("quick-more-toggle-2")); quick.UpdateLayout();
             Check(Has("quick-more-content-2") && Descendants<TextBlock>(quick).Any(t => t.Text == "画中画"), "More settings retains existing advanced functions");
