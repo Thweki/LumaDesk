@@ -21,6 +21,20 @@
 
 托盘面板中的“联调亮度”用于临时多选：勾选的屏幕只接受亮度调整，不沿用组成员或相对偏移，仍遵守各屏亮度上下限。未选择屏幕时滑块不可用；退出联调恢复此前的单屏控制，不创建或修改显示器组。关闭面板后，下次默认进入单屏模式。
 
+## Experimental idle dimming
+
+**Default: off.** Enable **Settings → Application → Idle dimming (experimental)** and choose 1–60 minutes, initially 5. The persisted settings are `ExperimentalIdleDimming` (boolean) and `IdleDimmingMinutes` (integer); old settings files keep the feature off. Invalid delays leave the experiment inactive.
+
+While enabled, LumaDesk checks keyboard/mouse inactivity in the current Windows session every 500 ms using [GetLastInputInfo](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getlastinputinfo). After the delay, all connected screens get at least 60% software dimming; an existing darker shade stays as it is. Input or disabling the option removes the temporary shade. The brightness sliders, remembered reconnect values and captured presets retain their original values. This is visual dimming, not a backlight or energy-saving control.
+
+Enabling, changing the delay, manual brightness/reset commands, display refresh/reconnection and waking from sleep start a fresh grace period. Dimming pauses during display scans, mode confirmation, scene application and brightness writes. Failed input sampling removes the temporary shade. Quitting closes the overlays. No polling timer runs for this feature when disabled.
+
+There is no video/presentation detection: watching without keyboard/mouse input counts as idle, so turn the option off when needed. This experimental software overlay has the same HDR/full-screen compatibility limits as manual software dimming. It does not lock the session or replace Windows screen-off settings.
+
+空闲调暗为默认关闭的实验性功能。在“设置 → 应用 → 空闲调暗（实验性）”开启，选择 1–60 分钟的等待时间（默认 5 分钟）。仅临时改变软件遮罩，键盘或鼠标活动会恢复原有亮度，不改写显示器背光、预设或重连恢复值。观看视频但不操作也会计入空闲，可按需关闭。
+
+To validate on Windows: run `dotnet run --project tests/LumaDesk.Tests -c Release` for deterministic timing/settings tests and `dotnet run --project tests/LumaDesk.UiTests -- --fixtures` for settings UI tests. Manually enable a one-minute delay, test screens with 0%, 25% and 80% existing software dimming, then verify input, reset, disable, unplug/replug and sleep/wake restore correctly. Native input and actual overlay behavior require a Windows desktop.
+
 ## 命令行
 
 这是脚本接口；普通用户无需使用。所有命令要求结果文件，返回 JSON，成功退出码为 0，失败/部分完成为 1。

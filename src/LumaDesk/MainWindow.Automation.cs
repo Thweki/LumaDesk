@@ -39,10 +39,12 @@ public partial class MainWindow
         preferenceTimer.Tick += (_, _) => { preferenceTimer.Stop(); Save(); };
         automationTimer.Tick += async (_, _) => await TickAutomationAsync();
         if (!testing) automationTimer.Start();
+        StartIdleDimming();
     }
     private void StopAutomation()
     {
         automationTimer.Stop(); preferenceTimer.Stop();
+        idleDimmingTimer.Stop(); ResetIdleDimming();
         foreach (var token in reconnectWrites.Values) token.Cancel();
     }
 

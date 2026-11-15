@@ -84,6 +84,7 @@ public partial class MainWindow : Window
     internal async Task RefreshAsync(bool sceneRefresh = false)
     {
         if (scanning || modePending || (sceneBusy && !sceneRefresh)) return;
+        ResetIdleDimming();
         scanning = true;
         brightnessScan = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Status(L.T("s117b82fa19"));
@@ -290,9 +291,13 @@ public partial class MainWindow : Window
     private void SetDimming(DisplayInfo display, double value)
     {
         if (value > 0) DisplayService.ValidateIdentity(display.Device, display.Id);
+        RenderDimming(display, value);
+        display.Dimming = value;
+    }
+    private void RenderDimming(DisplayInfo display, double value)
+    {
         if (value == 0) { if (dimWindows.Remove(display.Id, out var existing)) existing.Close(); }
         else { if (!dimWindows.TryGetValue(display.Id, out var overlay)) { overlay = new DimWindow(); dimWindows[display.Id] = overlay; overlay.Show(); } overlay.Position(display); overlay.Opacity = value / 100.0; }
-        display.Dimming = value;
     }
     internal async Task ChangeModeAsync(DisplayInfo display, DisplayMode mode, uint orientation, Window? dialogOwner = null, bool exactOutput = false)
     {
@@ -388,6 +393,7 @@ public partial class MainWindow : Window
             var previous = tray.Icon; tray.Icon = replacement; lightTrayGlyph = light; previous?.Dispose();
         });
         if (msg == 0x7e || msg == 0x219 || msg == 0x2e0 || msg == 0x1a || (msg == 0x218 && (w.ToInt32() == 7 || w.ToInt32() == 18))) {
+            ResetIdleDimming();
             if (msg == 0x218) resumeBrightness = true;
             hotplugTimer.Stop(); hotplugTimer.Start();
         }

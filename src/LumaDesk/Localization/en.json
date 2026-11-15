@@ -511,5 +511,9 @@
   "input.unchanged": "The display did not stay on the requested input. Check its signal and the monitor's automatic input settings.",
   "input.compatibility": "Using this display's compatible input switching method.",
   "input.switching": "Switching and verifying…",
-  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor."
+  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor.",
+  "idle.title": "Idle dimming (experimental)",
+  "idle.help": "Off by default. Temporarily shades all screens to at least 60% dimming after inactivity. Keyboard or mouse activity restores your brightness.",
+  "idle.delay": "Dim after inactivity",
+  "idle.minutes": "{0} min"
 }
