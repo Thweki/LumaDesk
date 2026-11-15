@@ -450,6 +450,18 @@ internal sealed class PipWindow : Window
         Closed += (_, _) => { closed = true; timer.Stop(); preview.Source = null; if (!capturing) DisposeBuffers(); };
     }
     private void DisposeBuffers() { full?.Dispose(); full = null; scaled?.Dispose(); scaled = null; }
+    internal static Bitmap EnsureBuffer(ref Bitmap? buffer, int width, int height)
+    {
+        if (buffer == null || buffer.Width != width || buffer.Height != height)
+        {
+            buffer?.Dispose();
+            // Allocation can fail. Never retain a disposed bitmap: the next
+            // capture must be able to retry instead of failing on Width/Height.
+            buffer = null;
+            buffer = new Bitmap(width, height);
+        }
+        return buffer;
+    }
     private async Task CaptureAsync()
     {
         if (paused || capturing || closed || selectionStart != null || WindowState == WindowState.Minimized) return;
@@ -463,12 +475,12 @@ internal sealed class PipWindow : Window
                 var area = new Drawing.Rectangle(0, 0, (int)current.Width, (int)current.Height);
                 if (requestedCrop.HasValue) area = Drawing.Rectangle.Intersect(area, requestedCrop.Value);
                 if (area.Width <= 0 || area.Height <= 0) throw new InvalidOperationException(L.T("s88561e63c9"));
-                if (full == null || full.Width != area.Width || full.Height != area.Height) { full?.Dispose(); full = new Bitmap(area.Width, area.Height); }
-                using (var graphics = Graphics.FromImage(full)) graphics.CopyFromScreen(current.X + area.X, current.Y + area.Y, 0, 0, full.Size);
+                var capture = EnsureBuffer(ref full, area.Width, area.Height);
+                using (var graphics = Graphics.FromImage(capture)) graphics.CopyFromScreen(current.X + area.X, current.Y + area.Y, 0, 0, capture.Size);
                 int width = Math.Min(960, area.Width), height = Math.Max(1, width * area.Height / area.Width);
-                if (scaled == null || scaled.Width != width || scaled.Height != height) { scaled?.Dispose(); scaled = new Bitmap(width, height); }
-                using (var g = Graphics.FromImage(scaled)) { g.InterpolationMode = Drawing.Drawing2D.InterpolationMode.Bilinear; g.DrawImage(full, 0, 0, width, height); }
-                var handle = scaled.GetHbitmap();
+                var output = EnsureBuffer(ref scaled, width, height);
+                using (var g = Graphics.FromImage(output)) { g.InterpolationMode = Drawing.Drawing2D.InterpolationMode.Bilinear; g.DrawImage(capture, 0, 0, width, height); }
+                var handle = output.GetHbitmap();
                 try { var source = Imaging.CreateBitmapSourceFromHBitmap(handle, IntPtr.Zero, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions()); source.Freeze(); return (Source: source, Area: area); }
                 finally { Native.DeleteObject(handle); }
             });
