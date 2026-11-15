@@ -54,6 +54,7 @@ internal static partial class Program
                     // Only detached controls with injected hardware callbacks belong here.
                     var owner = new MainWindow();
                     TestSceneDuplicateFixture(owner);
+                    TestSceneOrderFixture(owner);
                     await TestLiveBrightnessFixtureAsync(owner);
                     await TestQuickScaleFixtureAsync(owner);
                     await TestInputSwitchUiAsync(owner, offscreen: true);
