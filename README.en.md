@@ -46,6 +46,8 @@ For **Windows 10 / 11 x64**. The .NET runtime is included. Choose a file from [R
 
 Default shortcuts: `Ctrl+Alt+↑ / ↓` adjusts the screen under the pointer; `Ctrl+Alt+0` removes software dimming.
 
+**Experimental idle dimming (off by default):** enable **Settings → Application → Idle dimming (experimental)** and choose an idle delay of 1–60 minutes (default: 5). LumaDesk temporarily shades all screens after no keyboard or mouse input; activity restores the prior shade on the next check (about half a second). This uses a software overlay, leaves monitor backlights and saved brightness untouched, and preserves screens already dimmed more deeply. See [behavior and limitations](docs/workflows.md#experimental-idle-dimming).
+
 All editions store settings in `%LOCALAPPDATA%\LumaDesk`. “Portable” means no installation, not settings beside the executable. There is no telemetry. The virtual driver downloads only when you choose to install it. Driver installation and first-time system ICC imports may request administrator approval.
 
 ## Before you download
