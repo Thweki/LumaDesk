@@ -29,6 +29,18 @@ On the **Presets** page, expand **More options** for an existing preset, enter a
 
 On the **Presets** page, use **Move up** or **Move down** on a preset card to put frequently used presets first. The order is saved immediately, survives restarts, and also appears in the tray preset menu. Reordering does not capture or apply display settings or change preset IDs, saved values, shortcuts, or trigger settings. Existing automation still selects the first matching preset in list order when multiple rules match. No experimental flag is required.
 
+## Reset one display to its preset
+
+After successfully applying a preset, select a screen under **Settings → Displays** and use **Reset to preset**. Choose **Brightness**, **Scaling**, **Rotation**, or **All available**. The panel names the source preset. This is a normal manual control using existing display APIs; no experimental flag or new preference is introduced.
+
+- Each display remembers its own last successfully applied preset values for the current app session. Failed or missing displays keep their earlier baseline; a layout-only failure does not discard successfully applied controls. Editing, renaming or deleting the saved preset does not change this snapshot. Applying another preset successfully replaces it. Undoing a preset switch does not replace it.
+- Brightness restores the saved hardware brightness and software dimming directly for this display, bypassing group/sync targets and relative offsets, just as preset application does. An unspecified hardware brightness stays unchanged. Scaling restores the saved DPI percentage. Rotation preserves the current resolution and refresh rate, swapping width and height when changing between portrait and landscape.
+- **All available** restores only these three controls where saved. It does not restore HDR, ICC, contrast, volume, inputs, output resolution, display arrangement or the primary screen. Rotation still changes the desktop footprint; Windows may adjust placement as part of the mode change. Legacy brightness-only presets leave scaling and rotation unavailable.
+- Before a preset has been applied, or after restarting the app, the panel explains how to enable reset. No factory brightness or orientation is guessed. Reset does not consume or overwrite preset undo history and can be repeated. Missing devices and failed controls are reported in the status bar; hover over a partial result for details. Independent controls continue after a failure, and the baseline remains available for retry.
+- Rotation and scaling reuse existing identity checks, driver validation and recovery paths. Workflow tests cover reset scope, legacy data, immutable snapshots, partial failures and disconnects; detached WPF fixtures cover action wiring. Real display writes still require Windows hardware validation.
+
+在本次会话中成功应用预设后，打开“设置 → 屏幕”，使用“重置为预设”恢复该屏幕的亮度、缩放、旋转或所有可用项。仅重置所选屏幕；旧预设未保存的项目不可用。基准是上次成功应用的值，编辑或删除预设、撤销切换都不会改变它，退出应用后不保留。部分失败时可将鼠标悬停在状态栏查看详情并重试。
+
 ## 可选自动化
 
 预设可设置每天的时间（本机 24 小时制）或接通电源/使用电池触发。应用运行期间约每 20 秒检查一次；休眠错过的最近一次时间可在恢复后触发，不补跑历史任务。同一轮多个预设命中时只应用列表中第一个匹配屏幕集合的预设。

@@ -44,6 +44,8 @@ For **Windows 10 / 11 x64**. The .NET runtime is included. Choose a file from [R
    Choose **Move panel here** to bring the panel to that screen. It stays there until closed or the screen disconnects; reopening starts at the tray again.
 3. Save your setup under **Settings → Presets**. Startup and language options live under **Settings → Application**.
 
+After applying a preset, open a screen in **Settings → Displays → Reset to preset** to restore its brightness, scaling, rotation, or all available saved controls. The reset target is the last preset successfully applied to that screen during this session. [Reset behavior and limits](docs/workflows.md#reset-one-display-to-its-preset).
+
 Default shortcuts: `Ctrl+Alt+↑ / ↓` adjusts the screen under the pointer; `Ctrl+Alt+0` removes software dimming.
 
 All editions store settings in `%LOCALAPPDATA%\LumaDesk`. “Portable” means no installation, not settings beside the executable. There is no telemetry. The virtual driver downloads only when you choose to install it. Driver installation and first-time system ICC imports may request administrator approval.

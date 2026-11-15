@@ -80,6 +80,7 @@ public partial class MainWindow
             var before = await SceneService.Capture(backend, L.T("scene.previous"));
             if (!undo) undoScene = before;
             var result = await SceneService.Apply(backend, preset);
+            if (!undo) DisplayResets.Remember(preset, result);
             if (undo && result.Issues.Count == 0) undoScene = null;
             sceneReport = string.Join("\n", result.Issues);
             Save();

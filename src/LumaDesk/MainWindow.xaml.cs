@@ -195,6 +195,7 @@ public partial class MainWindow : Window
     private void RenderDisplay(DisplayInfo display)
     {
         Heading(display.Name, display.Subtitle + (display.Primary ? L.T("s28102bcda6") : ""));
+        PageContent.Children.Add(Ui.Card(CreateDisplayResetControls(display)));
         RenderDpiScaling(display);
         var light = new StackPanel(); light.Children.Add(Ui.Row(Ui.IconLabel("\uE706", L.T("s437926dd65")), Ui.Badge(display.HasDdc ? L.T("s77e64220a2") : display.HasWmi ? L.T("s16cc598b36") : L.T("sa81ff06ccd"))));
         light.Children.Add(Ui.Line());
