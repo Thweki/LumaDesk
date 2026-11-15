@@ -11,7 +11,7 @@ using System.Windows.Controls;
 
 internal static partial class Program
 {
-    private static async Task TestInputSwitchUiAsync(MainWindow window)
+    private static async Task TestInputSwitchUiAsync(MainWindow window, bool offscreen = false)
     {
         var display = new DisplayInfo { Id = "input-fixture", Number = 99, Name = "Input fixture" };
         uint current = 17; int writes = 0, reads = 0; bool fail = false, unverified = false;
@@ -25,14 +25,17 @@ internal static partial class Program
                 if (unverified) return new InputSwitchResult(false, null);
                 current = code; return new InputSwitchResult(true, code);
             });
-        var host = new Window { Width = 370, Height = 290, Content = new Border { Padding = new Thickness(15), Child = input }, ShowInTaskbar = false };
+        var content = new Border { Padding = new Thickness(15), Child = input };
+        FrameworkElement host = offscreen ? content : new Window { Width = 370, Height = 290, Content = content, ShowInTaskbar = false };
         ComboBox Choice() => Descendants<ComboBox>(host).Single();
         Button Find(string id) => Descendants<Button>(host).Single(b => AutomationProperties.GetAutomationId(b) == id);
         string Status() => Descendants<TextBlock>(host).Single(t => AutomationProperties.GetAutomationId(t) == "input-status-99").Text;
         void Choose(uint code) => Choice().SelectedItem = Choice().Items.Cast<MonitorInput>().Single(i => i.Code == code);
         try
         {
-            host.Show(); input.IsExpanded = true; await Task.Delay(60); host.UpdateLayout();
+            (host as Window)?.Show(); input.IsExpanded = true; await Task.Delay(60);
+            if (offscreen) { host.Measure(new Size(370, 290)); host.Arrange(new Rect(0, 0, 370, 290)); }
+            host.UpdateLayout();
             Check(reads == 1 && writes == 0 && (Choice().SelectedItem as MonitorInput)?.Code == 17 && !Find("input-apply-99").IsEnabled,
                 "Input panel reads the current input without issuing a command");
             Choose(15); Click(Find("input-apply-99")); await Task.Delay(60);
@@ -54,6 +57,6 @@ internal static partial class Program
                 "Repeated read-only refresh restores current state without writes or duplicate-parent UI errors");
             Snapshot(host, "input-switch-confirmation.png");
         }
-        finally { hold?.TrySetResult(true); await Task.Delay(40); host.Close(); }
+        finally { hold?.TrySetResult(true); await Task.Delay(40); (host as Window)?.Close(); }
     }
 }
