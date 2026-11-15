@@ -505,6 +505,7 @@
   "theme.title": "모양",
   "quick.choose": "화면 선택",
   "quick.identify": "위치 확인",
+  "quick.movePanel": "이 화면으로 패널 이동",
   "quick.screenCount": "디스플레이 {0}개",
   "quick.more": "추가 설정",
   "quick.less": "추가 설정 접기",

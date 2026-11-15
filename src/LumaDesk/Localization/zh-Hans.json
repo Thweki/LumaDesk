@@ -505,6 +505,7 @@
   "theme.title": "外观",
   "quick.choose": "选择屏幕",
   "quick.identify": "定位",
+  "quick.movePanel": "将面板移到此屏",
   "quick.screenCount": "{0} 块屏幕",
   "quick.more": "更多设置",
   "quick.less": "收起更多设置",

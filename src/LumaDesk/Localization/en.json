@@ -505,6 +505,7 @@
   "theme.title": "Appearance",
   "quick.choose": "Select display",
   "quick.identify": "Locate",
+  "quick.movePanel": "Move panel here",
   "quick.screenCount": "Displays: {0}",
   "quick.more": "More settings",
   "quick.less": "Hide more settings",
