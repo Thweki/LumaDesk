@@ -273,13 +273,15 @@ internal sealed partial class QuickWindow : Window
         Render();
         ScheduleDismiss();
     }
-    private UIElement CreateDpiControls(DisplayInfo display)
+    internal UIElement CreateDpiControls(DisplayInfo display)
     {
         var section = new StackPanel();
         System.Windows.Automation.AutomationProperties.SetAutomationId(section, "quick-dpi-" + display.Number);
         var info = display.DpiScale;
         var amount = Ui.Text(info.CanSet ? L.F("sdaee699fa0", info.CurrentPercent) : L.T("sf36cac9622"), 11, "#7A8699");
-        section.Children.Add(Ui.Row(Ui.Text(L.T("scene.scale"), 12), amount));
+        var scaleValue = new StackPanel { Orientation = Orientation.Horizontal };
+        scaleValue.Children.Add(amount);
+        section.Children.Add(Ui.Row(Ui.Text(L.T("scene.scale"), 12), scaleValue));
         if (!info.CanSet)
         {
             var help = Ui.Text(info.UnavailableReason, 10, "#8790A0"); help.Margin = new Thickness(0, 3, 0, 3); section.Children.Add(help);
@@ -291,6 +293,26 @@ internal sealed partial class QuickWindow : Window
         var slider = new Slider { Minimum = 0, Maximum = steps.Length - 1, TickFrequency = 1, IsSnapToTickEnabled = true, IsMoveToPointEnabled = true, Value = Array.IndexOf(steps, info.CurrentPercent), Height = 22, Margin = new Thickness(0, 2, 0, 0), IsEnabled = steps.Length > 1 };
         System.Windows.Automation.AutomationProperties.SetName(slider, display.Name + L.T("s4fa3927f98"));
         System.Windows.Automation.AutomationProperties.SetAutomationId(slider, "quick-dpi-slider-" + display.Number);
+        Button NudgeButton(string text, string action, int direction)
+        {
+            var button = Ui.Button(text, () =>
+            {
+                if (closed || dpiDragging || (dpiBusy && activeDpiDisplay != display.Id)) return;
+                // Step from the pending slider value, so rapid clicks accumulate
+                // while the same serialized writer applies only the latest target.
+                slider.Value = Math.Clamp(slider.Value + direction, slider.Minimum, slider.Maximum);
+            });
+            button.Width = 28; button.Padding = new Thickness(4, 2, 4, 2); button.Margin = new Thickness(6, 0, 0, 0);
+            button.ToolTip = L.T("quick.scale" + action);
+            System.Windows.Automation.AutomationProperties.SetName(button, display.Name + ": " + button.ToolTip);
+            System.Windows.Automation.AutomationProperties.SetAutomationId(button, "quick-dpi-" + action.ToLowerInvariant() + "-" + display.Number);
+            scaleValue.Children.Add(button);
+            return button;
+        }
+        // The slider is reversed (more desktop space to the right), whereas
+        // +/- describe the Windows scaling percentage and therefore text size.
+        var decrease = NudgeButton("−", "Decrease", 1);
+        var increase = NudgeButton("+", "Increase", -1);
         bool resetting = false;
         int SelectedPercent() => steps[Math.Clamp((int)Math.Round(slider.Value), 0, steps.Length - 1)];
         void ResetToCurrent()
@@ -302,6 +324,8 @@ internal sealed partial class QuickWindow : Window
             int percent = SelectedPercent();
             amount.Text = L.F("sdaee699fa0", percent);
             slider.ToolTip = $"{percent}% · {DpiRules.LooksLike(display.Current, percent)}";
+            decrease.IsEnabled = slider.Value < slider.Maximum;
+            increase.IsEnabled = slider.Value > slider.Minimum;
         }
         var writer = new LatestValueWriter(async percent =>
         {
@@ -317,7 +341,7 @@ internal sealed partial class QuickWindow : Window
         }, delay: () => Task.Delay(60), idle: () =>
         {
             dpiBusy = false; activeDpiDisplay = null;
-            if (!dpiDragging && !slider.IsMouseCaptureWithin && !slider.IsKeyboardFocusWithin) { activeDpiSlider = null; Render(); }
+            if (!dpiDragging && !slider.IsMouseCaptureWithin && !section.IsKeyboardFocusWithin) { activeDpiSlider = null; Render(); }
             ScheduleDismiss();
         });
         void RequestCurrent()
@@ -344,9 +368,9 @@ internal sealed partial class QuickWindow : Window
             await writer.WhenIdle;
             activeDpiSlider = null; Render(); ScheduleDismiss();
         }));
-        slider.LostKeyboardFocus += (_, _) =>
+        section.LostKeyboardFocus += (_, _) =>
         {
-            if (activeDpiSlider == slider && !dpiDragging && !writer.IsActive) { activeDpiSlider = null; Render(); }
+            if (activeDpiSlider == slider && !section.IsKeyboardFocusWithin && !dpiDragging && !writer.IsActive) { activeDpiSlider = null; Render(); }
         };
         slider.Unloaded += (_, _) => writer.Stop();
         section.Children.Add(slider);

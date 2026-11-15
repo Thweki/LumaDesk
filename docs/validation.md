@@ -1,5 +1,20 @@
 # LumaDesk 验证记录
 
+## Quick scaling nudges
+
+`QuickScaleTests.cs` runs in both the Windows desktop suite and `--fixtures`.
+Injected DPI writes cover supported steps (including 250% → 300%), both limits,
+single-step and unavailable displays, exact target/owner, rapid clicks during a
+slow write, serialization, and failure readback. The desktop DPI test also checks
+inline nudge errors, keyboard focus retention and deferred close. No real DPI
+settings are changed by these tests.
+
+Local validation on Linux: localization JSON/key/placeholder checks, project XML
+and test wiring checks, and `git diff --check`. C# execution/build, WPF rendering
+and `test.ps1` are skipped because .NET and PowerShell are unavailable. Run
+`dotnet run --project tests/LumaDesk.UiTests -- --fixtures artifacts/wpf-fixtures`
+on Windows for the detached fixtures, and `./test.ps1` on an interactive Windows
+desktop for the complete suite. Real display scaling remains a manual check.
 ## Quick-panel brightness steps
 
 The quick panel's **−5 / +5** buttons use the existing brightness slider queue,

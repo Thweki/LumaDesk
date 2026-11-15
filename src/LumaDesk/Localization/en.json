@@ -524,6 +524,8 @@
   "input.compatibility": "Using this display's compatible input switching method.",
   "input.switching": "Switching and verifying…",
   "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor.",
+  "quick.scaleDecrease": "Decrease scaling (smaller text)",
+  "quick.scaleIncrease": "Increase scaling (larger text)",
   "timing.title": "Refresh timing (experimental)",
   "timing.disabled": "Refresh timing inspection is disabled.",
   "timing.ambiguous": "This display has no unique active path. Refresh the display list; mirrored displays cannot be inspected separately.",
