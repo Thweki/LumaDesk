@@ -9,6 +9,7 @@ using System.Text.Json;
 
 int passed = 0;
 void Check(bool result, string name) { if (!result) throw new Exception("FAIL: " + name); passed++; }
+RefreshTimingTests.Run(Check);
 Check(Marshal.SizeOf<DpiNative.Header>() == 20, "CCD header size");
 Check(Marshal.SizeOf<AdvancedColorNative.Info2>() == 36, "Info2 UINT32 fields on x64");
 Check(Marshal.OffsetOf<AdvancedColorNative.Info2>(nameof(AdvancedColorNative.Info2.Flags)).ToInt32() == 20, "flags offset");

@@ -92,7 +92,12 @@ internal sealed partial class QuickWindow
             amount.Text = Math.Round(slider.Value) + "%"; AutomationProperties.SetItemStatus(slider, amount.Text);
             Hold(); writer.Request((int)Math.Round(slider.Value));
         }
-        slider.Loaded += (_, _) => UpdateTrack();
+        void OnBrightnessChanged(DisplayInfo display)
+        {
+            if (multiLevelLabels.TryGetValue(display.Id, out var label)) label.Text = owner.GetCombinedBrightness(display) + "%";
+            if (!writer.IsActive && !dragging && ids.Contains(display.Id, StringComparer.OrdinalIgnoreCase)) ReadActual();
+        }
+        slider.Loaded += (_, _) => { owner.BrightnessChanged += OnBrightnessChanged; UpdateTrack(); };
         slider.ValueChanged += (_, _) => Request();
         slider.PreviewMouseLeftButtonDown += (_, _) =>
         {
@@ -107,7 +112,7 @@ internal sealed partial class QuickWindow
             if (!dragging && !writer.IsActive) { ReadActual(); Release(); RefreshWhenIdle(); }
         }));
         slider.LostKeyboardFocus += (_, _) => Dispatcher.BeginInvoke(new Action(() => { if (!writer.IsActive) RefreshWhenIdle(); }));
-        slider.Unloaded += (_, _) => { dragging = false; writer.Stop(); Release(); };
+        slider.Unloaded += (_, _) => { owner.BrightnessChanged -= OnBrightnessChanged; dragging = false; writer.Stop(); Release(); };
         section.Children.Add(sliderHost); section.Children.Add(help); section.Children.Add(error);
         return section;
     }

@@ -18,13 +18,13 @@ public partial class MainWindow
 {
     private readonly DispatcherTimer automationTimer = new() { Interval = TimeSpan.FromSeconds(20) };
     private readonly DispatcherTimer preferenceTimer = new() { Interval = TimeSpan.FromMilliseconds(700) };
-    private HashSet<string> connectedScreens = new(StringComparer.OrdinalIgnoreCase);
-    private bool resumeBrightness, restoringConnection;
+    private ReconnectCoordinator? reconnect;
+    private bool restoringConnection => reconnect?.IsRestoring == true;
+    private bool resumeBrightness;
     private DateTime lastAutomationTime;
     private Forms.PowerLineStatus lastPower;
     private string lastConnectionScene = "";
-    private readonly Dictionary<string, CancellationTokenSource> reconnectWrites = new(StringComparer.OrdinalIgnoreCase);
-    private void CancelReconnect(string id) { if (reconnectWrites.TryGetValue(id, out var token)) token.Cancel(); }
+    private void CancelReconnect(string id) => reconnect?.Cancel(id);
     private bool testing => System.Windows.Application.Current is App { IntegrationTest: true };
 
     private void RememberBrightness(DisplayInfo d)
@@ -34,7 +34,7 @@ public partial class MainWindow
     }
     private void StartAutomation()
     {
-        connectedScreens = new(Displays.Select(d => d.Id), StringComparer.OrdinalIgnoreCase);
+        reconnect ??= new(new ReconnectBackend(this), Displays.Select(d => d.Id));
         lastAutomationTime = DateTime.Now; lastPower = Forms.SystemInformation.PowerStatus.PowerLineStatus;
         preferenceTimer.Tick += (_, _) => { preferenceTimer.Stop(); Save(); };
         automationTimer.Tick += async (_, _) => await TickAutomationAsync();
@@ -43,69 +43,63 @@ public partial class MainWindow
     private void StopAutomation()
     {
         automationTimer.Stop(); preferenceTimer.Stop();
-        foreach (var token in reconnectWrites.Values) token.Cancel();
+        reconnect?.CancelAll();
     }
 
     private async Task RestoreAfterConnectionAsync()
     {
         if (modePending || sceneBusy || scanning || restoringConnection) { hotplugTimer.Start(); return; }
-        restoringConnection = true;
+        reconnect ??= new(new ReconnectBackend(this), Displays.Select(d => d.Id));
         bool resume = resumeBrightness; resumeBrightness = false;
-        var pending = new Dictionary<string, PresetDisplay>(StringComparer.OrdinalIgnoreCase);
-        try
-        {
-            await RefreshAsync();
-            foreach (var d in Displays.Where(d => resume || !connectedScreens.Contains(d.Id)))
-                if (Preferences.RestoreBrightness && Preferences.RememberedBrightness.TryGetValue(d.Id, out var saved))
-                { pending[d.Id] = saved; reconnectWrites[d.Id] = new(); }
-            bool changed = !connectedScreens.SetEquals(Displays.Select(d => d.Id));
-            connectedScreens = new(Displays.Select(d => d.Id), StringComparer.OrdinalIgnoreCase);
-            if (!changed && !resume) return;
-            if (testing) return;
-            // Reacquire handles on every attempt; a wake event often precedes DDC readiness.
-            for (int attempt = 0; pending.Count > 0 && attempt < 3; attempt++)
-            {
-                if (attempt > 0) { await Task.Delay(1000 * attempt); if (sceneBusy || modePending) return; await RefreshAsync(); }
-                foreach (var pair in pending.ToArray())
-                {
-                    var cancellation = reconnectWrites[pair.Key].Token;
-                    if (cancellation.IsCancellationRequested) { pending.Remove(pair.Key); continue; }
-                    var d = Displays.FirstOrDefault(d => d.Id == pair.Key);
-                    if (d == null) continue;
-                    // A manual adjustment supersedes the saved reconnect target.
-                    if (!ReferenceEquals(Preferences.RememberedBrightness.GetValueOrDefault(d.Id), pair.Value)) { pending.Remove(pair.Key); continue; }
-                    try
-                    {
-                        var saved = pair.Value;
-                        if (saved.Brightness.HasValue)
-                        {
-                            if (!d.Brightness.HasValue) throw new InvalidOperationException(L.T("scene.unsupported"));
-                            if (d.Brightness != saved.Brightness) await Service.SetPercentAsync(d, 0x10, saved.Brightness.Value, cancellation);
-                            cancellation.ThrowIfCancellationRequested(); d.Brightness = saved.Brightness;
-                        }
-                        cancellation.ThrowIfCancellationRequested(); SetDimming(d, saved.Dimming, restoring: true); pending.Remove(pair.Key);
-                    }
-                    catch (OperationCanceledException) { pending.Remove(pair.Key); }
-                    catch (Exception ex) { Storage.Log("Reconnect brightness: " + d.Name + ": " + ex.Message); }
-                }
-            }
-            if (pending.Count > 0) Status(L.T("automation.restoreFailed") + string.Join("、", pending.Values.Select(d => d.Name)), true);
-            var scene = Preferences.Presets.FirstOrDefault(p => p.OnConnect && SceneService.SameScreens(p, Displays));
-            string connection = scene == null ? "" : scene.Id + ":" + string.Join("|", connectedScreens.OrderBy(id => id));
-            if (scene != null && (resume || lastConnectionScene != connection) && !sceneBusy && !modePending && !reconnectWrites.Values.Any(c => c.IsCancellationRequested))
-            {
-                lastConnectionScene = connection;
-                await ApplySceneAsync(scene);
-            }
-            else if (scene == null) lastConnectionScene = "";
-            quick?.Render();
-        }
+        try { await reconnect.RestoreAsync(resume, automate: !testing); }
         catch (Exception ex) { Status(ex.Message, true); }
-        finally
+    }
+
+    private async Task ConnectionRestoredAsync(bool resume, bool allowScene)
+    {
+        var scene = Preferences.Presets.FirstOrDefault(p => p.OnConnect && SceneService.SameScreens(p, Displays));
+        string connection = scene == null ? "" : scene.Id + ":" + string.Join("|", Displays.Select(d => d.Id).OrderBy(id => id));
+        if (scene != null && (resume || lastConnectionScene != connection) && !sceneBusy && !modePending && allowScene)
         {
-            foreach (var token in reconnectWrites.Values) token.Dispose(); reconnectWrites.Clear();
-            restoringConnection = false;
+            lastConnectionScene = connection;
+            await ApplySceneAsync(scene);
         }
+        else if (scene == null) lastConnectionScene = "";
+        RefreshView(); quick?.Render();
+    }
+
+    private void CompleteReconnectBrightness(DisplayInfo display, double dimming)
+    {
+        if (display.Dimming != dimming) SetDimming(display, dimming);
+        RememberBrightness(display);
+        BrightnessChanged?.Invoke(display);
+    }
+
+    private sealed class ReconnectBackend : IReconnectBackend
+    {
+        private readonly MainWindow window;
+        internal ReconnectBackend(MainWindow window) { this.window = window; }
+        public IReadOnlyList<DisplayInfo> Displays => window.Displays;
+        public Preferences Preferences => window.Preferences;
+        public bool IsBlocked => window.sceneBusy || window.modePending || window.scanning;
+        public Task RefreshAsync() => window.RefreshAsync();
+        public async Task<IDisposable> AcquireBrightnessAsync(string id, CancellationToken cancellation)
+        {
+            if (!window.brightnessGates.TryGetValue(id, out var gate)) window.brightnessGates[id] = gate = new(1, 1);
+            await gate.WaitAsync(cancellation);
+            return new BrightnessLease(gate);
+        }
+        private sealed class BrightnessLease : IDisposable
+        {
+            private readonly SemaphoreSlim gate;
+            internal BrightnessLease(SemaphoreSlim gate) { this.gate = gate; }
+            public void Dispose() => gate.Release();
+        }
+        public Task WriteBrightnessAsync(DisplayInfo display, int value, CancellationToken cancellation) => window.Service.SetPercentAsync(display, 0x10, value, cancellation);
+        public void SetDimming(DisplayInfo display, double value) => window.CompleteReconnectBrightness(display, value);
+        public void LogFailure(DisplayInfo display, Exception error) => Storage.Log("Reconnect brightness: " + display.Name + ": " + error.Message);
+        public void RestoreFailed(IReadOnlyList<PresetDisplay> targets) => window.Status(L.T("automation.restoreFailed") + string.Join("、", targets.Select(d => d.Name)), true);
+        public Task OnRestoredAsync(bool resume, bool allowScene) => window.ConnectionRestoredAsync(resume, allowScene);
     }
 
     private async Task TickAutomationAsync()
