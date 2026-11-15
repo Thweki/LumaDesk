@@ -112,6 +112,8 @@ public partial class MainWindow : Window
     }
     private void Render()
     {
+        // Tray startup and background refreshes only need the display model, not the settings UI.
+        if (!IsVisible) return;
         foreach (var pair in navButtons) pair.Value.Background = Ui.Brush(pair.Key == page ? "#E5E5E5" : "#00FFFFFF");
         Breadcrumb.Text = L.T("s424b6d3b48") + (navButtons.TryGetValue(page, out var navigation) ? (string)navigation.Tag : page);
         PageContent.Children.Clear(); DisplayTabs.Children.Clear();
@@ -367,7 +369,14 @@ public partial class MainWindow : Window
         var menu = new Forms.ContextMenuStrip(); menu.Items.Add(L.T("s770544f702"), null, (_, _) => Dispatcher.Invoke(ShowQuick)); menu.Items.Add(L.T("s3e86e94e26"), null, (_, _) => Dispatcher.Invoke(ShowSettings)); menu.Items.Add(L.T("sa13550662f"), null, (_, _) => Dispatcher.Invoke(() => _ = RefreshAsync())); menu.Items.Add(L.T("s8e6dbec08e"), null, (_, _) => Dispatcher.Invoke(ResetDimming)); menu.Items.Add(new Forms.ToolStripSeparator()); menu.Items.Add(L.T("s2297788756"), null, (_, _) => Dispatcher.Invoke(Quit)); tray.ContextMenuStrip = menu;
         tray.MouseClick += (_, e) => { if (e.Button == Forms.MouseButtons.Left) Dispatcher.Invoke(ShowQuick); }; tray.DoubleClick += (_, _) => Dispatcher.Invoke(ShowSettings);
     }
-    internal void ShowSettings() { quick?.Close(); Show(); WindowState = WindowState.Normal; Activate(); }
+    internal void ShowSettings()
+    {
+        quick?.Close();
+        bool wasVisible = IsVisible;
+        Show();
+        if (!wasVisible) Render();
+        WindowState = WindowState.Normal; Activate();
+    }
     internal void ShowDisplay(DisplayInfo display) { selectedId = display.Id; page = "displays"; Render(); ShowSettings(); }
     internal void ShowQuick()
     {
