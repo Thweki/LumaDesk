@@ -55,6 +55,7 @@ internal static partial class Program
                     var owner = new MainWindow();
                     TestSceneDuplicateFixture(owner);
                     TestSceneDisplayFixture(owner);
+                    TestSceneOrderFixture(owner);
                     await TestLiveBrightnessFixtureAsync(owner);
                     await TestInputSwitchUiAsync(owner, offscreen: true);
                     Check(!owner.IsLoaded && new WindowInteropHelper(owner).Handle == IntPtr.Zero && owner.Displays.Count == 0,
