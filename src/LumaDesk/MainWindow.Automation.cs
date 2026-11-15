@@ -65,7 +65,14 @@ public partial class MainWindow
             await ApplySceneAsync(scene);
         }
         else if (scene == null) lastConnectionScene = "";
-        quick?.Render();
+        RefreshView(); quick?.Render();
+    }
+
+    private void CompleteReconnectBrightness(DisplayInfo display, double dimming)
+    {
+        if (display.Dimming != dimming) SetDimming(display, dimming);
+        RememberBrightness(display);
+        BrightnessChanged?.Invoke(display);
     }
 
     private sealed class ReconnectBackend : IReconnectBackend
@@ -76,8 +83,20 @@ public partial class MainWindow
         public Preferences Preferences => window.Preferences;
         public bool IsBlocked => window.sceneBusy || window.modePending || window.scanning;
         public Task RefreshAsync() => window.RefreshAsync();
+        public async Task<IDisposable> AcquireBrightnessAsync(string id, CancellationToken cancellation)
+        {
+            if (!window.brightnessGates.TryGetValue(id, out var gate)) window.brightnessGates[id] = gate = new(1, 1);
+            await gate.WaitAsync(cancellation);
+            return new BrightnessLease(gate);
+        }
+        private sealed class BrightnessLease : IDisposable
+        {
+            private readonly SemaphoreSlim gate;
+            internal BrightnessLease(SemaphoreSlim gate) { this.gate = gate; }
+            public void Dispose() => gate.Release();
+        }
         public Task WriteBrightnessAsync(DisplayInfo display, int value, CancellationToken cancellation) => window.Service.SetPercentAsync(display, 0x10, value, cancellation);
-        public void SetDimming(DisplayInfo display, int value) => window.SetDimming(display, value, restoring: true);
+        public void SetDimming(DisplayInfo display, double value) => window.CompleteReconnectBrightness(display, value);
         public void LogFailure(DisplayInfo display, Exception error) => Storage.Log("Reconnect brightness: " + display.Name + ": " + error.Message);
         public void RestoreFailed(IReadOnlyList<PresetDisplay> targets) => window.Status(L.T("automation.restoreFailed") + string.Join("、", targets.Select(d => d.Name)), true);
         public Task OnRestoredAsync(bool resume, bool allowScene) => window.ConnectionRestoredAsync(resume, allowScene);

@@ -29,3 +29,13 @@ dotnet run --project tests/LumaDesk.WorkflowTests -c Release
 ```
 
 The workflow project references the production project and automatically includes the new test source. The existing `test.ps1` already invokes it; no CI or test-runner changes are needed. Real hotplug, sleep/wake and DDC/WMI timing still need hardware validation.
+
+## Merge integration with main (2026-11-15)
+
+The automation conflict retains the injectable reconnect coordinator and main's final view refresh. Reconnect operations now acquire the same per-display brightness gate used by manual changes and scans, recheck ownership after waiting, and hold the gate through brightness/dimming publication. The adapter retains main's remembered-state update and brightness notification. Saved dimming uses the new double precision model and supported range; invalid saved hardware brightness is rejected before writing. The other incoming main changes are retained.
+
+The workflow regressions additionally cover manual cancellation or saved-target replacement while waiting for the shared gate, gate release across retries, fractional/clamped dimming, and invalid saved brightness. These C# tests have not run locally.
+
+Local validation: `git diff --check` and `git diff --cached --check` passed. Python source checks found no tracked conflict markers and verified coordinator/adapter wiring, shared gate usage, double dimming signatures, notifications, workflow test registration, and preservation of the other incoming files. These are static checks, not compilation or execution.
+
+Attempted `dotnet run --project tests/LumaDesk.WorkflowTests -c Release` and `pwsh -NoProfile -File ./test.ps1 -Headless`; both exited 127 because the commands are unavailable. No .NET SDK, PowerShell, `csc`, `mcs`, or `msbuild` is installed. WPF build/UI tests and hardware validation were skipped in this Linux environment. Run the workflow suite and full Windows validation before relying on runtime behavior.

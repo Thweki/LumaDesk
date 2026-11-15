@@ -17,6 +17,8 @@ internal static class ReconnectTests
         await ManualAfterSuccessAsync(check);
         await OwnershipAndCleanupAsync(check);
         await SelectionAsync(check);
+        await SharedBrightnessGateAsync(check);
+        await SavedLevelsAsync(check);
     }
 
     private static Task Finish(Task task) => task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -178,6 +180,62 @@ internal static class ReconnectTests
             "Scene or mode activity during backoff stops reconnect before another refresh or write");
     }
 
+    private static async Task SharedBrightnessGateAsync(Action<bool, string> check)
+    {
+        foreach (bool cancel in new[] { true, false })
+        {
+            var backend = new FakeReconnectBackend("A");
+            var coordinator = new ReconnectCoordinator(backend, Array.Empty<string>(), _ => Task.CompletedTask);
+            await backend.BrightnessGate.WaitAsync();
+            var run = coordinator.RestoreAsync(false);
+            check(coordinator.IsRestoring && backend.Writes.Count == 0,
+                "Reconnect waits for the shared brightness gate before writing");
+            if (cancel) coordinator.Cancel("A");
+            else
+            {
+                backend.Screens[0].Brightness = 23;
+                backend.Remember(backend.Screens[0]);
+            }
+            backend.BrightnessGate.Release();
+            await Finish(run);
+            check(backend.Writes.Count == 0 && backend.Dims.Count == 0 && !backend.Completions.Single().AllowScene && backend.BrightnessGate.CurrentCount == 1,
+                "A manual override while waiting for the gate prevents restoration and releases ownership");
+        }
+
+        var retry = new FakeReconnectBackend("A");
+        var owner = new ReconnectCoordinator(retry, Array.Empty<string>(), _ => Task.CompletedTask);
+        retry.Write = (_, _, _) =>
+        {
+            check(retry.BrightnessGate.CurrentCount == 0, "Reconnect holds the brightness gate during hardware writes");
+            return retry.Writes.Count == 1 ? Task.FromException(new InvalidOperationException("Retry")) : Task.CompletedTask;
+        };
+        await Finish(owner.RestoreAsync(false));
+        check(retry.Writes.Count == 2 && retry.Dims.Count == 1 && retry.BrightnessGate.CurrentCount == 1,
+            "Reconnect releases the brightness gate after failure and success");
+    }
+
+    private static async Task SavedLevelsAsync(Action<bool, string> check)
+    {
+        foreach (var (saved, expected) in new[] { (12.5, 12.5), (-1.0, 0.0), (100.0, 85.0) })
+        {
+            var backend = new FakeReconnectBackend("A");
+            backend.Preferences.RememberedBrightness["A"].Dimming = saved;
+            var coordinator = new ReconnectCoordinator(backend, Array.Empty<string>(), _ => Task.CompletedTask);
+            await Finish(coordinator.RestoreAsync(false));
+            check(backend.Dims.Single().Value == expected && backend.Preferences.RememberedBrightness["A"].Dimming == expected,
+                "Reconnect preserves fractional dimming and clamps saved values to the supported range");
+        }
+        foreach (int invalid in new[] { -1, 101 })
+        {
+            var backend = new FakeReconnectBackend("A");
+            backend.Preferences.RememberedBrightness["A"].Brightness = invalid;
+            var coordinator = new ReconnectCoordinator(backend, Array.Empty<string>(), _ => Task.CompletedTask);
+            await Finish(coordinator.RestoreAsync(false));
+            check(backend.Writes.Count == 0 && backend.Dims.Count == 0 && backend.Failures.Single().Single().Id == "A" && backend.BrightnessGate.CurrentCount == 1,
+                "Invalid saved brightness fails without hardware writes and releases the gate");
+        }
+    }
+
     private static async Task SelectionAsync(Action<bool, string> check)
     {
         var backend = new FakeReconnectBackend("A", "B");
@@ -212,7 +270,7 @@ internal sealed class FakeReconnectBackend : IReconnectBackend
     public bool IsBlocked { get; set; }
     internal int Refreshes, StaleWrites, Errors;
     internal readonly List<(DisplayInfo Display, int Value, CancellationToken Token)> Writes = new();
-    internal readonly List<(string Id, int Value)> Dims = new();
+    internal readonly List<(string Id, double Value)> Dims = new();
     internal readonly List<IReadOnlyList<PresetDisplay>> Failures = new();
     internal readonly List<(bool Resume, bool AllowScene)> Completions = new();
     internal Func<Task> Refresh = () => Task.CompletedTask;
@@ -231,6 +289,17 @@ internal sealed class FakeReconnectBackend : IReconnectBackend
         await Refresh();
     }
 
+    internal readonly SemaphoreSlim BrightnessGate = new(1, 1);
+    public async Task<IDisposable> AcquireBrightnessAsync(string id, CancellationToken cancellation)
+    {
+        await BrightnessGate.WaitAsync(cancellation);
+        return new GateLease(BrightnessGate);
+    }
+    private sealed class GateLease(SemaphoreSlim gate) : IDisposable
+    {
+        public void Dispose() => gate.Release();
+    }
+
     public Task WriteBrightnessAsync(DisplayInfo display, int value, CancellationToken cancellation)
     {
         if (!Screens.Contains(display)) StaleWrites++;
@@ -241,7 +310,7 @@ internal sealed class FakeReconnectBackend : IReconnectBackend
     internal void Remember(DisplayInfo display) => Preferences.RememberedBrightness[display.Id] = new()
     { Id = display.Id, Name = display.Name, Brightness = display.Brightness, Dimming = display.Dimming };
 
-    public void SetDimming(DisplayInfo display, int value)
+    public void SetDimming(DisplayInfo display, double value)
     {
         Dims.Add((display.Id, value)); display.Dimming = value;
         Remember(display); // Match MainWindow: successful restoration replaces the saved object.

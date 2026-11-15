@@ -15,8 +15,9 @@ internal interface IReconnectBackend
     Preferences Preferences { get; }
     bool IsBlocked { get; }
     Task RefreshAsync();
+    Task<IDisposable> AcquireBrightnessAsync(string id, CancellationToken cancellation);
     Task WriteBrightnessAsync(DisplayInfo display, int value, CancellationToken cancellation);
-    void SetDimming(DisplayInfo display, int value);
+    void SetDimming(DisplayInfo display, double value);
     void LogFailure(DisplayInfo display, Exception error);
     void RestoreFailed(IReadOnlyList<PresetDisplay> targets);
     Task OnRestoredAsync(bool resume, bool allowScene);
@@ -106,7 +107,16 @@ internal sealed class ReconnectCoordinator
                     if (display == null) continue;
                     try
                     {
+                        // Share the manual-write gate through model publication and dimming.
+                        using var lease = await backend.AcquireBrightnessAsync(pair.Key, cancellation);
+                        cancellation.ThrowIfCancellationRequested();
+                        if (stopped || backend.IsBlocked) return;
+                        if (Superseded(pair.Key, pair.Value)) { pending.Remove(pair.Key); continue; }
+                        var current = backend.Displays.FirstOrDefault(d => StringComparer.OrdinalIgnoreCase.Equals(d.Id, pair.Key));
+                        if (current == null) continue;
+                        display = current;
                         var saved = pair.Value;
+                        if (saved.Brightness is < 0 or > 100) throw new InvalidOperationException(L.T("group.invalid"));
                         if (saved.Brightness.HasValue)
                         {
                             if (!display.Brightness.HasValue) throw new InvalidOperationException(L.T("scene.unsupported"));
@@ -120,7 +130,7 @@ internal sealed class ReconnectCoordinator
                             display.Brightness = saved.Brightness;
                         }
                         cancellation.ThrowIfCancellationRequested();
-                        backend.SetDimming(display, saved.Dimming);
+                        backend.SetDimming(display, Math.Clamp(saved.Dimming, 0, BrightnessRules.MaxDimming));
                         pending.Remove(pair.Key);
                     }
                     catch (OperationCanceledException) { pending.Remove(pair.Key); }
