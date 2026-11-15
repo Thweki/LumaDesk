@@ -16,6 +16,7 @@ internal interface ISceneBackend
     Task Dpi(DisplayInfo display, int percent);
     Task Hdr(DisplayInfo display, bool enabled);
     Task Profiles(DisplayInfo display, PresetDisplay saved);
+    Task Contrast(DisplayInfo display, int percent);
     Task Brightness(DisplayInfo display, PresetDisplay saved);
     Task Layout(IReadOnlyList<ScreenPlacement> placements);
 }
@@ -42,7 +43,7 @@ internal static class SceneService
             Name = name,
             Displays = source.Displays.Select(d => new PresetDisplay
             {
-                Id = d.Id, Name = d.Name, Brightness = d.Brightness, Dimming = d.Dimming,
+                Id = d.Id, Name = d.Name, Brightness = d.Brightness, Contrast = d.Contrast, Dimming = d.Dimming,
                 Mode = d.Mode, Orientation = d.Orientation, Dpi = d.Dpi, Hdr = d.Hdr,
                 UserProfiles = d.UserProfiles, SdrProfile = d.SdrProfile, HdrProfile = d.HdrProfile,
                 X = d.X, Y = d.Y, Primary = d.Primary
@@ -55,7 +56,7 @@ internal static class SceneService
         var scene = new Preset { Name = name };
         foreach (var d in backend.Displays.ToArray())
         {
-            var saved = new PresetDisplay { Id = d.Id, Name = d.Name, Brightness = d.Brightness, Dimming = d.Dimming,
+            var saved = new PresetDisplay { Id = d.Id, Name = d.Name, Brightness = d.Brightness, Contrast = d.Contrast, Dimming = d.Dimming,
                 Mode = d.Current, Orientation = d.Orientation, Dpi = d.DpiScale.CanSet ? d.DpiScale.CurrentPercent : null,
                 X = d.X, Y = d.Y, Primary = d.Primary };
             try
@@ -106,6 +107,13 @@ internal static class SceneService
                 if (state.HdrUserEnabled != saved.Hdr) await backend.Hdr(d, saved.Hdr.Value);
             });
             if (saved.UserProfiles.HasValue) await Step("ICC", d => backend.Profiles(d, saved));
+            if (saved.Contrast is int contrast) await Step(L.T("s4cbc753240"), async d =>
+            {
+                if (contrast is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(saved.Contrast));
+                // Mode/HDR changes can remove DDC support; use the freshly resolved display.
+                if (!d.Contrast.HasValue) throw new InvalidOperationException(L.T("scene.unsupported"));
+                if (d.Contrast != contrast) await backend.Contrast(d, contrast);
+            });
             await Step(L.T("scene.brightness"), d => backend.Brightness(d, saved));
             if (!failed) result.Applied++;
         }

@@ -4,12 +4,20 @@
 
 ## 场景与恢复
 
-- 新预设记录设备 ID、亮度/调暗、输出模式、旋转、DPI、可读取的 HDR/ICC 默认配置、主屏和坐标。旧预设只恢复原有亮度数据，不补写其他设置。
+- 新预设记录设备 ID、亮度/调暗、可读取的对比度、输出模式、旋转、DPI、可读取的 HDR/ICC 默认配置、主屏和坐标。旧预设只恢复原有亮度数据，不补写其他设置。
 - 缺席屏幕跳过，其他屏幕继续执行；明细保留在预设页。只有屏幕集合、模式及旋转匹配且排列通过验证时才恢复排列。不会创建缺席屏幕、启停驱动或安装 ICC 文件。
 - 模式、DPI、HDR 和排列沿用各自的验证/失败恢复路径。场景是有序的多项操作，不是系统级原子事务；部分成功不会伪装成全部完成。
 - “撤销上次切换”保存本次会话切换前的快照。撤销部分失败时保留快照以便重试；退出后不保留撤销历史。
 - 重连/唤醒恢复亮度默认开启，只恢复在本应用调整过的设备。最多尝试三次；手动调整会取代旧恢复目标。更换端口造成设备 ID 变化时不会猜测映射。
 - 自动恢复亮度不等于恢复完整场景。后者需在预设的更多选项中明确开启“连接这些屏幕时使用”，且屏幕集合必须完全匹配。
+
+## 预设对比度 / Preset contrast
+
+在支持 DDC/CI 对比度的屏幕上调整“对比度”，然后在“预设”中保存当前设置。切换预设会按设备 ID 恢复各屏保存的 0–100% 对比度；复制预设和“撤销上次切换”也保留对比度。已有预设需使用“用当前设置更新”重新捕获才会包含对比度；未记录对比度的预设不会修改该值。
+
+Adjust **Contrast** on a display that exposes the DDC/CI control, then save the current settings under **Presets**. Applying the preset restores each display's saved 0–100% contrast by device ID. Duplicate preset and the existing **Undo last switch** snapshot preserve contrast too. Use **Update from current setup** to recapture an older preset if you want it to include contrast; presets without a saved contrast value leave it unchanged.
+
+Contrast is restored after mode and HDR changes, using the refreshed display capabilities. If contrast is unavailable (including a monitor that locks it in HDR), invalid, or the DDC write fails, the preset reports a partial result and continues with brightness and other displays. This uses the existing DDC write path; an acknowledged write is not a guarantee that monitor firmware honored it. Automatic brightness restoration on reconnect remains brightness-only; contrast is restored when a full preset is applied.
 
 ## 复制预设 / Duplicate a preset
 

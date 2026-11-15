@@ -43,6 +43,11 @@ public partial class MainWindow
                 (saved.HdrProfile != null && !string.Equals(actual.HdrProfile, saved.HdrProfile, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException(L.T("scene.unsupported"));
         });
+        public async Task Contrast(DisplayInfo d, int percent)
+        {
+            await owner.Service.SetPercentAsync(d, 0x12, percent);
+            d.Contrast = percent;
+        }
         public Task Brightness(DisplayInfo d, PresetDisplay saved)
         {
             owner.CancelReconnect(d.Id);

@@ -121,6 +121,7 @@ using (var cancelled = new CancellationTokenSource())
     Check(stopped && !service.IsWriting, "Cancelled reconnect write exits before device lookup and releases its busy state");
 }
 await SceneDuplicateTests.Run(Check);
+await SceneContrastTests.Run(Check);
 await ReconnectTests.RunAsync(Check);
 PipBufferTests.Run(Check);
 Console.WriteLine($"{checks} workflow checks passed. No native writes were issued.");
@@ -135,17 +136,26 @@ internal sealed class FakeBackend : ISceneBackend
     public IReadOnlyList<DisplayInfo> Displays => Screens;
     public List<string> Calls { get; } = new();
     public HashSet<string> FailBrightness { get; } = new();
+    public HashSet<string> FailContrast { get; } = new();
+    public Action<DisplayInfo>? AfterHdr;
     public bool FailColor;
     public int StaleReferences;
     public Task<DisplayColorState> Color(DisplayInfo d) => FailColor ? Task.FromException<DisplayColorState>(new InvalidOperationException("No color API")) : Task.FromResult(new DisplayColorState { HdrKnown = true, HdrSupported = true, HdrUserEnabled = false, ProfilesAvailable = true, UseUserProfiles = true, SdrProfile = "sRGB.icm" });
     private void Call(string name, DisplayInfo d) { Calls.Add(name + ":" + d.Id); if (!Screens.Contains(d)) StaleReferences++; }
     public Task Mode(DisplayInfo d, DisplayMode mode, uint orientation)
     {
-        Call("mode", d); Screens[Screens.IndexOf(d)] = new() { Id = d.Id, Name = d.Name, Current = mode, Orientation = orientation, X = d.X, Y = d.Y, Primary = d.Primary, Brightness = d.Brightness, DpiScale = d.DpiScale }; return Task.CompletedTask;
+        Call("mode", d); Screens[Screens.IndexOf(d)] = new() { Id = d.Id, Name = d.Name, Current = mode, Orientation = orientation, X = d.X, Y = d.Y, Primary = d.Primary, Brightness = d.Brightness, Contrast = d.Contrast, DpiScale = d.DpiScale }; return Task.CompletedTask;
     }
     public Task Dpi(DisplayInfo d, int percent) { Call("dpi", d); d.DpiScale.CurrentPercent = percent; return Task.CompletedTask; }
-    public Task Hdr(DisplayInfo d, bool enabled) { Call("hdr", d); return Task.CompletedTask; }
+    public Task Hdr(DisplayInfo d, bool enabled) { Call("hdr", d); AfterHdr?.Invoke(d); return Task.CompletedTask; }
     public Task Profiles(DisplayInfo d, PresetDisplay saved) { Call("profiles", d); return Task.CompletedTask; }
+    public Task Contrast(DisplayInfo d, int percent)
+    {
+        Call("contrast", d);
+        if (FailContrast.Contains(d.Id)) throw new InvalidOperationException("Contrast write rejected");
+        d.Contrast = percent;
+        return Task.CompletedTask;
+    }
     public Task Brightness(DisplayInfo d, PresetDisplay saved) { Call("brightness", d); if (FailBrightness.Contains(d.Id)) throw new InvalidOperationException("Disconnected"); return Task.CompletedTask; }
     public Task Layout(IReadOnlyList<ScreenPlacement> placements) { Calls.Add("layout"); return Task.CompletedTask; }
 }
