@@ -127,6 +127,7 @@ internal static partial class Program
                     Check(window.Displays.All(d => { var m = DisplayService.CurrentMode(d.Device); return m.X == d.X && m.Y == d.Y; }), "Alternate primary layout passes whole-topology SDC_VALIDATE without moving monitors");
                 }
                 await TestLayoutAsync(window);
+                TestAutoLayoutFixture(window);
                 await TestLiveBrightnessAndDismissAsync(window);
                 await TestBrightnessPopupLifetimeAsync(window);
                 await TestBrightnessReadbackAsync(window);

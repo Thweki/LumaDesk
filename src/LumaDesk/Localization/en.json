@@ -1,4 +1,7 @@
 {
+  "layout.tidy.action": "Tidy preview (experimental)",
+  "layout.tidy.preview": "Preview tidied. Review the positions, then click Apply to move the displays.",
+  "layout.tidy.unavailable": "No tidy arrangement was found within the supported coordinate range. Arrange the displays manually.",
   "s4d8c1c5b42": "Unknown",
   "s5ee74333c6": "Read display paths",
   "s8833926459": "Display path data exceeds the supported range.",

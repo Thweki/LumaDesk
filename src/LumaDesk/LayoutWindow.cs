@@ -42,6 +42,18 @@ internal sealed class LayoutWindow : Window
         arrange.Children.Add(Ui.Button(L.T("se25efd6551"), () => Arrange(false))); var vertical = Ui.Button(L.T("s86d5bec31e"), () => Arrange(true)); vertical.Margin = new Thickness(8, 0, 8, 0); arrange.Children.Add(vertical);
         arrange.Children.Add(Ui.Button(L.T("sdf7392cc96"), () => _ = ExecuteAsync(async () => { await owner.RefreshAsync(); Reload(); })));
         body.Children.Add(arrange);
+        if (LayoutRules.AutoTidyEnabled)
+        {
+            var tidy = Ui.Button(L.T("layout.tidy.action"), () => _ = ExecuteAsync(() =>
+            {
+                placements = LayoutRules.Tidy(placements);
+                UpdateFields(); Draw(); feedback.Text = L.T("layout.tidy.preview");
+                return Task.CompletedTask;
+            }));
+            tidy.Margin = new Thickness(0, 8, 0, 0);
+            System.Windows.Automation.AutomationProperties.SetAutomationId(tidy, "layout-tidy");
+            body.Children.Add(tidy);
+        }
         var topology = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 12) };
         topology.Children.Add(Ui.Button(L.T("sa60416dbac"), () => _ = TopologyAsync(true))); var clone = Ui.Button(L.T("s99c94fd883"), () => _ = TopologyAsync(false)); clone.Margin = new Thickness(8, 0, 0, 0); topology.Children.Add(clone); body.Children.Add(topology);
         feedback.Margin = new Thickness(0, 7, 0, 14); body.Children.Add(feedback);
