@@ -42,13 +42,14 @@ internal sealed partial class QuickWindow : Window
     private readonly StackPanel body = new() { Margin = new Thickness(6) };
     private readonly StackPanel picker = new() { Margin = new Thickness(18, 12, 18, 0) };
     private readonly ScrollViewer controlsScroll;
-    public QuickWindow(MainWindow owner, Func<DisplayInfo, int, Window, Task>? applyDpi = null, Func<DisplayInfo, DisplayMode, uint, Window, Task>? applyMode = null, bool dismissOnDeactivate = true, Func<DisplayInfo, int, Task>? applyBrightness = null, Func<IReadOnlyList<string>, int, Task>? applySelectedBrightness = null)
+    public QuickWindow(MainWindow owner, Func<DisplayInfo, int, Window, Task>? applyDpi = null, Func<DisplayInfo, DisplayMode, uint, Window, Task>? applyMode = null, bool dismissOnDeactivate = true, Func<DisplayInfo, int, Task>? applyBrightness = null, Func<IReadOnlyList<string>, int, Task>? applySelectedBrightness = null, Func<DisplayInfo, Task<bool>>? readHdrActive = null)
     {
         Ui.ConfigureWindow(this);
         this.owner = owner; this.applyDpi = applyDpi ?? ((display, percent, parent) => owner.ChangeDpiAsync(display, percent, parent));
         this.applyMode = applyMode ?? ((display, mode, orientation, parent) => owner.ChangeModeAsync(display, mode, orientation, parent));
         this.applyBrightness = applyBrightness ?? owner.ChangeCombinedBrightness;
         this.applySelectedBrightness = applySelectedBrightness ?? owner.ChangeSelectedBrightness;
+        this.readHdrActive = readHdrActive ?? (display => Task.Run(() => AdvancedColorService.ReadHdrActive(display)));
         this.dismissOnDeactivate = dismissOnDeactivate;
         Title = AppBrand.Name + L.T("s2c58655791"); Width = 360; Height = 620; MinHeight = 180;
         WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize; AllowsTransparency = false; ShowInTaskbar = false; Topmost = true;

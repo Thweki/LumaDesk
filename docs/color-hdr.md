@@ -1,5 +1,26 @@
 # 应用内色彩与 HDR 控制
 
+## Tray display HDR badges
+
+Open the tray panel to see a small **HDR** badge on each display tile whose
+current OS color mode is confirmed as HDR. The read-only indicator needs no
+setting or experimental flag. It refreshes every three seconds while the panel
+is open, including when pinned. The tile tooltip and accessibility status say
+“HDR active”; very small tiles retain that text without drawing a cramped badge.
+Selection, linked brightness, and multi-display brightness controls still work.
+
+HDR capability, an enabled HDR switch, and wide-color-gamut SDR alone do not
+produce a badge. Unknown, failed, legacy-only, or ambiguous mirrored-display
+queries hide it. An absent badge is therefore not proof that HDR is disabled.
+Polling uses only the existing HDR query path, without enumerating ICC profiles
+or writing display settings, and stops when the panel closes.
+
+`tests/LumaDesk.UiTests/HdrBadgeTests.cs` covers active/inactive/unknown states,
+selection and multi-display behavior, periodic failure/recovery, tiny tiles,
+late results, and closure. Run `dotnet run --project tests/LumaDesk.UiTests -c Release`
+on an interactive Windows desktop. These tests were added but not executed in
+the implementation environment: `dotnet`, `pwsh`, and a Windows desktop are unavailable.
+
 实现日期：2026-11-02。新增 `AdvancedColorService.cs` 和 `MainWindow.Color.cs`；不依赖打开 Windows 设置完成这些操作。
 
 ## 已接入的操作

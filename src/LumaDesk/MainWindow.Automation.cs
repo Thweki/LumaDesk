@@ -45,7 +45,6 @@ public partial class MainWindow
     {
         automationTimer.Stop(); preferenceTimer.Stop();
         idleDimmingTimer.Stop(); ResetIdleDimming();
-        foreach (var token in reconnectWrites.Values) token.Cancel();
         reconnect?.CancelAll();
     }
 
