@@ -471,6 +471,7 @@
   "scene.previous": "切換前的設定",
   "scene.scale": "縮放",
   "scene.undo": "復原上次切換",
+  "scene.undoOutput": "復原上次顯示調整",
   "scene.unsupported": "目前裝置不支援此設定",
   "scene.duplicate": "複製預設",
   "scene.duplicateHelp": "複製已儲存的顯示設定，不會套用設定。自動觸發和快捷鍵預設關閉。",

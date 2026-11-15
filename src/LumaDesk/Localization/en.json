@@ -471,6 +471,7 @@
   "scene.previous": "Previous setup",
   "scene.scale": "Scaling",
   "scene.undo": "Undo last switch",
+  "scene.undoOutput": "Undo last display adjustment",
   "scene.unsupported": "This setting is unavailable on this device",
   "scene.duplicate": "Duplicate preset",
   "scene.duplicateHelp": "Copies saved display settings without applying them. Automatic triggers and the shortcut start off.",

@@ -471,6 +471,7 @@
   "scene.previous": "전환 전 설정",
   "scene.scale": "배율",
   "scene.undo": "마지막 전환 실행 취소",
+  "scene.undoOutput": "마지막 디스플레이 조정 실행 취소",
   "scene.unsupported": "이 장치에서 사용할 수 없는 설정입니다",
   "scene.duplicate": "프리셋 복제",
   "scene.duplicateHelp": "저장된 디스플레이 설정을 적용하지 않고 복제합니다. 자동 실행과 단축키는 꺼진 상태로 시작합니다.",

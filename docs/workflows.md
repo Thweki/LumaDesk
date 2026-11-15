@@ -17,6 +17,14 @@
 
 On the **Presets** page, expand **More options** for an existing preset, enter a **New preset name**, and click **Duplicate preset**. Names must contain 1–40 characters and be unique, ignoring case and surrounding whitespace. The copy gets its own ID and saved display settings, even if those screens are disconnected. Duplication does not capture or apply the current setup. Automatic triggers and the shortcut start off; configure them separately on the copy if needed. The original preset and its automation stay unchanged. No experimental flag is required.
 
+## 撤销显示调整 / Undo a display adjustment
+
+调整分辨率、刷新率、旋转或缩放后，在快捷面板的“预设”菜单或设置的“预设”页点击“撤销上次显示调整”。缩放撤销只恢复该屏幕的缩放；模式撤销恢复切换前的输出、缩放和排列，不改动亮度、软件调暗、HDR 或 ICC。与预设切换共用一个会话内撤销位置，下一次成功的显示调整或预设切换会替换它；无变化或已回滚的失败调整不会替换它。部分撤销失败时保留原快照供重试，退出应用后不保留。
+
+After changing resolution, refresh rate, rotation or scaling, choose **Undo last display adjustment** in the quick panel's **Presets** menu or **Settings → Presets**. Scaling undo restores only that screen's scale. Mode undo restores the previous outputs, scaling and arrangement; brightness, software dimming, HDR and ICC remain as they are.
+
+There is one undo slot per app session, shared with **Undo last switch** for presets. The next successful output/scaling adjustment or preset application replaces it. No-op changes and failed adjustments that roll back preserve it. An undo that partially fails retains the original snapshot for retry; reconnect missing displays before retrying. Layout restoration requires the same screen set and a valid extended layout, as with presets. This does not undo brightness, input, topology or layout-editor changes, and there is no redo or history across restarts.
+
 ## 可选自动化
 
 预设可设置每天的时间（本机 24 小时制）或接通电源/使用电池触发。应用运行期间约每 20 秒检查一次；休眠错过的最近一次时间可在恢复后触发，不补跑历史任务。同一轮多个预设命中时只应用列表中第一个匹配屏幕集合的预设。

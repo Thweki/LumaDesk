@@ -300,6 +300,13 @@ public partial class MainWindow : Window
         if (mode == display.Current && orientation == display.Orientation) { Status(L.T("sd75d70fe93")); return; }
         var original = DisplayService.CurrentMode(display.Device); var target = DisplayService.FindMode(display, mode, orientation, exactOutput);
         DisplayService.ApplyMode(display.Device, target, true, display.Id);
+        var before = sceneBusy ? null : SceneService.CaptureOutput(Displays);
+        var saved = before?.Displays.FirstOrDefault(d => string.Equals(d.Id, display.Id, StringComparison.OrdinalIgnoreCase));
+        if (saved != null)
+        {
+            saved.Mode = new(original.Width, original.Height, original.Frequency);
+            saved.Orientation = original.Orientation;
+        }
         string recovery = ModeRecovery.Prepare(display.Device, display.Id, original); modePending = true; ModeLease? lease = null;
         try
         {
@@ -317,6 +324,7 @@ public partial class MainWindow : Window
             }
             if (!matches) throw new InvalidOperationException(L.T("sd26c587007"));
             lease.Keep(); Status(L.T("s3e899a02c0"));
+            if (before != null) UndoHistory.Remember(before, outputOnly: true);
         }
         finally
         {
