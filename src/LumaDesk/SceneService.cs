@@ -28,6 +28,9 @@ internal sealed class SceneResult
 
 internal static class SceneService
 {
+    internal static bool MatchesName(Preset preset, string? query) =>
+        preset.Name.Contains(query?.Trim() ?? "", StringComparison.OrdinalIgnoreCase);
+
     internal static bool Move(List<Preset> presets, Preset preset, int direction)
     {
         if (direction is not (-1 or 1)) return false;
@@ -63,14 +66,6 @@ internal static class SceneService
 
     internal static async Task<Preset> Capture(IReadOnlyList<DisplayInfo> displays,
         Func<DisplayInfo, Task<DisplayColorState>> readColor, string name)
-    internal static async Task<Preset> CaptureDraft(ISceneBackend backend)
-    {
-        var draft = await Capture(backend, L.T("s3cbfca23b6"));
-        if (draft.Displays.Count == 0) throw new InvalidOperationException(L.T("scene.draftNoDisplays"));
-        return draft;
-    }
-
-    internal static async Task<Preset> Capture(ISceneBackend backend, string name)
     {
         var scene = new Preset { Name = name };
         foreach (var d in displays.ToArray())
@@ -92,6 +87,13 @@ internal static class SceneService
             scene.Displays.Add(saved);
         }
         return scene;
+    }
+
+    internal static async Task<Preset> CaptureDraft(ISceneBackend backend)
+    {
+        var draft = await Capture(backend, L.T("s3cbfca23b6"));
+        if (draft.Displays.Count == 0) throw new InvalidOperationException(L.T("scene.draftNoDisplays"));
+        return draft;
     }
 
     // Resolve the device again between operations: a mode change can replace every DisplayInfo.
