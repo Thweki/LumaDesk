@@ -514,5 +514,10 @@
   "input.unchanged": "The display did not stay on the requested input. Check its signal and the monitor's automatic input settings.",
   "input.compatibility": "Using this display's compatible input switching method.",
   "input.switching": "Switching and verifying…",
-  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor."
+  "input.unverified": "Switch request sent, but the current input could not be confirmed. Check the monitor.",
+  "scene.import": "Import preset…",
+  "scene.export": "Export preset…",
+  "scene.importHelp": "Import adds a preset with automation off. Apply it when ready.",
+  "scene.imported": "Preset imported. Display settings have not changed.",
+  "scene.fileInvalid": "Invalid preset file. Expected a LumaDesk scene (version 1), up to 1 MiB, with valid display settings."
 }

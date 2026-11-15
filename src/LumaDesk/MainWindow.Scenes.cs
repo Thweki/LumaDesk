@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -147,6 +148,7 @@ public partial class MainWindow
         while (Preferences.Presets.Any(p => p.Name == defaultName)) defaultName = L.T("s3cbfca23b6") + " " + suffix++;
         var name = new TextBox { Text = defaultName, MaxLength = 40, MinWidth = 180 };
         PageContent.Children.Add(Ui.Card(Ui.Row(name, Ui.Button(L.T("sce211a5a47"), () => _ = RunAsync(() => SaveSceneAsync(name.Text)), true))));
+        PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.importHelp"), 12), Ui.Button(L.T("scene.import"), () => _ = RunAsync(ImportSceneAsync)))));
         if (undoScene != null) PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.previous")), Ui.Button(L.T("scene.undo"), () => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); })))));
         if (!string.IsNullOrEmpty(sceneReport)) PageContent.Children.Add(Ui.Card(new Expander { Header = L.T("scene.details"), Content = Ui.Text(sceneReport, 12) }));
         if (Preferences.Presets.Count == 0) PageContent.Children.Add(Ui.Card(Ui.Labels(L.T("s502f445e9e"), L.T("scene.empty"))));
@@ -157,6 +159,7 @@ public partial class MainWindow
             var details = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
             var rename = new TextBox { Text = scene.Name, MaxLength = 40 };
             details.Children.Add(Ui.Row(rename, Ui.Button(L.T("scene.update"), () => _ = RunAsync(() => SaveSceneAsync(rename.Text, scene)))));
+            details.Children.Add(Ui.Button(L.T("scene.export"), () => _ = RunAsync(() => ExportSceneAsync(scene))));
             details.Children.Add(Ui.Line());
             details.Children.Add(Ui.Row(Ui.Labels(L.T("scene.onConnect"), L.T("scene.onConnectHelp")), Toggle(scene.OnConnect, v =>
             {
@@ -171,5 +174,25 @@ public partial class MainWindow
             card.Children.Add(new Expander { Header = L.T("scene.more"), Content = details, Margin = new Thickness(0, 10, 0, 0) });
             PageContent.Children.Add(Ui.Card(card));
         }
+    }
+
+    private Task ImportSceneAsync()
+    {
+        if (sceneBusy || modePending || scanning || Service.IsWriting) throw new InvalidOperationException(L.T("s92f637408f"));
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "JSON|*.json", CheckFileExists = true };
+        if (dialog.ShowDialog(this) != true) return Task.CompletedTask;
+        using var stream = File.OpenRead(dialog.FileName);
+        var scene = SceneFile.Import(stream, Preferences.Presets);
+        Preferences.Presets.Add(scene);
+        Save(); Render(); quick?.Render(); Status(L.T("scene.imported"));
+        return Task.CompletedTask;
+    }
+
+    private Task ExportSceneAsync(Preset scene)
+    {
+        string json = SceneFile.Export(scene);
+        var dialog = new Microsoft.Win32.SaveFileDialog { FileName = "lumadesk-scene.json", DefaultExt = ".json", Filter = "JSON|*.json" };
+        if (dialog.ShowDialog(this) == true) File.WriteAllText(dialog.FileName, json);
+        return Task.CompletedTask;
     }
 }
