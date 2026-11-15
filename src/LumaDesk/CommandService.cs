@@ -25,15 +25,17 @@ internal sealed class CommandService : IDisposable
         using var process = Process.GetCurrentProcess();
         return "LumaDesk.Control." + identity.User!.Value + "." + process.SessionId;
     }
-    internal CommandService(Func<ControlCommand, Task<ControlReply>> execute) => _ = Listen(execute);
+    internal Task Completion { get; }
+    internal CommandService(Func<ControlCommand, Task<ControlReply>> execute, string? pipeName = null)
+        => Completion = Listen(execute, pipeName ?? PipeName);
     public void Dispose() => stop.Cancel();
-    private async Task Listen(Func<ControlCommand, Task<ControlReply>> execute)
+    private async Task Listen(Func<ControlCommand, Task<ControlReply>> execute, string pipeName)
     {
         while (!stop.IsCancellationRequested)
         {
             try
             {
-                using var pipe = new NamedPipeServerStream(PipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+                using var pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
                 await pipe.WaitForConnectionAsync(stop.Token);
                 using var reader = new StreamReader(pipe, leaveOpen: true);
                 using var writer = new StreamWriter(pipe, leaveOpen: true) { AutoFlush = true };
@@ -76,7 +78,7 @@ internal sealed class CommandService : IDisposable
         };
         return (command, Path.GetFullPath(args[index + 1]));
     }
-    internal static async Task<int> RunClient(string[] args)
+    internal static async Task<int> RunClient(string[] args, string? pipeName = null)
     {
         string? output = null;
         try
@@ -84,9 +86,10 @@ internal sealed class CommandService : IDisposable
             int outputIndex = Array.IndexOf(args, "--output");
             if (outputIndex >= 0 && outputIndex == args.Length - 2) output = Path.GetFullPath(args[outputIndex + 1]);
             var parsed = Parse(args); output = parsed.Output;
-            using var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+            using var pipe = new NamedPipeClientStream(".", pipeName ?? PipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
             try { await pipe.ConnectAsync(700); }
-            catch (TimeoutException)
+            // An explicit endpoint is isolated: never scan hardware or launch the app for it.
+            catch (TimeoutException) when (pipeName == null)
             {
                 if (parsed.Command.Action == "list")
                 {
