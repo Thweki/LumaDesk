@@ -17,6 +17,10 @@ namespace LumaDesk;
 internal sealed partial class QuickWindow
 {
     private string? selectedDisplayId;
+    private readonly bool compactLayoutAvailable = QuickCompactLayout.IsEnabled;
+    private bool compactLayout;
+    private Canvas? displayPickerCanvas;
+    private Button? compactLayoutToggle;
     private readonly List<DisplayIdentifyWindow> identifyWindows = new();
     private bool brightnessMultiSelect;
     private readonly HashSet<string> multiSelection = new(StringComparer.OrdinalIgnoreCase);
@@ -68,12 +72,18 @@ internal sealed partial class QuickWindow
         }
         Render(); controlsScroll.ScrollToTop();
         // Rebuilding the controls must not strand keyboard focus on a removed tile.
-        if (picker.Children.OfType<Canvas>().FirstOrDefault() is { } canvas)
-            canvas.Children.OfType<Button>().FirstOrDefault(b => b.Tag as string == id)?.Focus();
+        FocusDisplayButton(id);
+    }
+
+    private void FocusDisplayButton(string id)
+    {
+        var button = displayPickerCanvas?.Children.OfType<Button>().FirstOrDefault(b => b.Tag as string == id);
+        button?.Focus(); button?.BringIntoView();
     }
 
     private void RenderDisplayPicker(DisplayInfo? selected)
     {
+        displayPickerCanvas = null; compactLayoutToggle = null;
         var mode = Ui.Button(L.T(brightnessMultiSelect ? "quick.multiDone" : "quick.multiStart"), () =>
         {
             if (!CanRebuild) return;
@@ -85,7 +95,23 @@ internal sealed partial class QuickWindow
         mode.IsEnabled = selected != null || brightnessMultiSelect;
         mode.Background = Ui.Brush(brightnessMultiSelect ? "#E6F2F4" : "#FFFFFF");
         AutomationProperties.SetAutomationId(mode, "quick-multi-toggle");
-        var heading = Ui.Row(Ui.Text(AppBrand.Name, 13, "#303846", true), mode);
+        var headingActions = new StackPanel { Orientation = Orientation.Horizontal };
+        if (compactLayoutAvailable)
+        {
+            var layout = Ui.Button(L.T(compactLayout ? "quick.mapLayout" : "quick.compactLayout"), () =>
+            {
+                if (!CanRebuild) return;
+                compactLayout = !compactLayout; Render();
+                // Keep keyboard focus on the replacement toggle after rebuilding.
+                compactLayoutToggle?.Focus();
+            });
+            layout.FontSize = 11; layout.Padding = new Thickness(6, 4, 6, 4);
+            layout.Margin = new Thickness(0, 0, 4, 0);
+            AutomationProperties.SetAutomationId(layout, "quick-layout-toggle");
+            compactLayoutToggle = layout; headingActions.Children.Add(layout);
+        }
+        headingActions.Children.Add(mode);
+        var heading = Ui.Row(Ui.Text(AppBrand.Name, 13, "#303846", true), headingActions, 6);
         heading.Margin = new Thickness(0, 0, 0, 12); picker.Children.Add(heading);
         if (selected == null) return;
 
@@ -109,8 +135,9 @@ internal sealed partial class QuickWindow
         }
         actions.Children.Add(identify);
         picker.Children.Add(Ui.Row(Ui.Text(brightnessMultiSelect ? L.F("quick.multiCount", multiSelection.Count) : L.T("quick.choose"), 12, "#616161"), actions, 6));
-        var canvas = new Canvas { Height = owner.Displays.Count == 1 ? 90 : 116, Margin = new Thickness(0, 8, 0, 8) };
-        AutomationProperties.SetAutomationId(canvas, "quick-display-map");
+        var canvas = new Canvas { Height = compactLayout ? QuickCompactLayout.Height(owner.Displays.Count) : owner.Displays.Count == 1 ? 90 : 116 };
+        displayPickerCanvas = canvas;
+        AutomationProperties.SetAutomationId(canvas, compactLayout ? "quick-display-compact" : "quick-display-map");
         AutomationProperties.SetName(canvas, L.T("quick.choose"));
         var displays = owner.Displays.OrderBy(d => d.X).ThenBy(d => d.Y).ThenBy(d => d.Id, StringComparer.OrdinalIgnoreCase).ToArray();
         var targets = brightnessMultiSelect ? owner.Displays.Where(d => multiSelection.Contains(d.Id)).ToList() : owner.BrightnessTargets(selected);
@@ -119,7 +146,9 @@ internal sealed partial class QuickWindow
         {
             string? focusedId = canvas.IsKeyboardFocusWithin ? (Keyboard.FocusedElement as Button)?.Tag as string : null;
             canvas.Children.Clear(); multiLevelLabels.Clear();
-            foreach (var tile in QuickDisplayMap.Project(displays, canvas.ActualWidth > 0 ? canvas.ActualWidth : Math.Max(40, Width - 38), canvas.Height))
+            double width = canvas.ActualWidth > 0 ? canvas.ActualWidth : Math.Max(40, Width - 38);
+            var tiles = compactLayout ? QuickCompactLayout.Project(displays, width) : QuickDisplayMap.Project(displays, width, canvas.Height);
+            foreach (var tile in tiles)
             {
                 var display = tile.Display; bool active = brightnessMultiSelect ? multiSelection.Contains(display.Id) : display.Id == selected.Id;
                 var button = Ui.Button("", () => SelectDisplay(display.Id));
@@ -129,7 +158,17 @@ internal sealed partial class QuickWindow
                 button.Background = Ui.Brush(active ? "#E6F2F4" : "#FFFFFF");
                 button.BorderBrush = Ui.Brush(active ? "#007A8A" : "#D1D1D1");
                 button.BorderThickness = new Thickness(active ? 2 : 1);
-                if (brightnessMultiSelect)
+                if (compactLayout)
+                {
+                    var name = Ui.Text(display.Number + " · " + display.Name, 11, "#303846", active);
+                    name.TextTrimming = TextTrimming.CharacterEllipsis;
+                    var level = Ui.Text(owner.GetCombinedBrightness(display) + "%", 11, "#617681");
+                    multiLevelLabels[display.Id] = level;
+                    var face = Ui.Row(name, level, 4);
+                    face.Width = Math.Max(1, tile.Bounds.Width - 16);
+                    button.Content = face;
+                }
+                else if (brightnessMultiSelect)
                 {
                     var face = new Grid();
                     var level = Ui.Text(owner.GetCombinedBrightness(display) + "%", 11, active ? "#303846" : "#7A8699");
@@ -153,17 +192,33 @@ internal sealed partial class QuickWindow
                 {
                     if (e.Key is not (Key.Left or Key.Right or Key.Up or Key.Down)) return;
                     var index = Array.IndexOf(displays, display);
-                    int delta = e.Key is Key.Left or Key.Up ? -1 : 1;
+                    int step = compactLayout && e.Key is (Key.Up or Key.Down) ? 2 : 1;
+                    int delta = e.Key is Key.Left or Key.Up ? -step : step;
                     string nextId = displays[(index + delta + displays.Length) % displays.Length].Id;
-                    if (brightnessMultiSelect) canvas.Children.OfType<Button>().FirstOrDefault(b => b.Tag as string == nextId)?.Focus();
+                    if (brightnessMultiSelect) FocusDisplayButton(nextId);
                     else SelectDisplay(nextId);
                     e.Handled = true;
                 };
                 Canvas.SetLeft(button, tile.Bounds.Left); Canvas.SetTop(button, tile.Bounds.Top); canvas.Children.Add(button);
             }
-            if (focusedId != null) canvas.Children.OfType<Button>().FirstOrDefault(b => b.Tag as string == focusedId)?.Focus();
+            if (focusedId != null) FocusDisplayButton(focusedId);
         }
-        canvas.SizeChanged += (_, _) => Draw(); Draw(); picker.Children.Add(canvas);
+        canvas.SizeChanged += (_, _) => Draw(); Draw();
+        if (compactLayout)
+        {
+            void UpdateLevel(DisplayInfo display)
+            {
+                if (multiLevelLabels.TryGetValue(display.Id, out var label)) label.Text = owner.GetCombinedBrightness(display) + "%";
+            }
+            canvas.Loaded += (_, _) => owner.BrightnessChanged += UpdateLevel;
+            canvas.Unloaded += (_, _) => owner.BrightnessChanged -= UpdateLevel;
+            var scroll = new ScrollViewer { Content = canvas, MaxHeight = QuickCompactLayout.VisibleHeight,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Margin = new Thickness(0, 8, 0, 8), Focusable = false };
+            AutomationProperties.SetAutomationId(scroll, "quick-display-compact-scroll");
+            picker.Children.Add(scroll);
+        }
+        else { canvas.Margin = new Thickness(0, 8, 0, 8); picker.Children.Add(canvas); }
         if (!brightnessMultiSelect)
         {
             var move = Ui.Button(L.T("quick.movePanel"), () =>

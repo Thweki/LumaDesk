@@ -533,5 +533,7 @@
   "timing.on": "Windows 动态刷新率（DRR）：已启用",
   "timing.off": "Windows 动态刷新率（DRR）：已禁用",
   "timing.unknown": "Windows 动态刷新率（DRR）：未报告",
-  "timing.help": "只读查看配置的刷新率，并非实时帧率。DRR 会自动提升桌面刷新率。此检查器不报告游戏 VRR / Adaptive-Sync 的支持情况或活动状态；DRR 已禁用不代表不支持 VRR。"
+  "timing.help": "只读查看配置的刷新率，并非实时帧率。DRR 会自动提升桌面刷新率。此检查器不报告游戏 VRR / Adaptive-Sync 的支持情况或活动状态；DRR 已禁用不代表不支持 VRR。",
+  "quick.compactLayout": "紧凑",
+  "quick.mapLayout": "布局图"
 }

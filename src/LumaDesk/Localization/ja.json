@@ -533,5 +533,7 @@
   "timing.on": "Windows 動的リフレッシュレート（DRR）: 有効",
   "timing.off": "Windows 動的リフレッシュレート（DRR）: 無効",
   "timing.unknown": "Windows 動的リフレッシュレート（DRR）: 報告なし",
-  "timing.help": "設定されたレートの読み取り専用スナップショットです。リアルタイム FPS ではありません。DRR はデスクトップのリフレッシュレートを自動的に引き上げます。ゲーム用 VRR / Adaptive-Sync の対応状況や動作状況は表示しません。DRR が無効でも VRR 非対応とは限りません。"
+  "timing.help": "設定されたレートの読み取り専用スナップショットです。リアルタイム FPS ではありません。DRR はデスクトップのリフレッシュレートを自動的に引き上げます。ゲーム用 VRR / Adaptive-Sync の対応状況や動作状況は表示しません。DRR が無効でも VRR 非対応とは限りません。",
+  "quick.compactLayout": "コンパクト",
+  "quick.mapLayout": "配置図"
 }
