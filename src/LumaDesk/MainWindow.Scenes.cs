@@ -30,19 +30,7 @@ public partial class MainWindow
         }
         public Task Layout(IReadOnlyList<ScreenPlacement> placements) => owner.ChangeLayoutAsync(placements);
         public Task Profiles(DisplayInfo d, PresetDisplay saved) => Task.Run(() =>
-        {
-            var current = AdvancedColorService.Read(d);
-            if (saved.UserProfiles == false) { AdvancedColorService.UseSystemProfiles(d); return; }
-            if (!string.IsNullOrEmpty(saved.SdrProfile) && (!current.UseUserProfiles || current.SdrProfile != saved.SdrProfile))
-                AdvancedColorService.SetDefaultProfile(d, saved.SdrProfile, false);
-            if (!string.IsNullOrEmpty(saved.HdrProfile) && (!current.UseUserProfiles || current.HdrProfile != saved.HdrProfile))
-                AdvancedColorService.SetDefaultProfile(d, saved.HdrProfile, true);
-            var actual = AdvancedColorService.Read(d);
-            if (!actual.ProfilesAvailable || !actual.UseUserProfiles ||
-                (saved.SdrProfile != null && !string.Equals(actual.SdrProfile, saved.SdrProfile, StringComparison.OrdinalIgnoreCase)) ||
-                (saved.HdrProfile != null && !string.Equals(actual.HdrProfile, saved.HdrProfile, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException(L.T("scene.unsupported"));
-        });
+            AdvancedColorService.RestoreProfiles(d, saved.UserProfiles, saved.SdrProfile, saved.HdrProfile));
         public Task Brightness(DisplayInfo d, PresetDisplay saved)
         {
             owner.CancelReconnect(d.Id);

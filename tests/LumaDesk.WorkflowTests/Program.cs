@@ -62,6 +62,81 @@ await SceneService.Apply(backend, scene);
 Check(backend.Calls.Count(c => c == "brightness:A") == 1 && !backend.Calls.Contains("layout"), "Duplicate saved identities never produce duplicate writes or layouts");
 backend = new FakeBackend { FailColor = true }; scene = await SceneService.Capture(backend, "No HDR");
 Check(scene.Displays.All(d => d.Hdr == null && d.UserProfiles == null) && scene.Displays.All(d => d.Mode != null), "Unavailable color query does not prevent saving other capabilities");
+Check(scene.Displays.All(d => d.SdrProfile == null && d.HdrProfile == null), "Unavailable ICC values remain unspecified, not captured absence");
+
+FakeBackend ProfileBackend(FakeProfileOperations profiles)
+{
+    var result = new FakeBackend { ProfileOperations = profiles };
+    result.Screens.RemoveAt(1);
+    return result;
+}
+var profiles = new FakeProfileOperations();
+profiles.Hdr.Add("HDR.icc");
+backend = ProfileBackend(profiles);
+scene = await SceneService.Capture(backend, "Absent SDR");
+scene = JsonSerializer.Deserialize<Preset>(JsonSerializer.Serialize(scene, Storage.Json), Storage.Json)!;
+Check(scene.Displays[0].UserProfiles == true && scene.Displays[0].SdrProfile == "" && scene.Displays[0].HdrProfile == "HDR.icc", "Capture and persistence retain an absent SDR default alongside a named HDR default");
+profiles.Sdr.AddRange(new[] { "assigned.icc", "fallback.icc" });
+applied = await SceneService.Apply(backend, scene);
+Check(applied.Applied == 1 && applied.Issues.Count == 0 && profiles.Sdr.Count == 0 && profiles.Hdr.Single() == "HDR.icc", "Apply restores captured SDR absence and preserves the HDR default");
+Check(profiles.Calls.SequenceEqual(new[] { "remove:SDR:assigned.icc", "remove:SDR:fallback.icc" }), "Absence uses native association removal and follows promoted defaults only in the saved subtype");
+profiles.Calls.Clear();
+await SceneService.Apply(backend, scene);
+Check(profiles.Calls.Count == 0, "Reapplying matching empty and named defaults issues no writes");
+
+profiles = new FakeProfileOperations(); backend = ProfileBackend(profiles);
+scene = await SceneService.Capture(backend, "Empty user scope");
+profiles.User = false;
+profiles.Sdr.Add("dormant-SDR.icc"); profiles.Hdr.Add("dormant-HDR.icc");
+applied = await SceneService.Apply(backend, scene);
+Check(applied.Issues.Count == 0 && profiles.User && profiles.Sdr.Count == 0 && profiles.Hdr.Count == 0, "Both empty defaults restore the saved user scope from system scope");
+Check(profiles.Calls.SequenceEqual(new[] { "scope:True", "remove:SDR:dormant-SDR.icc", "remove:HDR:dormant-HDR.icc" }), "Scope is enabled before reading and removing dormant user associations");
+profiles.User = false; profiles.Calls.Clear();
+applied = await SceneService.Apply(backend, scene);
+Check(applied.Issues.Count == 0 && profiles.Calls.SequenceEqual(new[] { "scope:True" }), "An empty user scope is enabled even when neither default needs a write");
+
+// MainWindow undo saves Capture before applying, then applies that snapshot.
+profiles = new FakeProfileOperations(); backend = ProfileBackend(profiles);
+var undoSnapshot = await SceneService.Capture(backend, "Previous settings");
+var namedProfiles = new Preset { Displays = new() { new() { Id = "A", UserProfiles = true, SdrProfile = "SDR.icc", HdrProfile = "HDR.icc" } } };
+applied = await SceneService.Apply(backend, namedProfiles);
+Check(applied.Issues.Count == 0 && profiles.Sdr.Single() == "SDR.icc" && profiles.Hdr.Single() == "HDR.icc", "Apply selects named SDR and HDR profiles through injected operations");
+applied = await SceneService.Apply(backend, undoSnapshot);
+Check(applied.Issues.Count == 0 && profiles.User && profiles.Sdr.Count == 0 && profiles.Hdr.Count == 0, "Undo restores captured absence for both defaults");
+profiles.User = false;
+undoSnapshot = await SceneService.Capture(backend, "Previous system scope");
+await SceneService.Apply(backend, namedProfiles);
+profiles.Calls.Clear();
+applied = await SceneService.Apply(backend, undoSnapshot);
+Check(applied.Issues.Count == 0 && !profiles.User && profiles.Calls.SequenceEqual(new[] { "scope:False" }), "Undo restores system scope without editing system defaults");
+
+profiles.User = true; profiles.Calls.Clear();
+var unspecified = new Preset { Displays = new() { new() { Id = "A", UserProfiles = true } } };
+var unspecifiedRoundtrip = JsonSerializer.Deserialize<Preset>(JsonSerializer.Serialize(unspecified, Storage.Json), Storage.Json)!;
+applied = await SceneService.Apply(backend, unspecifiedRoundtrip);
+Check(applied.Issues.Count == 0 && unspecifiedRoundtrip.Displays[0].SdrProfile == null && profiles.Calls.Count == 0 && profiles.Sdr.Single() == "SDR.icc" && profiles.Hdr.Single() == "HDR.icc", "Null defaults survive persistence and leave existing defaults unspecified");
+unspecified.Displays[0].UserProfiles = null;
+unspecified.Displays[0].SdrProfile = "";
+await SceneService.Apply(backend, unspecified);
+Check(profiles.Calls.Count == 0, "An unspecified scope never writes ICC settings");
+unspecified.Displays[0].UserProfiles = true;
+applied = await SceneService.Apply(backend, unspecified);
+Check(applied.Issues.Count == 0 && profiles.Sdr.Count == 0 && profiles.Hdr.Single() == "HDR.icc", "An empty SDR default and an unspecified HDR default remain distinct");
+
+foreach (string failure in new[] { "remove", "ignored", "scope", "unavailable", "set" })
+{
+    profiles = new FakeProfileOperations(); profiles.Sdr.Add("assigned.icc");
+    backend = ProfileBackend(profiles);
+    profiles.FailRemove = failure == "remove";
+    profiles.IgnoreWrites = failure is "ignored" or "scope" or "set";
+    profiles.User = failure != "scope";
+    profiles.Available = failure != "unavailable";
+    var restore = new Preset { Displays = new() { new() { Id = "A", UserProfiles = true, SdrProfile = failure == "set" ? "other.icc" : "" } } };
+    applied = await SceneService.Apply(backend, restore);
+    Check(applied.Applied == 0 && applied.Issues.Count == 1 && applied.Issues[0].Contains("ICC"), "ICC restoration reports native/readback failure: " + failure);
+    Check(profiles.Calls.Count <= 1, "Failed restoration is bounded and never reports fabricated success: " + failure);
+}
+
 Check(InputRules.Parse("(model(60(99))vcp(10 12 60(0F 10 11 12) D6(01 04)))").SequenceEqual(new uint[] { 15, 16, 17, 18 }), "Input parsing reads only reported VCP choices");
 Check(InputRules.Parse("(vcp(10 60(11 11 12)))").SequenceEqual(new uint[] { 17, 18 }), "Repeated input choices are deduplicated");
 Check(InputRules.Parse("(vcp( \t10 12(01 02)\n60 (0f 10) D6(01 04) \r\n))").SequenceEqual(new uint[] { 15, 16 }), "Complete VCP lists retain whitespace, lowercase values and unrelated features");
@@ -137,8 +212,9 @@ internal sealed class FakeBackend : ISceneBackend
     public List<string> Calls { get; } = new();
     public HashSet<string> FailBrightness { get; } = new();
     public bool FailColor;
+    public FakeProfileOperations? ProfileOperations;
     public int StaleReferences;
-    public Task<DisplayColorState> Color(DisplayInfo d) => FailColor ? Task.FromException<DisplayColorState>(new InvalidOperationException("No color API")) : Task.FromResult(new DisplayColorState { HdrKnown = true, HdrSupported = true, HdrUserEnabled = false, ProfilesAvailable = true, UseUserProfiles = true, SdrProfile = "sRGB.icm" });
+    public Task<DisplayColorState> Color(DisplayInfo d) => FailColor ? Task.FromException<DisplayColorState>(new InvalidOperationException("No color API")) : Task.FromResult(ProfileOperations?.Read(d) ?? new DisplayColorState { HdrKnown = true, HdrSupported = true, HdrUserEnabled = false, ProfilesAvailable = true, UseUserProfiles = true, SdrProfile = "sRGB.icm" });
     private void Call(string name, DisplayInfo d) { Calls.Add(name + ":" + d.Id); if (!Screens.Contains(d)) StaleReferences++; }
     public Task Mode(DisplayInfo d, DisplayMode mode, uint orientation)
     {
@@ -146,7 +222,42 @@ internal sealed class FakeBackend : ISceneBackend
     }
     public Task Dpi(DisplayInfo d, int percent) { Call("dpi", d); d.DpiScale.CurrentPercent = percent; return Task.CompletedTask; }
     public Task Hdr(DisplayInfo d, bool enabled) { Call("hdr", d); return Task.CompletedTask; }
-    public Task Profiles(DisplayInfo d, PresetDisplay saved) { Call("profiles", d); return Task.CompletedTask; }
+    public Task Profiles(DisplayInfo d, PresetDisplay saved)
+    {
+        Call("profiles", d);
+        if (ProfileOperations != null) AdvancedColorService.RestoreProfiles(d, saved.UserProfiles, saved.SdrProfile, saved.HdrProfile, ProfileOperations);
+        return Task.CompletedTask;
+    }
     public Task Brightness(DisplayInfo d, PresetDisplay saved) { Call("brightness", d); if (FailBrightness.Contains(d.Id)) throw new InvalidOperationException("Disconnected"); return Task.CompletedTask; }
     public Task Layout(IReadOnlyList<ScreenPlacement> placements) { Calls.Add("layout"); return Task.CompletedTask; }
+}
+
+internal sealed class FakeProfileOperations : IDisplayProfileOperations
+{
+    public bool User = true, Available = true, FailRemove, IgnoreWrites;
+    public List<string> Sdr = new(), Hdr = new(), Calls = new();
+    public DisplayColorState Read(DisplayInfo display) => new()
+    {
+        ProfilesAvailable = Available, ProfileUnavailableReason = "Unavailable ICC API", UseUserProfiles = User,
+        SdrProfile = User ? Sdr.FirstOrDefault() ?? "" : "system-SDR.icc",
+        HdrProfile = User ? Hdr.FirstOrDefault() ?? "" : "system-HDR.icc"
+    };
+    public void SetScope(DisplayInfo display, bool user)
+    {
+        Calls.Add("scope:" + user);
+        if (!IgnoreWrites) User = user;
+    }
+    public void SetDefault(DisplayInfo display, string name, bool hdr)
+    {
+        if (!User || string.IsNullOrEmpty(name)) throw new Exception("Invalid default write");
+        Calls.Add($"set:{(hdr ? "HDR" : "SDR")}:{name}");
+        if (!IgnoreWrites) { var list = hdr ? Hdr : Sdr; list.Remove(name); list.Insert(0, name); }
+    }
+    public void RemoveAssociation(DisplayInfo display, string name, bool hdr)
+    {
+        if (!User || string.IsNullOrEmpty(name)) throw new Exception("Invalid association removal");
+        Calls.Add($"remove:{(hdr ? "HDR" : "SDR")}:{name}");
+        if (FailRemove) throw new InvalidOperationException("Native removal failed");
+        if (!IgnoreWrites) (hdr ? Hdr : Sdr).Remove(name);
+    }
 }
