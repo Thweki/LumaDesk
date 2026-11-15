@@ -491,6 +491,7 @@
   "theme.title": "外観",
   "quick.choose": "画面を選択",
   "quick.identify": "位置を確認",
+  "quick.movePanel": "この画面にパネルを移動",
   "quick.screenCount": "{0} 台のディスプレイ",
   "quick.more": "その他の設定",
   "quick.less": "その他の設定を閉じる",
