@@ -12,6 +12,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -300,14 +301,47 @@ internal static partial class Program
         {
             layout.Show(); layout.UpdateLayout(); Snapshot(layout, "layout.png");
             Check(Descendants<FrameworkElement>(layout).Count(e => System.Windows.Automation.AutomationProperties.GetAutomationId(e).StartsWith("layout-screen-")) == 2, "Layout renders each monitor in its physical position");
+            var undo = Descendants<Button>(layout).Single(btn => System.Windows.Automation.AutomationProperties.GetAutomationId(btn) == "layout-undo");
+            var redo = Descendants<Button>(layout).Single(btn => System.Windows.Automation.AutomationProperties.GetAutomationId(btn) == "layout-redo");
+            Check(!undo.IsEnabled && !redo.IsEnabled, "Loaded layout has no undo or redo steps");
             var primary = Descendants<ComboBox>(layout).Last(); primary.SelectedItem = a;
             Check(calls == 0 && layout.Placements.Single(p => p.Id == a.Id).Primary, "Primary selection only previews and sends no display command");
+            Check(ApplicationCommands.Undo.InputGestures.OfType<KeyGesture>().Any(g => g.Key == Key.Z && g.Modifiers == ModifierKeys.Control) &&
+                ApplicationCommands.Redo.InputGestures.OfType<KeyGesture>().Any(g => g.Key == Key.Y && g.Modifiers == ModifierKeys.Control), "Layout undo and redo commands expose Ctrl+Z and Ctrl+Y");
+            Check(ApplicationCommands.Undo.CanExecute(null, layout) && undo.IsEnabled, "Primary preview enables layout undo command and button");
+            ApplicationCommands.Undo.Execute(null, layout);
+            Check(ReferenceEquals(primary.SelectedItem, b) && layout.Placements.Single(p => p.Id == b.Id).Primary && !undo.IsEnabled && redo.IsEnabled, "Undo command restores the preview and primary selector");
+            ApplicationCommands.Redo.Execute(null, layout);
+            Check(ReferenceEquals(primary.SelectedItem, a) && undo.IsEnabled && !redo.IsEnabled, "Redo command restores the primary preview without a recursive edit");
+            Click(undo); Click(redo);
+            Check(ReferenceEquals(primary.SelectedItem, a) && calls == 0, "Undo and redo buttons only change the preview");
+            var beforeCoordinates = layout.Placements.ToArray();
+            var xBox = Descendants<TextBox>(layout).First(); xBox.Text = "-1800";
+            Click(Descendants<Button>(layout).Single(btn => btn.Content as string == L.T("s4a05c9ce76")));
+            Check(layout.Placements[0].X == -1800, "Coordinate update records a preview edit");
+            Click(undo);
+            Check(layout.Placements.SequenceEqual(beforeCoordinates) && xBox.Text == "-1920", "Undo coordinates updates the preview and its text fields");
+            Click(Descendants<Button>(layout).Single(btn => btn.Content as string == L.T("s86d5bec31e")));
+            Check(layout.Placements[1].Y == 1080 && !redo.IsEnabled, "New arrangement replaces the redo path");
+            Click(undo);
+            Check(layout.Placements.SequenceEqual(beforeCoordinates), "Undo restores all arranged monitors in one step");
+            xBox.Focus(); xBox.SelectAll(); xBox.SelectedText = "-1200";
+            ApplicationCommands.Undo.Execute(null, xBox);
+            Check(xBox.Text != "-1200" && layout.Placements.SequenceEqual(beforeCoordinates), "Undo inside a coordinate field edits text without undoing the layout");
+            xBox.ClearUndo(); ApplicationCommands.Undo.Execute(null, xBox);
+            Check(layout.Placements.SequenceEqual(beforeCoordinates), "An empty text undo history does not fall through to layout undo");
             var apply = Descendants<Button>(layout).Single(btn => System.Windows.Automation.AutomationProperties.GetAutomationId(btn) == "layout-apply");
             Click(apply); await Task.Delay(20);
             Check(calls == 1 && received!.Single(p => p.Id == a.Id).X == 0 && received!.Single(p => p.Id == b.Id).X == 1920 && !window.IsVisible, "Layout applies a normalized exact set from its own window without opening settings");
             Click(apply); Check(calls == 1 && !apply.IsEnabled, "Pending layout blocks duplicate submission");
-            hold.SetResult(); await Task.Delay(60); fail = true; Click(apply); await Task.Delay(60);
+            Check(!undo.IsEnabled && !redo.IsEnabled && !ApplicationCommands.Undo.CanExecute(null, layout) && !ApplicationCommands.Redo.CanExecute(null, layout), "Pending apply blocks preview undo and redo");
+            hold.SetResult(); await Task.Delay(60);
+            Check(!undo.IsEnabled && !redo.IsEnabled && !ApplicationCommands.Undo.CanExecute(null, layout), "Successful apply reloads the layout and clears preview history");
+            primary.SelectedItem = a; fail = true; Click(apply); await Task.Delay(60);
             Check(calls == 2 && Descendants<TextBlock>(layout).Any(t => t.Text == "测试：排列应用被拒绝"), "Layout errors remain visible in app and controls recover");
+            Check(undo.IsEnabled, "Failed apply keeps preview history available");
+            Click(undo);
+            Check(ReferenceEquals(primary.SelectedItem, b) && calls == 2, "Undo after a rejected apply restores the preview without another display write");
         }
         finally { hold.TrySetResult(); await Task.Delay(20); layout.Close(); window.Displays = real; window.Show(); }
     }
