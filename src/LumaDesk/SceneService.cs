@@ -37,6 +37,9 @@ internal static class SceneService
         preset.Note = string.IsNullOrEmpty(note) ? null : note;
     }
 
+    internal static bool MatchesName(Preset preset, string? query) =>
+        preset.Name.Contains(query?.Trim() ?? "", StringComparison.OrdinalIgnoreCase);
+
     internal static bool Move(List<Preset> presets, Preset preset, int direction)
     {
         if (direction is not (-1 or 1)) return false;

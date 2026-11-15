@@ -23,8 +23,26 @@ internal static partial class Program
         string folder = Storage.Folder;
         var previous = owner.Preferences.Presets;
         var navigation = owner.Navigation.Children.OfType<Button>().ToArray();
-        TextBox Editor() => Descendants<TextBox>(owner.PageContent).Single(t => AutomationProperties.GetAutomationId(t) == "SceneNoteEditor");
-        Button SaveNote() => Descendants<Button>(owner.PageContent).Single(b => b.Content as string == L.T("scene.saveNote"));
+        void ExpandMoreOptions()
+        {
+            var details = Descendants<Expander>(owner.PageContent).Single(e => e.Header as string == L.T("scene.more"));
+            details.IsExpanded = true;
+            // The owner stays unshown; lay out the expanded content before walking its visual tree.
+            // Successful saves and page navigation rebuild the card with its details collapsed.
+            owner.PageContent.Measure(new Size(900, double.PositiveInfinity));
+            owner.PageContent.Arrange(new Rect(new Point(), owner.PageContent.DesiredSize));
+            owner.PageContent.UpdateLayout();
+        }
+        TextBox Editor()
+        {
+            ExpandMoreOptions();
+            return Descendants<TextBox>(owner.PageContent).Single(t => AutomationProperties.GetAutomationId(t) == "SceneNoteEditor");
+        }
+        Button SaveNote()
+        {
+            ExpandMoreOptions();
+            return Descendants<Button>(owner.PageContent).Single(b => b.Content as string == L.T("scene.saveNote"));
+        }
         TextBlock[] Previews() => Descendants<TextBlock>(owner.PageContent).Where(t => AutomationProperties.GetAutomationId(t) == "SceneNotePreview").ToArray();
         try
         {

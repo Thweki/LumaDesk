@@ -199,6 +199,7 @@ await SceneDuplicateTests.Run(Check);
 await SceneDraftTests.Run(Check);
 await SceneOrderTests.Run(Check);
 await SceneNoteTests.Run(Check);
+SceneSearchTests.Run(Check);
 await ReconnectTests.RunAsync(Check);
 PipBufferTests.Run(Check);
 Console.WriteLine($"{checks} workflow checks passed. No native writes were issued.");
