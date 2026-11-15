@@ -522,5 +522,17 @@
   "input.unchanged": "螢幕未保持在目標輸入，切換未生效。請檢查目標連接埠訊號或螢幕的自動輸入設定。",
   "input.compatibility": "已啟用此螢幕的相容切換方式。",
   "input.switching": "正在切換並確認…",
-  "input.unverified": "已傳送切換要求，但無法確認目前輸入。請在螢幕上確認。"
+  "input.unverified": "已傳送切換要求，但無法確認目前輸入。請在螢幕上確認。",
+  "scan.title": "過掃描 / 欠掃描（實驗性）",
+  "scan.normal": "正常（無過掃描）",
+  "scan.underscan": "欠掃描",
+  "scan.overscan": "過掃描",
+  "scan.widescreen": "寬螢幕",
+  "scan.unknown": "未知掃描模式",
+  "scan.apply": "套用掃描模式",
+  "scan.help": "選擇顯示器如何調整畫面。欠掃描可顯示被裁切的邊緣；過掃描可能裁切邊緣。僅提供顯示器回報支援的模式。若支援，可選擇「正常」取消過掃描。",
+  "scan.disabled": "掃描模式控制未啟用。",
+  "scan.unavailable": "此顯示器未透過 DDC/CI 回報可讀取、可選擇的掃描模式。",
+  "scan.unverified": "無法驗證掃描模式變更。請重新整理以讀取實際模式；必要時檢查顯示器選單。",
+  "scan.confirmed": "顯示器已確認掃描模式。"
 }
