@@ -198,6 +198,7 @@ using (var cancelled = new CancellationTokenSource())
     Check(stopped && !service.IsWriting, "Cancelled reconnect write exits before device lookup and releases its busy state");
 }
 await SceneDuplicateTests.Run(Check);
+await SceneComparisonTests.Run(Check);
 await SceneDraftTests.Run(Check);
 await SceneOrderTests.Run(Check);
 SceneSearchTests.Run(Check);
