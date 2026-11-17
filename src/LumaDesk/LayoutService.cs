@@ -112,25 +112,31 @@ internal static class LayoutService
             if (status == 122) continue;
             if (status != 0) throw new InvalidOperationException(L.F("s12a68724cf", status));
             Array.Resize(ref paths, (int)pc); Array.Resize(ref modes, (int)mc);
-            var changed = new HashSet<uint>();
-            foreach (var screen in screens)
+            UpdatePositions(screens, paths, modes, path =>
             {
-                var matches = paths.Where(path =>
-                {
-                    var name = new DpiNative.SourceName { Header = DpiNative.Packet<DpiNative.SourceName>(1, path.Source.Adapter, path.Source.Id) };
-                    return DpiNative.GetSourceName(ref name) == 0 && name.Name == screen.Device;
-                }).ToArray();
-                if (matches.Length != 1) throw new InvalidOperationException(L.T("s7f55a6dae8"));
-                uint index = matches[0].Source.ModeIndex;
-                if (index >= modes.Length || modes[index].Type != 1 || !changed.Add(index)) throw new InvalidOperationException(L.T("s036adacc30"));
-                modes[index].X = screen.Mode.X; modes[index].Y = screen.Mode.Y;
-            }
-            if (changed.Count != paths.Length) throw new InvalidOperationException(L.T("sd03d18f1a0"));
+                var name = new DpiNative.SourceName { Header = DpiNative.Packet<DpiNative.SourceName>(1, path.Source.Adapter, path.Source.Id) };
+                return DpiNative.GetSourceName(ref name) == 0 ? name.Name : null;
+            });
             status = SetConfig(pc, paths, mc, modes, 0x20 | 0x40);
             if (status != 0) throw new InvalidOperationException(L.F("s2abfd99f73", status));
             return (paths, modes);
         }
         throw new InvalidOperationException(L.T("sc7f0630ed8"));
+    }
+    internal static void UpdatePositions(IReadOnlyList<SavedLayoutScreen> screens, DpiNative.Path[] paths, ConfigMode[] modes, Func<DpiNative.Path, string?> sourceName)
+    {
+        // Resolve each native source name once for this configuration, never across topology changes.
+        var pathsByDevice = paths.ToLookup(sourceName, StringComparer.Ordinal);
+        var changed = new HashSet<uint>();
+        foreach (var screen in screens)
+        {
+            var matches = pathsByDevice[screen.Device].ToArray();
+            if (matches.Length != 1) throw new InvalidOperationException(L.T("s7f55a6dae8"));
+            uint index = matches[0].Source.ModeIndex;
+            if (index >= modes.Length || modes[index].Type != 1 || !changed.Add(index)) throw new InvalidOperationException(L.T("s036adacc30"));
+            modes[index].X = screen.Mode.X; modes[index].Y = screen.Mode.Y;
+        }
+        if (changed.Count != paths.Length) throw new InvalidOperationException(L.T("sd03d18f1a0"));
     }
     private static void Stage(List<SavedLayoutScreen> screens)
     {
