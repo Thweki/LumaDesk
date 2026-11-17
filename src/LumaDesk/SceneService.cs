@@ -28,6 +28,8 @@ internal sealed class SceneResult
 
 internal static class SceneService
 {
+    internal const int MaxNameLength = 40;
+
     internal const int NoteMaxLength = 500;
 
     internal static void SetNote(Preset preset, string? note)
@@ -39,6 +41,18 @@ internal static class SceneService
 
     internal static bool MatchesName(Preset preset, string? query) =>
         preset.Name.Contains(query?.Trim() ?? "", StringComparison.OrdinalIgnoreCase);
+
+    // Metadata only: keep the same object so registered shortcuts still target it.
+    internal static void Rename(IReadOnlyCollection<Preset> presets, Preset scene, string name)
+    {
+        if (!presets.Contains(scene)) throw new InvalidOperationException(L.T("command.presetMissing"));
+        name = name.Trim();
+        if (name.Length == 0) throw new InvalidOperationException(L.T("s2c09021a16"));
+        if (name.Length > MaxNameLength) throw new InvalidOperationException(L.F("scene.nameTooLong", MaxNameLength));
+        if (presets.Any(p => p != scene && p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException(L.T("s1f09d8e896"));
+        scene.Name = name;
+    }
 
     internal static bool Move(List<Preset> presets, Preset preset, int direction)
     {
