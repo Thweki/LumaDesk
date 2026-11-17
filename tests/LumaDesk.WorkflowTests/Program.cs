@@ -202,6 +202,7 @@ await SceneDuplicateTests.Run(Check);
 await SceneDraftTests.Run(Check);
 await SceneOrderTests.Run(Check);
 NextScheduleTests.Run(Check);
+LayoutConfigurationTests.Run(Check);
 await SceneNoteTests.Run(Check);
 SceneSearchTests.Run(Check);
 await ReconnectTests.RunAsync(Check);
