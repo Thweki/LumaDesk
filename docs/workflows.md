@@ -29,6 +29,12 @@ On the **Presets** page, expand **More options** for an existing preset, enter a
 
 On the **Presets** page, use **Move up** or **Move down** on a preset card to put frequently used presets first. The order is saved immediately, survives restarts, and also appears in the tray preset menu. Reordering does not capture or apply display settings or change preset IDs, saved values, shortcuts, or trigger settings. Existing automation still selects the first matching preset in list order when multiple rules match. No experimental flag is required.
 
+## 预设备注 / Preset notes
+
+在“预设”页展开预设的“更多选项”，输入备注并点击“保存备注”。备注最多 500 个字符，支持多行文字，例如记录适用场景或连接提示。卡片显示备注预览，完整内容可在编辑框或悬停提示中查看。清空文字后保存即可删除备注。备注随预设保存，复制预设时一并复制；更新显示设置不会删除已有备注。保存备注无需连接屏幕，也不会读取或应用显示设置，更不会改变快捷键或自动触发配置。
+
+Open **Presets → More options**, enter a **Note**, then click **Save note**. Use up to 500 characters across multiple lines to record when to use a setup or a connection reminder. The card shows a short preview; the editor and preview tooltip show the full note. Clear the text and save to remove it. Outer whitespace is trimmed. Notes survive restarts, copy with duplicated presets, and remain when updating the preset's display settings. Saving a note works with disconnected screens and does not capture or apply display settings or change shortcuts or automation. Failed saves keep your typed text for retry. No experimental flag is required.
+
 ## 搜索预设 / Search presets
 
 在设置的“预设”页，在“按名称搜索预设”中输入名称的一部分即可即时筛选。搜索不区分大小写，会忽略首尾空白，并保留已保存的顺序。“清除搜索”恢复完整列表。搜索不会修改已保存的预设、应用显示设置或丢失卡片中尚未提交的编辑。筛选期间隐藏排序按钮，清除搜索后可继续排序。搜索词在本次会话中切换页面后保留，退出后不保存。

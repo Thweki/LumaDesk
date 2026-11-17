@@ -208,9 +208,22 @@ public partial class MainWindow
         {
             var card = new StackPanel();
             card.Children.Add(Ui.Row(Ui.Labels(scene.Name, L.F("sb91b8e2562", scene.Displays.Count)), Ui.Button(L.T("s63c73c4730"), () => _ = RunAsync(async () => await ApplySceneAsync(scene)), true)));
+            if (!string.IsNullOrWhiteSpace(scene.Note))
+            {
+                var note = Ui.Text(scene.Note, 12, "#617681");
+                note.TextWrapping = TextWrapping.Wrap;
+                note.MaxHeight = 54;
+                note.TextTrimming = TextTrimming.CharacterEllipsis;
+                note.ToolTip = scene.Note;
+                note.Margin = new Thickness(0, 8, 0, 0);
+                System.Windows.Automation.AutomationProperties.SetAutomationId(note, "SceneNotePreview");
+                card.Children.Add(note);
+            }
             var order = CreateSceneOrderControls(scene);
             card.Children.Add(order);
             var details = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
+            details.Children.Add(CreateSceneNoteEditor(scene));
+            details.Children.Add(Ui.Line());
             var rename = new TextBox { Text = scene.Name, MaxLength = 40 };
             details.Children.Add(Ui.Row(rename, Ui.Button(L.T("scene.update"), () => _ = RunAsync(() => SaveSceneAsync(rename.Text, scene)))));
             details.Children.Add(Ui.Line());
