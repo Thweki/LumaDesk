@@ -77,6 +77,7 @@ public sealed class Preset
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Name { get; set; } = "";
+    public string? Note { get; set; }
     public List<PresetDisplay> Displays { get; set; } = new();
     public bool OnConnect { get; set; }
     public string? AtTime { get; set; }
