@@ -34,9 +34,11 @@ internal static partial class Program
         {
             try
             {
+                window.Hide(); // Match tray startup while the initial display scan completes.
                 for (int i = 0; i < 150 && window.Displays.Count == 0; i++) await Task.Delay(100);
                 await Task.Delay(200);
                 Check(window.Displays.Count > 0, "Actual display scan populates overview");
+                TestDeferredSettingsRendering(window);
                 if (args.Contains("--demo"))
                 {
                     await CaptureReadmeDemoAsync(window);
