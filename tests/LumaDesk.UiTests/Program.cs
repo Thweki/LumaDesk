@@ -103,6 +103,10 @@ internal static partial class Program
                 Check(Storage.Load().Presets.Count == 1, "Preset save persists in isolated test profile");
                 Check(Storage.Load().Presets[0].Displays.All(d => d.Mode != null && d.X.HasValue && d.Primary.HasValue), "Saved scene includes output and placement for every screen");
                 Check(Storage.Load().Presets.All(p => !p.OnConnect && p.AtTime == null && p.OnPower == null), "Automatic scene switching defaults off");
+                var presetList = await window.ExecuteCommand(new ControlCommand("list-presets"));
+                using (var listed = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(presetList)))
+                    Check(presetList.Success && listed.RootElement.GetProperty("Data")[0].GetProperty("Id").GetString() == window.Preferences.Presets[0].Id,
+                        "Running application serves saved preset IDs through the command handler");
                 Snapshot(window, "scenes.png");
                 foreach (var expander in Descendants<Expander>(window.PageContent).ToArray()) expander.IsExpanded = true;
                 window.UpdateLayout();

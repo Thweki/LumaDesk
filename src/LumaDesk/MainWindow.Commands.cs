@@ -17,10 +17,13 @@ public partial class MainWindow
     internal async Task<ControlReply> ExecuteCommand(ControlCommand command)
     {
         if (command.Action == "list") return new(true, Displays);
+        if (command.Action == "list-presets") return CommandService.ListPresets(Preferences);
         if (sceneBusy || modePending || scanning || restoringConnection) return new(false, Error: L.T("s92f637408f"));
-        if (command.Action == "preset")
+        if (command.Action is "preset" or "preset-id")
         {
-            var preset = Preferences.Presets.FirstOrDefault(p => p.Name.Equals(command.Target, StringComparison.OrdinalIgnoreCase) || p.Id == command.Target);
+            var preset = command.Action == "preset-id"
+                ? CommandService.ResolvePresetId(Preferences, command.Target)
+                : Preferences.Presets.FirstOrDefault(p => p.Name.Equals(command.Target, StringComparison.OrdinalIgnoreCase) || p.Id == command.Target);
             if (preset == null) return new(false, Error: L.T("command.presetMissing"));
             var result = await ApplySceneAsync(preset);
             return new(result?.Issues.Count == 0, result, result?.Issues.Count > 0 ? string.Join("\n", result.Issues) : null);

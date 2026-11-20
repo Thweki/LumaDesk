@@ -66,11 +66,24 @@ Enable **Daily schedule** under a preset's **More options**, then open the tray 
 ```powershell
 $app = '.\LumaDesk.exe'
 & $app --list --output .\screens.json
+& $app --list-presets --output .\presets.json
 & $app --brightness '1' 60 --output .\brightness-result.json
 & $app --apply-preset '办公' --output .\preset-result.json
 ```
 
 显示器参数可以是列表中的设备 ID、唯一名称或编号。长期脚本优先使用设备 ID；编号可能随连接变化。亮度命令遵循应用内分组和同步设置。预设可使用名称或 ID。
+
+`--list-presets` 只读列出已保存的预设，按应用内顺序返回 `Data` 数组；每项含 `Id`、`Name` 和 `Displays`（已保存屏幕的 `Id`、`Name`）。未连接屏幕也会列出；没有预设时成功返回空数组。应用运行时读取内存中的预设，否则读取本地已保存的预设，不启动托盘应用或访问显示器。尚未保存、重复或不能作为参数使用的 ID 返回 `null`；脚本请输入非空 ID 给 `--apply-preset-id`，该命令不会按名称查找。
+
+For scripts, `--list-presets` discovers saved preset IDs without changing any display settings. The JSON reply has `Success`, `Data`, and `Error`; `Data` contains `{ "Id", "Name", "Displays": [{ "Id", "Name" }] }` entries in library order, including disconnected displays. An empty library returns success with `Data: []`. It uses the running app's library when available, otherwise reads saved preferences without starting the app or probing monitors. Unsaved, duplicate, or unusable IDs are returned as `null`. Pass a non-null `Id` to `--apply-preset-id` for exact, case-sensitive matching without name fallback. The old `--apply-preset` still accepts a name or ID with its original matching behavior.
+
+```powershell
+$presets = Get-Content .\presets.json -Raw | ConvertFrom-Json
+$preset = $presets.Data | Where-Object { $null -ne $_.Id } | Select-Object -First 1
+if ($presets.Success -and $null -ne $preset) {
+    & $app --apply-preset-id $preset.Id --output .\preset-result.json
+}
+```
 
 已有应用时，命令通过限定当前 Windows 用户及桌面会话的本地命名管道交给应用执行；不会另建调暗覆盖层。未运行时，查询直接读取，修改命令启动托盘应用后再执行。发送命令后不自动重试，避免超时导致重复写入。管道不对网络开放。
 
