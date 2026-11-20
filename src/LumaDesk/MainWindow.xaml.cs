@@ -37,8 +37,13 @@ public partial class MainWindow : Window
     private IntPtr hwnd;
     internal DisplayInfo? Selected => Displays.FirstOrDefault(d => d.Id == selectedId) ?? Displays.FirstOrDefault();
 
-    public MainWindow()
+    private readonly Func<bool>? fixtureSettingsVisible;
+
+    public MainWindow() : this(null) { }
+
+    internal MainWindow(Func<bool>? fixtureSettingsVisible)
     {
+        this.fixtureSettingsVisible = fixtureSettingsVisible;
         ThemeService.Apply(Preferences.Theme);
         InitializeComponent();
         Ui.ConfigureWindow(this);
@@ -110,11 +115,10 @@ public partial class MainWindow : Window
         catch (Exception ex) { Status(L.T("sf7293a061e") + ex.Message, true); Render(); }
         finally { scanning = false; brightnessScan.SetResult(); brightnessScan = null; }
     }
-    private void Render() => RenderSettingsIfVisible(IsVisible);
-    internal void RenderSettingsIfVisible(bool visible)
+    private void Render()
     {
         // Tray startup and background refreshes only need the display model, not the settings UI.
-        if (!visible) return;
+        if (!(fixtureSettingsVisible?.Invoke() ?? IsVisible)) return;
         foreach (var pair in navButtons) pair.Value.Background = Ui.Brush(pair.Key == page ? "#E5E5E5" : "#00FFFFFF");
         Breadcrumb.Text = L.T("s424b6d3b48") + (navButtons.TryGetValue(page, out var navigation) ? (string)navigation.Tag : page);
         PageContent.Children.Clear(); DisplayTabs.Children.Clear();

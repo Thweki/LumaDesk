@@ -52,7 +52,9 @@ internal static partial class Program
                 {
                     // Never show the owner: Loaded starts discovery, tray, and automation.
                     // Only detached controls with injected hardware callbacks belong here.
-                    var owner = new MainWindow();
+                    // The logical-control fixtures need rendering on navigation and redraw
+                    // without invoking the real window lifecycle.
+                    var owner = new MainWindow(() => true);
                     TestSceneRenameFixture(owner);
                     TestSceneDuplicateFixture(owner);
                     await TestSceneDraftFixtureAsync(owner);
@@ -65,7 +67,7 @@ internal static partial class Program
                     await TestInputSwitchUiAsync(owner, offscreen: true);
                     await TestInputConnectionUiAsync(owner);
                     await TestRefreshTimingUiAsync(owner);
-                    TestDeferredSettingsRenderingFixture(owner);
+                    TestDeferredSettingsRenderingFixture();
                     Check(!owner.IsLoaded && new WindowInteropHelper(owner).Handle == IntPtr.Zero && owner.Displays.Count == 0,
                         "Fixture owner never loads a desktop window or discovers displays");
                     Result($"PASS: {checks} desktop-independent WPF fixture checks. No hardware queries or writes.");

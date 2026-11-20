@@ -2,8 +2,10 @@
 // Copyright (c) 2026 LumaDesk contributors
 
 using LumaDesk;
+using System;
 using System.Linq;
 using System.Windows.Controls;
+using System.Windows.Interop;
 
 internal static partial class Program
 {
@@ -54,47 +56,43 @@ internal static partial class Program
         }
     }
 
-    private static void TestDeferredSettingsRenderingFixture(MainWindow owner)
+    private static void TestDeferredSettingsRenderingFixture()
     {
-        var previousDisplays = owner.Displays;
         var display = new DisplayInfo { Id = "deferred-fixture", Name = "Fixture Alpha", Number = 99 };
+        var hiddenOwner = new MainWindow { Displays = new() { display } };
+        Click(hiddenOwner.Navigation.Children.OfType<Button>().First());
+        hiddenOwner.RefreshView();
+        Check(hiddenOwner.PageContent.Children.Count == 0 && hiddenOwner.DisplayTabs.Children.Count == 0,
+            "The default visibility guard leaves hidden settings controls unbuilt even with a populated model");
+
+        bool visible = true;
+        var owner = new MainWindow(() => visible) { Displays = new() { display } };
         var navigation = owner.Navigation.Children.OfType<Button>().ToArray();
-        var overview = navigation[0];
         var about = navigation[^1];
-        try
-        {
-            owner.Displays = new() { display };
-            Click(overview); // Actual visibility is false for the unshown owner.
-            Check(owner.PageContent.Children.Count == 0 && owner.DisplayTabs.Children.Count == 0,
-                "Hidden settings do not build controls after display discovery");
 
-            owner.RenderSettingsIfVisible(true);
-            Check(owner.PageContent.Children.Count > 0 && owner.DisplayTabs.Children.Count == 2,
-                "Visible settings build the overview and its current display tab");
-            var originalPage = owner.PageContent.Children[0];
-            var originalTab = (Button)owner.DisplayTabs.Children[1];
-            Check(Equals(originalTab.ToolTip, "Fixture Alpha"), "Visible settings render the current display name");
+        owner.RefreshView();
+        Check(owner.PageContent.Children.Count > 0 && owner.DisplayTabs.Children.Count == 2,
+            "Visible settings build the overview and its current display tab");
+        var originalPage = owner.PageContent.Children[0];
+        var originalTab = (Button)owner.DisplayTabs.Children[1];
+        Check(Equals(originalTab.ToolTip, "Fixture Alpha"), "Visible settings render the current display name");
 
-            display.Name = "Fixture Beta";
-            owner.RefreshView();
-            Click(about);
-            Check(ReferenceEquals(originalPage, owner.PageContent.Children[0])
-                && ReferenceEquals(originalTab, owner.DisplayTabs.Children[1])
-                && Equals(originalTab.ToolTip, "Fixture Alpha"),
-                "Hidden refresh and navigation preserve the rendered controls without using stale data on reopen");
+        visible = false;
+        display.Name = "Fixture Beta";
+        owner.RefreshView();
+        Click(about);
+        Check(ReferenceEquals(originalPage, owner.PageContent.Children[0])
+            && ReferenceEquals(originalTab, owner.DisplayTabs.Children[1])
+            && Equals(originalTab.ToolTip, "Fixture Alpha"),
+            "Hidden refresh and navigation leave existing settings controls untouched");
 
-            owner.RenderSettingsIfVisible(true);
-            Check(!ReferenceEquals(originalPage, owner.PageContent.Children[0])
-                && Equals(((Button)owner.DisplayTabs.Children[1]).ToolTip, "Fixture Beta")
-                && owner.Breadcrumb.Text.EndsWith((string)about.Tag),
-                "Visible rendering uses refreshed data and navigation selected while hidden");
-        }
-        finally
-        {
-            owner.Displays = previousDisplays;
-            Click(overview);
-            owner.PageContent.Children.Clear();
-            owner.DisplayTabs.Children.Clear();
-        }
+        visible = true;
+        owner.RefreshView();
+        Check(!ReferenceEquals(originalPage, owner.PageContent.Children[0])
+            && Equals(((Button)owner.DisplayTabs.Children[1]).ToolTip, "Fixture Beta")
+            && owner.Breadcrumb.Text.EndsWith((string)about.Tag),
+            "Visible rendering uses refreshed data and navigation selected while hidden");
+        Check(new[] { hiddenOwner, owner }.All(w => !w.IsLoaded && new WindowInteropHelper(w).Handle == IntPtr.Zero),
+            "Deferred-render owners stay detached and never load a desktop window");
     }
 }
