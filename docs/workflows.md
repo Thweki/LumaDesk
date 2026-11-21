@@ -111,11 +111,11 @@ $process = Start-Process -FilePath '.\LumaDesk.exe' -ArgumentList '--export-log 
 $process.ExitCode
 ```
 
-`--export-log <archive.zip>` creates a new ZIP containing only the available `app.log` and `app.previous.log` from `%LOCALAPPDATA%\LumaDesk` (or `LUMADESK_DATA_DIR` when set). It works with the tray app running or closed and does not start or activate it. Settings, presets and recovery files are excluded. Log text is copied verbatim and can contain device names, file paths and exception details; review the archive before sharing. When the app is running, the export is a best-effort copy while logging and rotation may continue.
+`--export-log <archive.zip>` creates a new ZIP from the available `app.log` and `app.previous.log` in `%LOCALAPPDATA%\LumaDesk` (or `LUMADESK_DATA_DIR` when set). It works with the tray app running or closed and does not start or activate it. It rejects log entries that are reparse points, have multiple hard links, or cannot be verified as regular files. Use a trusted log directory and a trusted destination directory. The command does not separately collect settings, presets or recovery files. It copies logs verbatim, so review them for device names, local paths and exception details before sharing. While the app is running, logging and rotation may continue during the export.
 
-The exit code is 0 on success or 1 for invalid arguments, missing logs, an existing destination or a read/write failure. The destination's parent directory must exist. Existing files are never overwritten, and export failures are not appended to the source logs. Unlike the automation commands above, this command writes a ZIP directly, takes no `--output` option and does not return JSON.
+The exit code is 0 on success or 1 for invalid arguments, no available logs, an invalid log entry, an existing destination or a read/write failure. The destination's parent directory must exist. The command finishes the ZIP before moving it to the requested name and never overwrites an existing destination. Export failures are not appended to the source logs. Unlike the automation commands above, this command takes no `--output` option and does not return JSON.
 
-此命令将现有的当前和上一份日志导出为新的 ZIP，不探测或更改显示器，也不启动托盘窗口。不包含设置、预设或恢复文件；日志可能包含设备名称、路径和异常详情，分享前请检查。成功返回 0；参数无效、无日志、目标已存在或读写失败时返回 1，不覆盖已有文件。
+此命令将现有的当前和上一份日志导出为新的 ZIP，不探测或更改显示器，也不启动托盘窗口。拒绝重解析点（含符号链接）、有多个硬链接或无法验证为普通文件的日志。请使用可信的日志目录和输出目录。命令不会另外收集设置、预设或恢复文件，但会原样复制日志；分享前请检查其中的设备名称、路径和异常详情。ZIP 写完后才移动到指定位置，不覆盖已有文件。成功返回 0；参数无效、无日志、日志不合规、目标已存在或读写失败时返回 1。
 
 ## 硬件与性能边界
 

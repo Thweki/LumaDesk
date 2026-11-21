@@ -9,6 +9,17 @@ internal static class LogExportTests
 {
     public static void Run(Action<bool, string> check)
     {
+        check(LogExport.IsOrdinaryLog(true, FileAttributes.Normal, 1) &&
+            LogExport.IsOrdinaryLog(true, FileAttributes.Archive, 1), "Ordinary single-link disk logs pass validation");
+        check(!LogExport.IsOrdinaryLog(false, FileAttributes.Normal, 1) &&
+            !LogExport.IsOrdinaryLog(true, FileAttributes.Directory, 1) &&
+            !LogExport.IsOrdinaryLog(true, FileAttributes.Device, 1) &&
+            !LogExport.IsOrdinaryLog(true, FileAttributes.ReparsePoint, 1) &&
+            !LogExport.IsOrdinaryLog(true, FileAttributes.Normal, 2) &&
+            !LogExport.IsOrdinaryLog(true, FileAttributes.Normal, 0),
+            "Source metadata for non-disk, non-regular, reparse, and ambiguous-link entries fails validation");
+        if (!OperatingSystem.IsWindows()) return;
+
         string root = Path.Combine(Path.GetTempPath(), "lumadesk-log-export-" + Guid.NewGuid().ToString("N"));
         string data = Path.Combine(root, "data");
         string output = Path.Combine(root, "support logs.zip");
@@ -44,6 +55,8 @@ internal static class LogExportTests
             byte[] existing = File.ReadAllBytes(output);
             check(Export(output) == 1 && File.ReadAllBytes(output).SequenceEqual(existing),
                 "Log export refuses to overwrite an existing export");
+            check(!Directory.EnumerateFiles(root, ".lumadesk-export-*.tmp").Any(),
+                "A blocked move preserves the completed destination and removes the temporary ZIP");
             foreach (string protectedFile in new[] { current, previous, Path.Combine(data, "settings.json") })
             {
                 byte[] before = File.ReadAllBytes(protectedFile);
@@ -78,6 +91,8 @@ internal static class LogExportTests
             check(Export(output) == 0, "An existing empty log can be exported");
             using (var archive = ZipFile.OpenRead(output))
                 check(archive.Entries.Count == 1 && Read(archive, "app.log").Length == 0, "Empty logs remain empty in the archive");
+            check(!Directory.EnumerateFiles(root, ".lumadesk-export-*.tmp").Any(),
+                "No staging file remains after publishing the ZIP");
         }
         finally { Directory.Delete(root, true); }
     }
