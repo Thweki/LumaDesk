@@ -66,7 +66,6 @@ Enable **Daily schedule** under a preset's **More options**, then open the tray 
 ```powershell
 $app = '.\LumaDesk.exe'
 & $app --list --output .\screens.json
-& $app --list-presets --output .\presets.json
 & $app --brightness '1' 60 --output .\brightness-result.json
 & $app --apply-preset '办公' --output .\preset-result.json
 ```
@@ -78,12 +77,28 @@ $app = '.\LumaDesk.exe'
 For scripts, `--list-presets` discovers saved preset IDs without changing any display settings. The JSON reply has `Success`, `Data`, and `Error`; `Data` contains `{ "Id", "Name", "Displays": [{ "Id", "Name" }] }` entries in library order, including disconnected displays. An empty library returns success with `Data: []`. It uses the running app's library when available, otherwise reads saved preferences without starting the app or probing monitors. Unsaved, duplicate, or unusable IDs are returned as `null`. Pass a non-null `Id` to `--apply-preset-id` for exact, case-sensitive matching without name fallback. The old `--apply-preset` still accepts a name or ID with its original matching behavior.
 
 ```powershell
-$presets = Get-Content .\presets.json -Raw | ConvertFrom-Json
-$preset = $presets.Data | Where-Object { $null -ne $_.Id } | Select-Object -First 1
-if ($presets.Success -and $null -ne $preset) {
-    & $app --apply-preset-id $preset.Id --output .\preset-result.json
+$app = '.\LumaDesk.exe'
+$result = Join-Path ([IO.Path]::GetTempPath()) ("lumadesk-presets-$([guid]::NewGuid().ToString('N')).json")
+
+try {
+    $run = Start-Process -FilePath (Resolve-Path -LiteralPath $app -ErrorAction Stop).Path `
+        -ArgumentList ('--list-presets --output "{0}"' -f $result) -Wait -PassThru -ErrorAction Stop
+    if ($run.ExitCode -ne 0) { throw "LumaDesk listing failed (exit $($run.ExitCode))." }
+
+    $reply = Get-Content -LiteralPath $result -Raw -Encoding UTF8 -ErrorAction Stop |
+        ConvertFrom-Json -ErrorAction Stop
+    if ($reply.Success -ne $true) { throw 'LumaDesk did not return a successful preset list.' }
+    $reply.Data | Where-Object { $null -ne $_.Id } | Select-Object Id, Name
+} finally {
+    if (Test-Path -LiteralPath $result) {
+        Remove-Item -LiteralPath $result -ErrorAction SilentlyContinue
+    }
 }
 ```
+
+枚举命令会等待查询完成后再读新的结果文件。确定要修改显示设置时，从列表复制所需的 ID，再用 `--apply-preset-id`；不默认选择第一项。修改命令可能启动长期运行的托盘进程，不要用示例中的 `Start-Process -Wait` 等待它。
+
+The listing waits before reading a fresh result file. To change display settings, explicitly copy the desired ID from the list and pass it to `--apply-preset-id`; do not default to the first entry. Do not reuse the listing's `Start-Process -Wait` for an apply command, which may start the long-lived tray process.
 
 已有应用时，命令通过限定当前 Windows 用户及桌面会话的本地命名管道交给应用执行；不会另建调暗覆盖层。未运行时，查询直接读取，修改命令启动托盘应用后再执行。发送命令后不自动重试，避免超时导致重复写入。管道不对网络开放。
 
