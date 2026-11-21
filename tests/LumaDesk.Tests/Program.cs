@@ -7,6 +7,7 @@ using System.Text.Json;
 
 int tests = 0;
 void Check(bool condition, string name) { if (!condition) throw new Exception("FAIL: " + name); tests++; Console.WriteLine("PASS " + name); }
+LogExportTests.Run(Check);
 Check(Marshal.SizeOf<Native.DevMode>() == 220, "DEVMODEW native layout is 220 bytes");
 Check(Marshal.OffsetOf<Native.DevMode>(nameof(Native.DevMode.Width)).ToInt32() == 172, "DEVMODEW width offset");
 Check(Marshal.SizeOf<Native.DisplayDevice>() == 840, "DISPLAY_DEVICEW native layout");
