@@ -46,6 +46,8 @@ For **Windows 10 / 11 x64**. The .NET runtime is included. Choose a file from [R
 
 Default shortcuts: `Ctrl+Alt+↑ / ↓` adjusts the screen under the pointer; `Ctrl+Alt+0` removes software dimming.
 
+**Experimental brightness easing (default OFF):** launch with `LUMADESK_EXPERIMENTAL_TRANSITIONS=1` for a short ease when manually adjusting brightness. See [usage and validation](docs/brightness-transitions.md).
+
 All editions store settings in `%LOCALAPPDATA%\LumaDesk`. “Portable” means no installation, not settings beside the executable. There is no telemetry. The virtual driver downloads only when you choose to install it. Driver installation and first-time system ICC imports may request administrator approval.
 
 ## Before you download
