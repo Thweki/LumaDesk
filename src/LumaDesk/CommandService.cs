@@ -64,16 +64,47 @@ internal sealed class CommandService : IDisposable
         }
         throw new InvalidDataException("Command too long.");
     }
-    internal static bool IsCommand(string[] args) => args.Length > 0 && args[0] is "--list" or "--brightness" or "--apply-preset";
+    private static bool IsUsablePresetId(string? id) =>
+        !string.IsNullOrWhiteSpace(id) && id != "--output" && !id.Contains('\0');
+
+    internal static Preset? ResolvePresetId(Preferences preferences, string? id)
+    {
+        if (!IsUsablePresetId(id)) return null;
+        Preset? match = null;
+        foreach (var preset in preferences.Presets)
+        {
+            if (preset.Id != id) continue;
+            if (match != null) return null;
+            match = preset;
+        }
+        return match?.IsIdPersisted == true ? match : null;
+    }
+
+    internal static ControlReply ListPresets(Preferences preferences)
+    {
+        var duplicateIds = preferences.Presets.Select(p => p.Id).Where(IsUsablePresetId)
+            .GroupBy(id => id, StringComparer.Ordinal).Where(g => g.Skip(1).Any())
+            .Select(g => g.Key).ToHashSet(StringComparer.Ordinal);
+        return new(true, preferences.Presets.Select(p => new
+        {
+            Id = p.IsIdPersisted && IsUsablePresetId(p.Id) && !duplicateIds.Contains(p.Id) ? p.Id : null,
+            p.Name,
+            Displays = p.Displays.Select(d => new { d.Id, d.Name }).ToArray()
+        }).ToArray());
+    }
+
+    internal static bool IsCommand(string[] args) => args.Length > 0 && args[0] is "--list" or "--list-presets" or "--brightness" or "--apply-preset" or "--apply-preset-id";
     internal static (ControlCommand Command, string Output) Parse(string[] args)
     {
         int index = Array.IndexOf(args, "--output");
-        if (index < 1 || index != args.Length - 2 || string.IsNullOrWhiteSpace(args[index + 1])) throw new ArgumentException("Use --list | --brightness <display> <0-100> | --apply-preset <name>, followed by --output <result.json>.");
+        if (index < 1 || index != args.Length - 2 || string.IsNullOrWhiteSpace(args[index + 1])) throw new ArgumentException("Use --list | --list-presets | --brightness <display> <0-100> | --apply-preset <name> | --apply-preset-id <id>, followed by --output <result.json>.");
         ControlCommand command = args[0] switch
         {
             "--list" when index == 1 => new("list"),
+            "--list-presets" when index == 1 => new("list-presets"),
             "--brightness" when index == 3 && int.TryParse(args[2], out int value) && value >= 0 && value <= 100 => new("brightness", args[1], value),
             "--apply-preset" when index == 2 => new("preset", args[1]),
+            "--apply-preset-id" when index == 2 && IsUsablePresetId(args[1]) => new("preset-id", args[1]),
             _ => throw new ArgumentException("Invalid display command.")
         };
         return (command, Path.GetFullPath(args[index + 1]));
@@ -91,6 +122,10 @@ internal sealed class CommandService : IDisposable
             // An explicit endpoint is isolated: never scan hardware or launch the app for it.
             catch (TimeoutException) when (pipeName == null)
             {
+                if (parsed.Command.Action == "list-presets")
+                {
+                    File.WriteAllText(output, JsonSerializer.Serialize(ListPresets(Storage.Load()), Storage.Json)); return 0;
+                }
                 if (parsed.Command.Action == "list")
                 {
                     var displays = await new DisplayService().ScanAsync();

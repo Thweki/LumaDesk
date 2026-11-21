@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace LumaDesk;
 
@@ -73,9 +74,20 @@ public static class DpiRules
         return $"{Math.Round(mode.Width * 100.0 / percent, MidpointRounding.AwayFromZero):0} × {Math.Round(mode.Height * 100.0 / percent, MidpointRounding.AwayFromZero):0}";
     }
 }
-public sealed class Preset
+public sealed class Preset : IJsonOnDeserialized
 {
-    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    private string id = Guid.NewGuid().ToString("N");
+    private bool idWasAssigned;
+    public string Id
+    {
+        get => id;
+        set { id = value; idWasAssigned = true; IsIdPersisted = false; }
+    }
+
+    // The generated identity of a legacy record changes on every cold read until its first save.
+    internal bool IsIdPersisted { get; private set; }
+    void IJsonOnDeserialized.OnDeserialized() => IsIdPersisted = idWasAssigned;
+    internal void MarkIdPersisted() => IsIdPersisted = true;
     public string Name { get; set; } = "";
     public string? Note { get; set; }
     public List<PresetDisplay> Displays { get; set; } = new();
@@ -159,6 +171,8 @@ internal static class Storage
         var path = Path.Combine(Folder, "settings.json");
         File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(preferences, Json));
         File.Move(path + ".tmp", path, true);
+        if (preferences.Presets != null)
+            foreach (var preset in preferences.Presets) preset?.MarkIdPersisted();
     }
     public static void Log(string message)
     {

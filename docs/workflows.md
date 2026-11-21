@@ -72,6 +72,34 @@ $app = '.\LumaDesk.exe'
 
 显示器参数可以是列表中的设备 ID、唯一名称或编号。长期脚本优先使用设备 ID；编号可能随连接变化。亮度命令遵循应用内分组和同步设置。预设可使用名称或 ID。
 
+`--list-presets` 只读列出已保存的预设，按应用内顺序返回 `Data` 数组；每项含 `Id`、`Name` 和 `Displays`（已保存屏幕的 `Id`、`Name`）。未连接屏幕也会列出；没有预设时成功返回空数组。应用运行时读取内存中的预设，否则读取本地已保存的预设，不启动托盘应用或访问显示器。尚未保存、重复或不能作为参数使用的 ID 返回 `null`；脚本请输入非空 ID 给 `--apply-preset-id`，该命令不会按名称查找。
+
+For scripts, `--list-presets` discovers saved preset IDs without changing any display settings. The JSON reply has `Success`, `Data`, and `Error`; `Data` contains `{ "Id", "Name", "Displays": [{ "Id", "Name" }] }` entries in library order, including disconnected displays. An empty library returns success with `Data: []`. It uses the running app's library when available, otherwise reads saved preferences without starting the app or probing monitors. Unsaved, duplicate, or unusable IDs are returned as `null`. Pass a non-null `Id` to `--apply-preset-id` for exact, case-sensitive matching without name fallback. The old `--apply-preset` still accepts a name or ID with its original matching behavior.
+
+```powershell
+$app = '.\LumaDesk.exe'
+$result = Join-Path ([IO.Path]::GetTempPath()) ("lumadesk-presets-$([guid]::NewGuid().ToString('N')).json")
+
+try {
+    $run = Start-Process -FilePath (Resolve-Path -LiteralPath $app -ErrorAction Stop).Path `
+        -ArgumentList ('--list-presets --output "{0}"' -f $result) -Wait -PassThru -ErrorAction Stop
+    if ($run.ExitCode -ne 0) { throw "LumaDesk listing failed (exit $($run.ExitCode))." }
+
+    $reply = Get-Content -LiteralPath $result -Raw -Encoding UTF8 -ErrorAction Stop |
+        ConvertFrom-Json -ErrorAction Stop
+    if ($reply.Success -ne $true) { throw 'LumaDesk did not return a successful preset list.' }
+    $reply.Data | Where-Object { $null -ne $_.Id } | Select-Object Id, Name
+} finally {
+    if (Test-Path -LiteralPath $result) {
+        Remove-Item -LiteralPath $result -ErrorAction SilentlyContinue
+    }
+}
+```
+
+枚举命令会等待查询完成后再读新的结果文件。确定要修改显示设置时，从列表复制所需的 ID，再用 `--apply-preset-id`；不默认选择第一项。修改命令可能启动长期运行的托盘进程，不要用示例中的 `Start-Process -Wait` 等待它。
+
+The listing waits before reading a fresh result file. To change display settings, explicitly copy the desired ID from the list and pass it to `--apply-preset-id`; do not default to the first entry. Do not reuse the listing's `Start-Process -Wait` for an apply command, which may start the long-lived tray process.
+
 已有应用时，命令通过限定当前 Windows 用户及桌面会话的本地命名管道交给应用执行；不会另建调暗覆盖层。未运行时，查询直接读取，修改命令启动托盘应用后再执行。发送命令后不自动重试，避免超时导致重复写入。管道不对网络开放。
 
 ## 硬件与性能边界
