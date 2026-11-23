@@ -655,5 +655,7 @@
   "scene.previewLayout": "应用时，如果所有已保存的屏幕、模式及排列验证均匹配，还将恢复屏幕排列。",
   "scene.previewChanged": "屏幕连接已改变。请重新打开预览后再应用。",
   "quick.showList": "显示屏幕列表",
-  "quick.showMap": "显示屏幕布局图"
+  "quick.showMap": "显示屏幕布局图",
+  "scene.previousPreset": "上一个预设",
+  "scene.nextPreset": "下一个预设"
 }

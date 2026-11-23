@@ -135,6 +135,7 @@ public partial class MainWindow
             var result = undo ? await UndoHistory.UndoAsync(backend) : await SceneService.Apply(backend, target);
             if (result == null) return null;
             if (!undo) DisplayResets.Remember(target, result);
+            if (displayId == null) sceneCycle.RecordApplied(preset, result, undo);
             sceneReport = string.Join("\n", result.Issues);
             Save();
             string message = L.F("sa40a67f8f2", preset.Name, result.Applied);

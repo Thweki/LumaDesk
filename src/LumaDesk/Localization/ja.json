@@ -655,5 +655,7 @@
   "scene.previewLayout": "適用時に保存済みの全ディスプレイ、モード、配置の検証が一致した場合、画面配置も復元されます。",
   "scene.previewChanged": "ディスプレイの接続が変わりました。適用する前にプレビューを開き直してください。",
   "quick.showList": "ディスプレイ一覧を表示",
-  "quick.showMap": "ディスプレイ配置図を表示"
+  "quick.showMap": "ディスプレイ配置図を表示",
+  "scene.previousPreset": "前のプリセット",
+  "scene.nextPreset": "次のプリセット"
 }

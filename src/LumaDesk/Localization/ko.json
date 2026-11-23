@@ -655,5 +655,7 @@
   "scene.previewLayout": "적용 시 저장된 모든 디스플레이, 모드 및 배치 검증이 일치하면 화면 배치도 복원됩니다.",
   "scene.previewChanged": "디스플레이 연결이 변경되었습니다. 적용하기 전에 미리 보기를 다시 여세요.",
   "quick.showList": "디스플레이 목록 표시",
-  "quick.showMap": "디스플레이 배치도 표시"
+  "quick.showMap": "디스플레이 배치도 표시",
+  "scene.previousPreset": "이전 프리셋",
+  "scene.nextPreset": "다음 프리셋"
 }

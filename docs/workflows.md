@@ -115,6 +115,12 @@ This confirmation previews the scope of a manual application, not differences be
 
 Validation: workflow tests cover target matching, legacy presets, cancellation, connection changes, scan failure and default-off behavior; WPF fixtures cover the dialog and opt-in action label. These C# tests were added but not executed in the implementation environment because `dotnet` and `pwsh` were unavailable. Run the workflow suite and UI `--fixtures` suite on Windows.
 
+## 从托盘循环切换预设 / Cycle presets from the tray
+
+右键单击托盘图标，选择“上一个预设”或“下一个预设”，即可直接应用菜单中显示的目标预设。顺序与预设页一致，到达末尾后循环。位置以本次运行中最后一次完整成功应用的预设为准，设置页、快捷面板、快捷键、命令行和自动触发的应用都会更新位置；手动调整屏幕不会更新位置。刚启动、上次预设已删除或成功撤销后，“下一个”从首项开始，“上一个”从末项开始。只有一个预设时可重新应用，没有预设或显示操作忙碌时不可用。部分成功或失败不会推进位置，可重试；继续沿用预设的恢复和错误报告机制。不保存循环位置，无需更改设置或启用实验开关。
+
+Right-click the tray icon and choose **Previous preset** or **Next preset** to apply the named target immediately. Actions follow the saved order on the Presets page and wrap at either end. The position follows the last fully successful preset application in this session, including applications from Settings, the quick panel, shortcuts, commands and automation. Manual display adjustments do not change that position. After startup, deletion of the last applied preset, or a successful **Undo last switch**, Next starts at the first preset and Previous at the last. A single preset can be reapplied; actions are disabled when there are no saved presets or display operations are busy. Failed or partial applications leave the position unchanged for retry and use the existing preset recovery and error reporting. The cursor is never saved. No settings change or experimental flag is required.
+
 ## 可选自动化
 
 预设可设置每天的时间（本机 24 小时制）或接通电源/使用电池触发。应用运行期间约每 20 秒检查一次；休眠错过的最近一次时间可在恢复后触发，不补跑历史任务。同一轮多个预设命中时只应用列表中第一个匹配屏幕集合的预设。

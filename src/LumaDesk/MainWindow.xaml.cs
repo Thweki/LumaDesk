@@ -432,7 +432,9 @@ public partial class MainWindow : Window
     {
         lightTrayGlyph = TrayIcon.UseLightGlyph();
         tray = new Forms.NotifyIcon { Text = L.T("s4f97d4b368"), Icon = TrayIcon.Create(), Visible = true };
-        var menu = new Forms.ContextMenuStrip(); menu.Items.Add(L.T("s770544f702"), null, (_, _) => Dispatcher.Invoke(ShowQuick)); menu.Items.Add(L.T("s3e86e94e26"), null, (_, _) => Dispatcher.Invoke(ShowSettings)); menu.Items.Add(L.T("sa13550662f"), null, (_, _) => Dispatcher.Invoke(() => _ = RefreshAsync())); menu.Items.Add(L.T("s8e6dbec08e"), null, (_, _) => Dispatcher.Invoke(ResetDimming)); menu.Items.Add(new Forms.ToolStripSeparator()); menu.Items.Add(L.T("s2297788756"), null, (_, _) => Dispatcher.Invoke(Quit)); tray.ContextMenuStrip = menu;
+        var menu = new Forms.ContextMenuStrip(); menu.Items.Add(L.T("s770544f702"), null, (_, _) => Dispatcher.Invoke(ShowQuick)); menu.Items.Add(L.T("s3e86e94e26"), null, (_, _) => Dispatcher.Invoke(ShowSettings)); menu.Items.Add(L.T("sa13550662f"), null, (_, _) => Dispatcher.Invoke(() => _ = RefreshAsync())); menu.Items.Add(L.T("s8e6dbec08e"), null, (_, _) => Dispatcher.Invoke(ResetDimming));
+        AddSceneCycleTrayItems(menu);
+        menu.Items.Add(new Forms.ToolStripSeparator()); menu.Items.Add(L.T("s2297788756"), null, (_, _) => Dispatcher.Invoke(Quit)); tray.ContextMenuStrip = menu;
         tray.MouseClick += (_, e) => { if (e.Button == Forms.MouseButtons.Left) Dispatcher.Invoke(ShowQuick); }; tray.DoubleClick += (_, _) => Dispatcher.Invoke(ShowSettings);
     }
     internal void ShowSettings()

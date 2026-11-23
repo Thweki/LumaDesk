@@ -655,5 +655,7 @@
   "scene.previewLayout": "Screen arrangement will also be restored if all saved displays, modes and layout checks match at apply time.",
   "scene.previewChanged": "Display connections changed. Open the preview again before applying.",
   "quick.showList": "Show display list",
-  "quick.showMap": "Show display map"
+  "quick.showMap": "Show display map",
+  "scene.previousPreset": "Previous preset",
+  "scene.nextPreset": "Next preset"
 }
