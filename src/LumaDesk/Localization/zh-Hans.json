@@ -592,5 +592,20 @@
   "scene.applyDisplay": "应用到单个显示器",
   "scene.applyDisplayHelp": "选择此预设中已保存且已连接的显示器。仅应用其保存的设置，不恢复保存的位置或主屏。",
   "scene.noMatchingDisplay": "没有已连接的显示器与此预设匹配。",
-  "scene.displayMissing": "所选显示器不存在或标识不唯一。请刷新并重新选择。"
+  "scene.displayMissing": "所选显示器不存在或标识不唯一。请刷新并重新选择。",
+  "layout.relative.to": "将所选屏幕放置在此屏幕旁",
+  "layout.relative.left": "左侧",
+  "layout.relative.right": "右侧",
+  "layout.relative.above": "上方",
+  "layout.relative.below": "下方",
+  "layout.relative.top": "顶部对齐",
+  "layout.relative.leftEdge": "左侧对齐",
+  "layout.relative.center": "居中对齐",
+  "layout.relative.bottom": "底部对齐",
+  "layout.relative.rightEdge": "右侧对齐",
+  "layout.relative.place": "在预览中放置",
+  "layout.relative.side": "相邻方向",
+  "layout.relative.alignment": "边缘对齐",
+  "layout.relative.preview": "预览已更新。点击应用以验证并使用此排列。",
+  "layout.relative.same": "请选择两个不同的屏幕。"
 }

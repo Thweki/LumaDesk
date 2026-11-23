@@ -592,5 +592,20 @@
   "scene.applyDisplay": "디스플레이 한 대에 적용",
   "scene.applyDisplayHelp": "이 프리셋에 저장된 연결된 디스플레이를 선택하세요. 해당 화면의 저장된 설정만 적용하며 저장된 위치나 주 디스플레이는 복원하지 않습니다.",
   "scene.noMatchingDisplay": "이 프리셋과 일치하는 연결된 디스플레이가 없습니다.",
-  "scene.displayMissing": "선택한 디스플레이를 찾을 수 없거나 식별자가 중복됩니다. 새로 고친 후 다시 선택하세요."
+  "scene.displayMissing": "선택한 디스플레이를 찾을 수 없거나 식별자가 중복됩니다. 새로 고친 후 다시 선택하세요.",
+  "layout.relative.to": "선택한 화면의 배치 기준",
+  "layout.relative.left": "왼쪽",
+  "layout.relative.right": "오른쪽",
+  "layout.relative.above": "위쪽",
+  "layout.relative.below": "아래쪽",
+  "layout.relative.top": "위쪽 맞춤",
+  "layout.relative.leftEdge": "왼쪽 맞춤",
+  "layout.relative.center": "가운데 맞춤",
+  "layout.relative.bottom": "아래쪽 맞춤",
+  "layout.relative.rightEdge": "오른쪽 맞춤",
+  "layout.relative.place": "미리 보기에 배치",
+  "layout.relative.side": "인접 방향",
+  "layout.relative.alignment": "가장자리 맞춤",
+  "layout.relative.preview": "미리 보기가 업데이트되었습니다. 적용을 클릭하여 배치를 검증하고 사용하세요.",
+  "layout.relative.same": "서로 다른 두 화면을 선택하세요."
 }

@@ -140,6 +140,7 @@ internal static partial class Program
                     Check(window.Displays.All(d => { var m = DisplayService.CurrentMode(d.Device); return m.X == d.X && m.Y == d.Y; }), "Alternate primary layout passes whole-topology SDC_VALIDATE without moving monitors");
                 }
                 await TestLayoutAsync(window);
+                await TestRelativePlacementFixtureAsync(window);
                 await TestLiveBrightnessAndDismissAsync(window);
                 await TestBrightnessPopupLifetimeAsync(window);
                 await TestBrightnessReadbackAsync(window);
@@ -347,7 +348,7 @@ internal static partial class Program
             var undo = Descendants<Button>(layout).Single(btn => System.Windows.Automation.AutomationProperties.GetAutomationId(btn) == "layout-undo");
             var redo = Descendants<Button>(layout).Single(btn => System.Windows.Automation.AutomationProperties.GetAutomationId(btn) == "layout-redo");
             Check(!undo.IsEnabled && !redo.IsEnabled, "Loaded layout has no undo or redo steps");
-            var primary = Descendants<ComboBox>(layout).Last(); primary.SelectedItem = a;
+            var primary = Descendants<ComboBox>(layout).Single(c => System.Windows.Automation.AutomationProperties.GetAutomationId(c) == "layout-primary"); primary.SelectedItem = a;
             Check(calls == 0 && layout.Placements.Single(p => p.Id == a.Id).Primary, "Primary selection only previews and sends no display command");
             Check(ApplicationCommands.Undo.InputGestures.OfType<KeyGesture>().Any(g => g.Key == Key.Z && g.Modifiers == ModifierKeys.Control) &&
                 ApplicationCommands.Redo.InputGestures.OfType<KeyGesture>().Any(g => g.Key == Key.Y && g.Modifiers == ModifierKeys.Control), "Layout undo and redo commands expose Ctrl+Z and Ctrl+Y");

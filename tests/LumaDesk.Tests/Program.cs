@@ -144,4 +144,5 @@ var snapped = LayoutRules.Snap(layout[0] with { X = -1900, Y = 15 }, new[] { lay
 Check(snapped.X == -1920 && snapped.Y == 0, "Dragged screen snaps to neighboring edge and alignment");
 LayoutHistoryTests.Run(Check);
 SceneFileTests.Run(Check);
+RelativePlacementTests.Run(Check);
 Console.WriteLine($"{tests} tests passed.");

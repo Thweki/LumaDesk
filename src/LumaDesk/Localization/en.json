@@ -592,5 +592,20 @@
   "scene.applyDisplay": "Apply to one display",
   "scene.applyDisplayHelp": "Choose a connected display saved in this preset. Applies its saved settings only; skips saved positions and the main display.",
   "scene.noMatchingDisplay": "No connected displays match this preset.",
-  "scene.displayMissing": "The selected display is missing or ambiguous. Refresh and select it again."
+  "scene.displayMissing": "The selected display is missing or ambiguous. Refresh and select it again.",
+  "layout.relative.to": "Position selected display relative to",
+  "layout.relative.left": "Left of",
+  "layout.relative.right": "Right of",
+  "layout.relative.above": "Above",
+  "layout.relative.below": "Below",
+  "layout.relative.top": "Top edges",
+  "layout.relative.leftEdge": "Left edges",
+  "layout.relative.center": "Centers",
+  "layout.relative.bottom": "Bottom edges",
+  "layout.relative.rightEdge": "Right edges",
+  "layout.relative.place": "Place in preview",
+  "layout.relative.side": "Side of neighbor",
+  "layout.relative.alignment": "Edge alignment",
+  "layout.relative.preview": "Preview updated. Click Apply to validate and use this layout.",
+  "layout.relative.same": "Choose two different displays."
 }

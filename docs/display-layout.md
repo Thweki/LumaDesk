@@ -6,6 +6,14 @@
 
 The layout editor offers **Undo preview / Redo preview** (`Ctrl+Z` / `Ctrl+Y`) for drags, coordinate updates, arrangements and primary-screen choices. In coordinate text fields, these shortcuts retain normal text editing behavior; use the buttons to undo a whole preview step. Successful apply, reload or topology changes clear preview history; failed apply preserves it for correction. Undo/redo only changes the preview, never an already applied desktop layout.
 
+精确相邻放置：先选择要移动的屏幕，再选择参考屏幕、左侧/右侧/上方/下方以及边缘或居中对齐，点击「在预览中放置」。左右放置支持顶部/居中/底部对齐，上下放置支持左侧/居中/右侧对齐。仅移动所选屏幕；其他屏幕与主屏标识保持不变。最后点击应用，验证完整排列后再提交。与第三块屏幕重叠或断开的预览仍会被拒绝。
+
+### Precise relative placement
+
+In the display layout editor, select the screen to move, then choose a neighbor under **Position selected display relative to**. Choose **Left of**, **Right of**, **Above**, or **Below**, and an edge or center alignment. Click **Place in preview**, then **Apply** when the full layout is ready.
+
+This closes the gap to that neighbor using output pixels, including for mixed portrait/landscape screens. Left/right placement aligns top edges, centers, or bottom edges; above/below placement aligns left edges, centers, or right edges. Half-pixel center offsets round toward the top/left. Other screens and the primary designation stay unchanged. Placement only edits the preview; Apply still rejects overlaps or disconnected screens and uses the existing rollback-protected layout transaction. At least two displays are required.
+
 坐标取自 EnumDisplaySettings 的原生模式，与分辨率使用相同物理像素单位。主屏位置归零，其余屏幕整体平移，保留相对关系。纯规则拒绝重叠、断开、重复设备及多个主屏。
 
 读取完整 CCD 路径和 64 字节模式联合体，仅修改源位置，先使用 SDC_VALIDATE | SDC_USE_SUPPLIED_DISPLAY_CONFIG 验证整套排列，再整体应用保存。不能逐屏单独验证主屏迁移：其他屏幕未移动时会误判完整布局。

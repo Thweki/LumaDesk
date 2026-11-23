@@ -67,6 +67,7 @@ internal static partial class Program
                     TestNextScheduleFixture(owner);
                     TestSceneNoteFixture(owner);
                     TestSceneSearchFixture(owner);
+                    await TestRelativePlacementFixtureAsync(owner);
                     await TestLiveBrightnessFixtureAsync(owner);
                     await TestQuickScaleFixtureAsync(owner);
                     await TestBrightnessStepsFixtureAsync(owner);
