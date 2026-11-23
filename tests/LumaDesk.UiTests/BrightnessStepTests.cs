@@ -107,7 +107,7 @@ internal static partial class Program
             var settings = window.CreateBrightnessSlider(display, (_, _) => Task.CompletedTask);
             var volume = window.CreateSlider("volume", 50, 100, _ => Task.CompletedTask, compact: true);
             Check(!Descendants<Button>(settings).Any() && !Descendants<Button>(volume).Any(),
-                "Step controls appear only on compact combined brightness");
+                "Brightness steps leave full settings and generic compact sliders unchanged");
 
             writes.Clear(); Click(up);
             slider.RaiseEvent(new RoutedEventArgs(FrameworkElement.UnloadedEvent)); await Task.Delay(100);

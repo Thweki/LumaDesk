@@ -149,11 +149,11 @@ internal sealed partial class QuickWindow : Window
                 }
                 if (d.Volume.HasValue)
                 {
-                    more.Children.Add(owner.CreateSlider(L.T("s716ddda53d"), d.Volume, 100, async value =>
+                    more.Children.Add(owner.CreateQuickVolumeSlider(d, async value =>
                     {
                         await owner.Service.SetPercentAsync(d, 0x62, value); d.Volume = value;
                         owner.Status(d.Name + L.T("s5caf7d72ba") + value + "%"); owner.RefreshView();
-                    }, compact: true));
+                    }));
                 }
                 if (d.Contrast.HasValue) more.Children.Add(owner.CreateSlider(L.T("s4cbc753240"), d.Contrast, 100, async value =>
                 {

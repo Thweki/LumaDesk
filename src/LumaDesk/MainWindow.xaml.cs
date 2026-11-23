@@ -237,7 +237,10 @@ public partial class MainWindow : Window
         return CreateSlider(L.T("s8e2f643ad1"), GetCombinedBrightness(display), 100, value => changed(display, value), help, compact, display);
     }
 
-    internal UIElement CreateSlider(string label, int? value, int maximum, Func<int, Task> changed, string? help = null, bool compact = false, DisplayInfo? brightnessDisplay = null)
+    internal UIElement CreateQuickVolumeSlider(DisplayInfo display, Func<int, Task> changed) =>
+        CreateSlider(L.T("s716ddda53d"), display.Volume, 100, changed, compact: true, volumeSteps: true);
+
+    internal UIElement CreateSlider(string label, int? value, int maximum, Func<int, Task> changed, string? help = null, bool compact = false, DisplayInfo? brightnessDisplay = null, bool volumeSteps = false)
     {
         var stack = new StackPanel(); var amount = Ui.Text(value.HasValue ? value + "%" : L.T("s7c53786065"), 12, "#7C8594"); stack.Children.Add(Ui.Row(Ui.Labels(label, help), amount));
         var slider = new Slider { Value = value ?? 0, Maximum = maximum, IsEnabled = value.HasValue, Margin = new Thickness(0, compact ? 1 : 8, 0, 0), Height = compact ? 22 : 28 }; System.Windows.Automation.AutomationProperties.SetName(slider, label);
@@ -297,10 +300,11 @@ public partial class MainWindow : Window
             RefreshPopup();
         }));
         stack.LostKeyboardFocus += (_, _) => Dispatcher.BeginInvoke(new Action(RefreshPopup));
-        if (compact && brightnessDisplay != null)
+        if (compact && (brightnessDisplay != null || (volumeSteps && value.HasValue)))
         {
             int StepValue(int delta)
             {
+                if (brightnessDisplay == null) return Math.Clamp((int)Math.Round(slider.Value) + delta, 0, maximum);
                 var options = Options(brightnessDisplay);
                 return GroupRules.Target((int)Math.Round(slider.Value) + delta, options, options);
             }
@@ -323,8 +327,9 @@ public partial class MainWindow : Window
                 return button;
             }
             var controls = new DockPanel();
-            var down = StepButton("−5", "s970eb36fb3", -5, "quick-brightness-down");
-            var up = StepButton("+5", "s768e8a9c2a", 5, "quick-brightness-up");
+            bool volume = brightnessDisplay == null;
+            var down = StepButton("−5", volume ? "quick.volumeDown" : "s970eb36fb3", -5, volume ? "quick-volume-down" : "quick-brightness-down");
+            var up = StepButton("+5", volume ? "quick.volumeUp" : "s768e8a9c2a", 5, volume ? "quick-volume-up" : "quick-brightness-up");
             DockPanel.SetDock(down, Dock.Left); controls.Children.Add(down);
             DockPanel.SetDock(up, Dock.Right); controls.Children.Add(up);
             slider.Margin = new Thickness(8, 1, 8, 0); controls.Children.Add(slider);

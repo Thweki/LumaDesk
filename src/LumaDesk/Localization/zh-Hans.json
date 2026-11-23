@@ -644,5 +644,7 @@
   "awake.toggle": "保持屏幕唤醒（实验性）",
   "awake.help": "面板可见时阻止屏幕和系统因空闲而休眠。隐藏或关闭面板后自动关闭。可固定面板以保持打开。",
   "awake.error": "无法保持屏幕唤醒：{0}",
-  "awake.reason": "LumaDesk：托盘面板打开时保持屏幕唤醒"
+  "awake.reason": "LumaDesk：托盘面板打开时保持屏幕唤醒",
+  "quick.volumeDown": "显示器音量降低 5 个百分点",
+  "quick.volumeUp": "显示器音量提高 5 个百分点"
 }

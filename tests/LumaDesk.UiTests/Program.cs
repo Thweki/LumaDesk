@@ -128,6 +128,7 @@ internal static partial class Program
                 await TestHdrBadgesAsync(window);
                 await TestMultiBrightnessAsync(window);
                 await TestBrightnessStepsFixtureAsync(window);
+                await TestVolumeStepsFixtureAsync(window);
                 await TestInputSwitchUiAsync(window);
                 await TestInputConnectionUiAsync(window);
                 window.Hide(); await TestQuickScaleFixtureAsync(window); window.Show();
@@ -548,8 +549,10 @@ internal static partial class Program
         {
             quick.Render(); quick.Show(); quick.UpdateLayout();
             Check(!Has("quick-output-toggle-1") && !Descendants<TextBlock>(quick).Any(t => t.Text == "显示器音量"), "Mode and volume controls stay inside More by default");
+            Check(!Has("quick-volume-down") && !Has("quick-volume-up"), "Volume steps stay inside More by default");
             Toggle("quick-more-toggle-1");
             Check(Has("quick-output-toggle-1") && Has("quick-refresh-toggle-1") && Descendants<TextBlock>(quick).Any(t => t.Text == "显示器音量"), "More exposes real output, refresh and supported monitor volume controls");
+            Check(Has("quick-volume-down") && Has("quick-volume-up"), "More exposes volume steps for the selected supported monitor");
             Toggle("quick-refresh-toggle-1"); var rates = List("quick-refresh-list-1");
             Check(rates.Items.Cast<DisplayMode>().SequenceEqual(new[] { current, slower }) && Equals(rates.SelectedItem, current), "Refresh list filters current pixel dimensions, deduplicates and selects current rate");
             Check(calls == 0, "Expanding mode lists does not send a display command");
@@ -582,6 +585,7 @@ internal static partial class Program
                 "Quick rotation uses the selected display and existing validated mode transaction");
             SelectQuick(quick, 2);
             Check(!Has("quick-output-toggle-2") && !Has("quick-refresh-toggle-2") && !Descendants<TextBlock>(quick).Any(t => t.Text == "显示器音量"), "Unsupported display has no fabricated output, refresh or volume controls");
+            Check(!Has("quick-volume-down") && !Has("quick-volume-up"), "Selecting an unsupported monitor removes volume steps");
             Check(!window.IsVisible, "All quick mode operations leave main settings hidden");
         }
         finally

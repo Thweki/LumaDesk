@@ -45,6 +45,7 @@ For **Windows 10 / 11 x64**. The .NET runtime is included. Choose a file from [R
 1. Run `LumaDesk.exe`. Click the tray icon for the panel; double-click for settings.
 2. Pick a screen at the top and drag brightness or HiDPI. Click **−5 / +5** beside brightness for five-point steps; these follow the slider's sync/group scope and display limits. Use **Link brightness** to adjust several screens.
    Choose **Move panel here** to bring the panel to that screen. It stays there until closed or the screen disconnects; reopening starts at the tray again.
+   Under **More → Monitor volume**, use **−5 / +5** to adjust only the selected monitor in five-percentage-point steps (0–100%). These controls appear when Windows exposes monitor volume through DDC/CI; they do not change Windows master volume.
 3. Save your setup under **Settings → Presets**. Startup and language options live under **Settings → Application**.
 
 After applying a preset, open a screen in **Settings → Displays → Reset to preset** to restore its brightness, scaling, rotation, or all available saved controls. The reset target is the last preset successfully applied to that screen during this session. [Reset behavior and limits](docs/workflows.md#reset-one-display-to-its-preset).

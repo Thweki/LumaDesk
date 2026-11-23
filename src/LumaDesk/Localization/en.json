@@ -644,5 +644,7 @@
   "awake.toggle": "Keep displays awake (experimental)",
   "awake.help": "Prevent idle display and system sleep while this panel is visible. Turns off when the panel hides or closes. Pin the panel to keep it open.",
   "awake.error": "Could not keep displays awake: {0}",
-  "awake.reason": "LumaDesk: keep displays awake while the tray panel is open"
+  "awake.reason": "LumaDesk: keep displays awake while the tray panel is open",
+  "quick.volumeDown": "Decrease monitor volume by 5 percentage points",
+  "quick.volumeUp": "Increase monitor volume by 5 percentage points"
 }
