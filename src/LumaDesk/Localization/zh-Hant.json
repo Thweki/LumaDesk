@@ -569,5 +569,20 @@
   "night.invalid": "請使用 24 小時制 HH:mm 格式，開始和結束時間不能相同。",
   "automation.weekly": "按星期執行（實驗性）",
   "automation.weeklyHelp": "關閉時每天執行；開啟後僅在所選星期執行。不選星期則暫停時間觸發。",
-  "automation.weeklyTime": "所選星期的時間"
+  "automation.weeklyTime": "所選星期的時間",
+  "compare.option": "預設比較（實驗性）",
+  "compare.action": "與目前設定比較",
+  "compare.help": "唯讀快照：目前 → 已儲存。未指定的項目不顯示；未知表示無法使用或讀取。比較不會驗證驅動程式支援；還原排列還需要螢幕相符且配置有效。再次點擊可重新整理。",
+  "compare.empty": "此預設沒有已儲存的顯示設定。",
+  "compare.match": "已儲存的項目與目前快照一致。",
+  "compare.missing": "{0}：未連接，將略過此螢幕。",
+  "compare.extra": "{0}：已連接，但不在此預設中。",
+  "compare.row": "{0} · {1}: {2} → {3}",
+  "compare.failed": "無法比較目前設定。",
+  "compare.userProfiles": "個人 ICC 設定",
+  "compare.x": "水平位置（像素）",
+  "compare.y": "垂直位置（像素）",
+  "compare.primary": "主螢幕",
+  "compare.yes": "是",
+  "compare.no": "否"
 }

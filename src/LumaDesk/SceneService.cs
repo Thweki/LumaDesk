@@ -86,24 +86,20 @@ internal static class SceneService
         };
     }
 
-    internal static async Task<Preset> CaptureDraft(ISceneBackend backend)
-    {
-        var draft = await Capture(backend, L.T("s3cbfca23b6"));
-        if (draft.Displays.Count == 0) throw new InvalidOperationException(L.T("scene.draftNoDisplays"));
-        return draft;
-    }
+    internal static Task<Preset> Capture(ISceneBackend backend, string name) => Capture(backend.Displays, backend.Color, name);
 
-    internal static async Task<Preset> Capture(ISceneBackend backend, string name)
+    internal static async Task<Preset> Capture(IReadOnlyList<DisplayInfo> displays,
+        Func<DisplayInfo, Task<DisplayColorState>> readColor, string name)
     {
         var scene = new Preset { Name = name };
-        foreach (var d in backend.Displays.ToArray())
+        foreach (var d in displays.ToArray())
         {
             var saved = new PresetDisplay { Id = d.Id, Name = d.Name, Brightness = d.Brightness, Dimming = d.Dimming,
                 Mode = d.Current, Orientation = d.Orientation, Dpi = d.DpiScale.CanSet ? d.DpiScale.CurrentPercent : null,
                 X = d.X, Y = d.Y, Primary = d.Primary };
             try
             {
-                var color = await backend.Color(d);
+                var color = await readColor(d);
                 if (color.HdrKnown && color.HdrSupported) saved.Hdr = color.HdrUserEnabled;
                 if (color.ProfilesAvailable)
                 {
@@ -115,6 +111,13 @@ internal static class SceneService
             scene.Displays.Add(saved);
         }
         return scene;
+    }
+
+    internal static async Task<Preset> CaptureDraft(ISceneBackend backend)
+    {
+        var draft = await Capture(backend, L.T("s3cbfca23b6"));
+        if (draft.Displays.Count == 0) throw new InvalidOperationException(L.T("scene.draftNoDisplays"));
+        return draft;
     }
 
     // Resolve the device again between operations: a mode change can replace every DisplayInfo.

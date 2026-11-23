@@ -569,5 +569,20 @@
   "night.invalid": "시작과 종료에 서로 다른 시간을 24시간제 HH:mm 형식으로 입력하세요.",
   "automation.weekly": "요일 선택 (실험적)",
   "automation.weeklyHelp": "끄면 매일, 켜면 선택한 요일에만 실행합니다. 선택한 요일이 없으면 시간 실행을 중지합니다.",
-  "automation.weeklyTime": "선택한 요일의 시간"
+  "automation.weeklyTime": "선택한 요일의 시간",
+  "compare.option": "프리셋 비교(실험 기능)",
+  "compare.action": "현재 설정과 비교",
+  "compare.help": "읽기 전용 스냅샷: 현재 → 저장된 값. 지정하지 않은 항목은 생략합니다. 알 수 없음은 사용할 수 없거나 읽을 수 없음을 의미합니다. 드라이버 지원 여부는 확인하지 않습니다. 배치 복원에는 일치하는 화면과 유효한 배치도 필요합니다. 다시 클릭하면 새로 고칩니다.",
+  "compare.empty": "이 프리셋에 저장된 디스플레이 설정이 없습니다.",
+  "compare.match": "저장된 항목이 현재 스냅샷과 일치합니다.",
+  "compare.missing": "{0}: 연결되지 않아 이 디스플레이는 건너뜁니다.",
+  "compare.extra": "{0}: 연결되어 있지만 이 프리셋에 포함되지 않습니다.",
+  "compare.row": "{0} · {1}: {2} → {3}",
+  "compare.failed": "현재 설정을 비교할 수 없습니다.",
+  "compare.userProfiles": "개인 ICC 프로필",
+  "compare.x": "가로 위치(px)",
+  "compare.y": "세로 위치(px)",
+  "compare.primary": "주 디스플레이",
+  "compare.yes": "예",
+  "compare.no": "아니요"
 }

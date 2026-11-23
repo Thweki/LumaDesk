@@ -59,6 +59,7 @@ internal static partial class Program
                     TestIdleDimmingOptions(owner);
                     TestSceneDuplicateFixture(owner);
                     TestWeeklyScheduleFixture(owner);
+                    await TestSceneComparisonFixtureAsync(owner);
                     await TestSceneDraftFixtureAsync(owner);
                     TestSceneOrderFixture(owner);
                     TestNextScheduleFixture(owner);

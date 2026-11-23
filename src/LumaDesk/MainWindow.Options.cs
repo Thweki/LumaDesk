@@ -42,5 +42,6 @@ public partial class MainWindow
         PageContent.Children.Add(Ui.Card(Ui.Row(idleLabels, idleToggle)));
         PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("idle.delay")), idleDelay)));
         PageContent.Children.Add(CreateNightDimmingOptions());
+        PageContent.Children.Add(Ui.Card(CreateSceneComparisonOption()));
     }
 }

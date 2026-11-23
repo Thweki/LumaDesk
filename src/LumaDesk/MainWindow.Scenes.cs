@@ -248,6 +248,7 @@ public partial class MainWindow
             details.Children.Add(Ui.Row(rename, Ui.Button(L.T("scene.rename"), () => RenameScene(scene, rename.Text))));
             details.Children.Add(Ui.Button(L.T("scene.update"), () => _ = RunAsync(() => SaveSceneAsync(rename.Text, scene))));
             details.Children.Add(Ui.Button(L.T("scene.export"), () => _ = RunAsync(() => ExportSceneAsync(scene))));
+            if (CreateSceneComparison(scene) is UIElement comparison) details.Children.Add(comparison);
             details.Children.Add(Ui.Line());
             details.Children.Add(CreateSceneDuplicateEditor(scene));
             details.Children.Add(Ui.Line());

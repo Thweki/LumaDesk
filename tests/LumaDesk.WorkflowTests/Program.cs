@@ -202,6 +202,7 @@ using (var cancelled = new CancellationTokenSource())
 }
 await SceneDuplicateTests.Run(Check);
 WeeklyScheduleTests.Run(Check);
+await SceneComparisonTests.Run(Check);
 await SceneDraftTests.Run(Check);
 await SceneOrderTests.Run(Check);
 NextScheduleTests.Run(Check);

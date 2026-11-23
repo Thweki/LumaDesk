@@ -145,6 +145,7 @@ public sealed class Preferences
     public bool CloseToTray { get; set; } = true;
     public bool SyncBrightness { get; set; }
     public bool Hotkeys { get; set; } = true;
+    public bool ExperimentalPresetComparison { get; set; }
     public bool ShowHelp { get; set; } = true;
     public HashSet<string> QuickCollapsedDisplays { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public string? QuickMoreDisplayId { get; set; }

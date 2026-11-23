@@ -33,6 +33,7 @@ Check(lease.Pending, "Failed rollback remains pending"); failRestore = false; le
 await RecoveryLifecycleTests.RunAsync(Check);
 IdleDimmingTests.Run(Check);
 NightDimmingTests.Run(Check);
+SceneComparisonTests.Run(Check);
 var original = Native.DevMode.Create(); original.Width = 2560; original.X = -2560; original.Frequency = 144; original.Fields = 0x80000;
 var copy = JsonSerializer.Deserialize<Native.DevMode>(JsonSerializer.Serialize(original, Storage.Json), Storage.Json);
 Check(copy.Width == 2560 && copy.X == -2560 && copy.Size == 220 && copy.Fields == original.Fields, "Watchdog recovery data roundtrip preserves native mode");

@@ -569,5 +569,20 @@
   "night.invalid": "Use different start and end times in 24-hour HH:mm format.",
   "automation.weekly": "Selected weekdays (experimental)",
   "automation.weeklyHelp": "Off: daily. On: selected days only. No days: time trigger paused.",
-  "automation.weeklyTime": "Time on selected days"
+  "automation.weeklyTime": "Time on selected days",
+  "compare.option": "Preset comparison (experimental)",
+  "compare.action": "Compare with current setup",
+  "compare.help": "Read-only snapshot: current → saved. Unspecified fields are omitted. Unknown means unavailable or unreadable. This comparison does not validate driver support; layout restoration also requires matching screens and valid geometry. Click again to refresh.",
+  "compare.empty": "This preset has no saved display settings.",
+  "compare.match": "Saved fields match the current snapshot.",
+  "compare.missing": "{0}: disconnected; this display will be skipped.",
+  "compare.extra": "{0}: connected but not included in this preset.",
+  "compare.row": "{0} · {1}: {2} → {3}",
+  "compare.failed": "Could not compare the current setup.",
+  "compare.userProfiles": "Personal ICC profiles",
+  "compare.x": "Horizontal position (px)",
+  "compare.y": "Vertical position (px)",
+  "compare.primary": "Main display",
+  "compare.yes": "Yes",
+  "compare.no": "No"
 }
