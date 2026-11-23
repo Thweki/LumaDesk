@@ -4,7 +4,7 @@
 
 LumaDesk 是一款开源的 Windows 多显示器管理工具。单击系统托盘图标，就能按桌面位置选中一块屏幕，调整亮度或缩放。把常用的亮度、分辨率和屏幕排列存成预设，下次接上显示器时就能一起恢复。
 
-**[下载 LumaDesk 0.6.0 预览版](https://github.com/Thweki/LumaDesk/releases/tag/v0.6.0)** · Windows 10 / 11 x64
+**[下载 LumaDesk 0.6.0](https://github.com/Thweki/LumaDesk/releases/tag/v0.6.0)** · Windows 10 / 11 x64
 
 ![在快捷面板中按位置选屏，再联调多块屏幕的亮度](docs/images/quick-demo.gif)
 

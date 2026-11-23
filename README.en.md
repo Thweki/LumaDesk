@@ -4,7 +4,7 @@
 
 LumaDesk is an open-source display manager for Windows. Click the system tray icon, pick a monitor by its position on your desk, and adjust its brightness or scaling. Save brightness, resolution and display layout together as a preset to restore the next time you connect those screens.
 
-**[Download LumaDesk 0.6.0 Preview](https://github.com/Thweki/LumaDesk/releases/tag/v0.6.0)** · Windows 10 / 11 x64
+**[Download LumaDesk 0.6.0](https://github.com/Thweki/LumaDesk/releases/tag/v0.6.0)** · Windows 10 / 11 x64
 
 ![Selecting a monitor by position, then adjusting brightness across several screens](docs/images/quick-demo-en.gif)
 
