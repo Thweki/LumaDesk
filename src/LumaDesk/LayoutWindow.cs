@@ -22,6 +22,9 @@ internal sealed class LayoutWindow : Window
     private readonly TextBox xBox = new() { Width = 95 }, yBox = new() { Width = 95 };
     private readonly ComboBox selected = new() { DisplayMemberPath = "Name", Width = 185 };
     private readonly ComboBox primary = new() { DisplayMemberPath = "Name", Width = 185 };
+    private readonly ComboBox swapTarget = new() { DisplayMemberPath = "Label", SelectedValuePath = "Id", Width = 185 };
+    private readonly Button swapButton;
+    private readonly bool swapEnabled = Environment.GetEnvironmentVariable("LUMADESK_EXPERIMENTAL_SWAP") == "1";
     private readonly ComboBox relativeTo = new() { DisplayMemberPath = "Name", Width = 185 };
     private readonly ComboBox relativeSide = new() { MinWidth = 100 };
     private readonly ComboBox relativeAlignment = new() { MinWidth = 100 };
@@ -47,6 +50,18 @@ internal sealed class LayoutWindow : Window
         AutomationProperties.SetAutomationId(selected, "layout-selected");
         AutomationProperties.SetAutomationId(primary, "layout-primary");
         CreateRelativeControls(); body.Children.Add(relativeControls);
+        swapButton = Ui.Button(L.T("layout.swap.action"), SwapPositions);
+        if (swapEnabled)
+        {
+            var swapRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 0) };
+            swapRow.Children.Add(Ui.Text(L.T("layout.swap.with"), 13));
+            swapRow.Children.Add(swapTarget); swapButton.Margin = new Thickness(8, 0, 0, 0); swapRow.Children.Add(swapButton);
+            System.Windows.Automation.AutomationProperties.SetAutomationId(swapTarget, "layout-swap-target");
+            System.Windows.Automation.AutomationProperties.SetName(swapTarget, L.T("layout.swap.with"));
+            System.Windows.Automation.AutomationProperties.SetAutomationId(swapButton, "layout-swap");
+            body.Children.Add(swapRow);
+            swapTarget.SelectionChanged += (_, _) => swapButton.IsEnabled = swapTarget.SelectedValue is string;
+        }
         var primaryRow = Ui.Row(Ui.Text(L.T("s93ff5822ca"), 13), primary); primaryRow.Margin = new Thickness(0, 14, 0, 14); body.Children.Add(primaryRow);
         var arrange = new StackPanel { Orientation = Orientation.Horizontal };
         arrange.Children.Add(Ui.Button(L.T("se25efd6551"), () => Arrange(false))); var vertical = Ui.Button(L.T("s86d5bec31e"), () => Arrange(true)); vertical.Margin = new Thickness(8, 0, 8, 0); arrange.Children.Add(vertical);
@@ -82,7 +97,13 @@ internal sealed class LayoutWindow : Window
         }), true);
         System.Windows.Automation.AutomationProperties.SetAutomationId(applyButton, "layout-apply");
         body.Children.Add(Ui.Row(Ui.Text(L.T("s67773de970"), 11, "#718096"), applyButton));
-        selected.SelectionChanged += (_, _) => { UpdateFields(); if (!loading) UpdateRelativeTargets(); };
+        selected.SelectionChanged += (_, _) =>
+        {
+            UpdateFields();
+            if (loading) return;
+            UpdateRelativeTargets();
+            UpdateSwapTargets();
+        };
         primary.SelectionChanged += (_, _) =>
         {
             if (loading || primary.SelectedItem is not DisplayInfo display) return;
@@ -98,7 +119,7 @@ internal sealed class LayoutWindow : Window
         history.Reset(displays.Select(d => new ScreenPlacement(d.Id, d.X, d.Y, (int)d.Current.Width, (int)d.Current.Height, d.Primary)));
         selected.ItemsSource = displays; selected.SelectedIndex = displays.Count > 0 ? 0 : -1;
         primary.ItemsSource = displays; primary.SelectedItem = displays.FirstOrDefault(d => d.Primary);
-        loading = false; UpdateRelativeTargets(); RefreshPreview();
+        loading = false; UpdateRelativeTargets(); UpdateSwapTargets(); RefreshPreview();
     }
     private void EditPreview(IEnumerable<ScreenPlacement> next)
     {
@@ -168,6 +189,25 @@ internal sealed class LayoutWindow : Window
             feedback.Text = L.T("layout.relative.preview");
         }
         catch (Exception ex) { feedback.Text = ex.Message; }
+    }
+    private void UpdateSwapTargets()
+    {
+        if (!swapEnabled || loading) return;
+        string? previousId = swapTarget.SelectedValue as string;
+        var choices = displays.Where(d => selected.SelectedItem is DisplayInfo current && d.Id != current.Id).ToList();
+        swapTarget.ItemsSource = choices.Select(d => new { d.Id, Label = d.Number + " · " + d.Name }).ToList();
+        swapTarget.SelectedValue = (choices.FirstOrDefault(d => d.Id == previousId) ?? choices.FirstOrDefault())?.Id;
+        swapButton.IsEnabled = swapTarget.SelectedValue is string;
+    }
+    private void SwapPositions()
+    {
+        if (!swapEnabled || busy || selected.SelectedItem is not DisplayInfo first || swapTarget.SelectedValue is not string secondId) return;
+        try
+        {
+            EditPreview(LayoutRules.SwapPositions(placements, first.Id, secondId));
+            feedback.Text = L.T("layout.swap.preview");
+        }
+        catch (InvalidOperationException ex) { feedback.Text = ex.Message; }
     }
     private void UpdateFields()
     {

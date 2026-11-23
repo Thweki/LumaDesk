@@ -146,4 +146,5 @@ LayoutHistoryTests.Run(Check);
 SceneFileTests.Run(Check);
 RelativePlacementTests.Run(Check);
 AutoLayoutTests.Run(Check);
+LayoutSwapTests.Run(Check);
 Console.WriteLine($"{tests} tests passed.");

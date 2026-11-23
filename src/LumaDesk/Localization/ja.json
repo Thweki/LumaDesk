@@ -610,5 +610,9 @@
   "layout.relative.side": "隣接する方向",
   "layout.relative.alignment": "端の位置合わせ",
   "layout.relative.preview": "プレビューを更新しました。適用をクリックして配置を検証し、使用します。",
-  "layout.relative.same": "異なる2つの画面を選択してください。"
+  "layout.relative.same": "異なる2つの画面を選択してください。",
+  "layout.swap.action": "位置を交換（試験的）",
+  "layout.swap.with": "交換先",
+  "layout.swap.preview": "プレビューで位置を交換しました。「適用」をクリックして画面を移動します。",
+  "layout.swap.choose": "交換する接続済みの異なる画面を2つ選択してください。"
 }

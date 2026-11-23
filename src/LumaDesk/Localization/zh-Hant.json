@@ -610,5 +610,9 @@
   "layout.relative.side": "相鄰方向",
   "layout.relative.alignment": "邊緣對齊",
   "layout.relative.preview": "預覽已更新。點擊套用以驗證並使用此排列。",
-  "layout.relative.same": "請選擇兩個不同的螢幕。"
+  "layout.relative.same": "請選擇兩個不同的螢幕。",
+  "layout.swap.action": "交換位置（實驗性）",
+  "layout.swap.with": "交換對象",
+  "layout.swap.preview": "已在預覽中交換位置。點擊套用以移動螢幕。",
+  "layout.swap.choose": "請選擇兩個不同的已連接螢幕進行交換。"
 }

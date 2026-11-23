@@ -142,6 +142,7 @@ internal static partial class Program
                 await TestLayoutAsync(window);
                 await TestRelativePlacementFixtureAsync(window);
                 TestAutoLayoutFixture(window);
+                await TestLayoutSwapFixtureAsync(window);
                 await TestLiveBrightnessAndDismissAsync(window);
                 await TestBrightnessPopupLifetimeAsync(window);
                 await TestBrightnessReadbackAsync(window);

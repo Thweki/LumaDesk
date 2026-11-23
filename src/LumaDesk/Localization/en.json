@@ -610,5 +610,9 @@
   "layout.relative.side": "Side of neighbor",
   "layout.relative.alignment": "Edge alignment",
   "layout.relative.preview": "Preview updated. Click Apply to validate and use this layout.",
-  "layout.relative.same": "Choose two different displays."
+  "layout.relative.same": "Choose two different displays.",
+  "layout.swap.action": "Swap positions (experimental)",
+  "layout.swap.with": "Swap with",
+  "layout.swap.preview": "Positions swapped in preview. Click Apply to move the displays.",
+  "layout.swap.choose": "Choose two different connected displays to swap."
 }
