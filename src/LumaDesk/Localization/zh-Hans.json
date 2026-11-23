@@ -566,5 +566,8 @@
   "night.start": "开始（HH:mm）",
   "night.end": "结束（HH:mm）",
   "night.apply": "应用时段",
-  "night.invalid": "请使用 24 小时制 HH:mm 格式，开始和结束时间不能相同。"
+  "night.invalid": "请使用 24 小时制 HH:mm 格式，开始和结束时间不能相同。",
+  "automation.weekly": "按星期运行（实验性）",
+  "automation.weeklyHelp": "关闭时每天运行；开启后仅在所选星期运行。不选星期则暂停时间触发。",
+  "automation.weeklyTime": "所选星期的时间"
 }

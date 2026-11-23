@@ -566,5 +566,8 @@
   "night.start": "開始（HH:mm）",
   "night.end": "終了（HH:mm）",
   "night.apply": "時間帯を適用",
-  "night.invalid": "開始と終了に異なる時刻を 24 時間制の HH:mm 形式で入力してください。"
+  "night.invalid": "開始と終了に異なる時刻を 24 時間制の HH:mm 形式で入力してください。",
+  "automation.weekly": "曜日を指定（試験的）",
+  "automation.weeklyHelp": "オフ：毎日。オン：選択した曜日のみ。未選択：時刻による実行を停止。",
+  "automation.weeklyTime": "選択した曜日の時刻"
 }

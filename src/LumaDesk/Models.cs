@@ -93,6 +93,11 @@ public sealed class Preset : IJsonOnDeserialized
     public List<PresetDisplay> Displays { get; set; } = new();
     public bool OnConnect { get; set; }
     public string? AtTime { get; set; }
+    public bool ExperimentalWeeklySchedule { get; set; }
+    public List<DayOfWeek>? ScheduleDays { get; set; } = new()
+    {
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday
+    };
     public string? OnPower { get; set; }
     public HotkeyBinding? Shortcut { get; set; }
 }

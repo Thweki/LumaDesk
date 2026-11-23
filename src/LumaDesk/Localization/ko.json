@@ -566,5 +566,8 @@
   "night.start": "시작 (HH:mm)",
   "night.end": "종료 (HH:mm)",
   "night.apply": "시간대 적용",
-  "night.invalid": "시작과 종료에 서로 다른 시간을 24시간제 HH:mm 형식으로 입력하세요."
+  "night.invalid": "시작과 종료에 서로 다른 시간을 24시간제 HH:mm 형식으로 입력하세요.",
+  "automation.weekly": "요일 선택 (실험적)",
+  "automation.weeklyHelp": "끄면 매일, 켜면 선택한 요일에만 실행합니다. 선택한 요일이 없으면 시간 실행을 중지합니다.",
+  "automation.weeklyTime": "선택한 요일의 시간"
 }

@@ -111,7 +111,7 @@ public partial class MainWindow
         UpdateNightDimming(now);
         var power = Forms.SystemInformation.PowerStatus.PowerLineStatus;
         var scenes = Preferences.Presets.Where(p =>
-            AutomationRules.CrossedTime(p.AtTime, lastAutomationTime, now) ||
+            AutomationRules.CrossedSchedule(p, lastAutomationTime, now) ||
             (power != lastPower && ((p.OnPower == "ac" && power == Forms.PowerLineStatus.Online) || (p.OnPower == "battery" && power == Forms.PowerLineStatus.Offline)))).ToArray();
         lastAutomationTime = now; lastPower = power;
         // Stable list order breaks ties; never run conflicting scenes back to back.
@@ -119,14 +119,16 @@ public partial class MainWindow
         if (scene != null) await RunAsync(async () => await ApplySceneAsync(scene));
     }
 
-    private UIElement CreateSceneSchedule(Preset scene)
+    internal UIElement CreateSceneSchedule(Preset scene)
     {
         var stack = new StackPanel();
+        var days = new WrapPanel { IsEnabled = scene.ExperimentalWeeklySchedule && scene.AtTime != null };
         var time = new TextBox { Text = scene.AtTime ?? "21:00", Width = 90, IsEnabled = scene.AtTime != null, MaxLength = 5 };
         var enabled = Toggle(scene.AtTime != null, value =>
         {
             time.IsEnabled = value; scene.AtTime = value ? (AutomationRules.ValidTime(time.Text) ? time.Text : "21:00") : null;
-            time.Text = scene.AtTime ?? "21:00"; Save();
+            time.Text = scene.AtTime ?? "21:00";
+            days.IsEnabled = value && scene.ExperimentalWeeklySchedule; Save();
         });
         time.LostKeyboardFocus += (_, _) =>
         {
@@ -135,7 +137,38 @@ public partial class MainWindow
             else { time.Text = scene.AtTime ?? "21:00"; Status(L.T("automation.timeFormat"), true); }
         };
         var right = new StackPanel { Orientation = Orientation.Horizontal }; right.Children.Add(time); enabled.Margin = new Thickness(12, 0, 0, 0); right.Children.Add(enabled);
-        stack.Children.Add(Ui.Line()); stack.Children.Add(Ui.Row(Ui.Text(L.T("automation.daily")), right));
+        System.Windows.Automation.AutomationProperties.SetAutomationId(enabled, "schedule-enabled");
+        var timeLabel = Ui.Text(L.T(scene.ExperimentalWeeklySchedule ? "automation.weeklyTime" : "automation.daily"));
+        stack.Children.Add(Ui.Line()); stack.Children.Add(Ui.Row(timeLabel, right));
+        var weekly = Toggle(scene.ExperimentalWeeklySchedule, value =>
+        {
+            scene.ExperimentalWeeklySchedule = value;
+            days.IsEnabled = value && scene.AtTime != null;
+            timeLabel.Text = L.T(value ? "automation.weeklyTime" : "automation.daily");
+            Save();
+        });
+        System.Windows.Automation.AutomationProperties.SetAutomationId(weekly, "schedule-weekly");
+        System.Windows.Automation.AutomationProperties.SetName(weekly, L.T("automation.weekly"));
+        stack.Children.Add(Ui.Line());
+        var weeklyLabels = Ui.Labels(L.T("automation.weekly"), L.T("automation.weeklyHelp"));
+        foreach (var label in weeklyLabels.Children.OfType<TextBlock>()) label.TextWrapping = TextWrapping.Wrap;
+        stack.Children.Add(Ui.Row(weeklyLabels, weekly));
+        // Keep the visible order Monday–Sunday, independent of DayOfWeek's Sunday-first values.
+        foreach (var day in new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday })
+        {
+            var choice = Toggle(scene.ScheduleDays?.Contains(day) == true, value =>
+            {
+                scene.ScheduleDays ??= new();
+                scene.ScheduleDays.RemoveAll(d => d == day);
+                if (value) scene.ScheduleDays.Add(day);
+                Save();
+            });
+            choice.Content = CultureInfo.CurrentUICulture.DateTimeFormat.GetDayName(day);
+            choice.Margin = new Thickness(0, 8, 12, 0);
+            System.Windows.Automation.AutomationProperties.SetAutomationId(choice, "schedule-day-" + day);
+            days.Children.Add(choice);
+        }
+        stack.Children.Add(days);
         var power = new ComboBox { ItemsSource = new[] { L.T("automation.never"), L.T("automation.ac"), L.T("automation.battery") }, SelectedIndex = scene.OnPower == "ac" ? 1 : scene.OnPower == "battery" ? 2 : 0 };
         power.SelectionChanged += (_, _) => { scene.OnPower = power.SelectedIndex == 1 ? "ac" : power.SelectedIndex == 2 ? "battery" : null; Save(); };
         stack.Children.Add(Ui.Line()); stack.Children.Add(Ui.Row(Ui.Text(L.T("automation.power")), power));
@@ -162,10 +195,20 @@ internal static class AutomationRules
     }
 
     internal static bool CrossedTime(string? value, DateTime previous, DateTime now)
+        => CrossedScheduleTime(value, previous, now, null);
+
+    internal static bool CrossedSchedule(Preset scene, DateTime previous, DateTime now)
+        => !scene.ExperimentalWeeklySchedule ? CrossedTime(scene.AtTime, previous, now)
+            : CrossedScheduleTime(scene.AtTime, previous, now, scene.ScheduleDays ?? new());
+
+    private static bool CrossedScheduleTime(string? value, DateTime previous, DateTime now, IReadOnlyCollection<DayOfWeek>? days)
     {
         if (!TimeSpan.TryParseExact(value, @"hh\:mm", CultureInfo.InvariantCulture, out var time) || now <= previous) return false;
         DateTime candidate = now.Date + time;
         if (candidate > now) candidate = candidate.AddDays(-1);
-        return candidate > previous && now - candidate < TimeSpan.FromDays(1);
+        // Inspect only the latest daily occurrence. Never replay an older selected weekday
+        // after a long sleep, or use the wake-up day's weekday for a midnight crossing.
+        return candidate > previous && now - candidate < TimeSpan.FromDays(1) &&
+            (days == null || days.Contains(candidate.DayOfWeek));
     }
 }

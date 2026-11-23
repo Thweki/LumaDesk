@@ -566,5 +566,8 @@
   "night.start": "Start (HH:mm)",
   "night.end": "End (HH:mm)",
   "night.apply": "Apply window",
-  "night.invalid": "Use different start and end times in 24-hour HH:mm format."
+  "night.invalid": "Use different start and end times in 24-hour HH:mm format.",
+  "automation.weekly": "Selected weekdays (experimental)",
+  "automation.weeklyHelp": "Off: daily. On: selected days only. No days: time trigger paused.",
+  "automation.weeklyTime": "Time on selected days"
 }
