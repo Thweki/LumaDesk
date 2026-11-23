@@ -60,11 +60,14 @@ public partial class App : System.Windows.Application
         }
         mutex = new Mutex(true, "Local\\LumaDesk.Desktop", out var fresh);
         activateEvent = new EventWaitHandle(false, EventResetMode.AutoReset, "Local\\LumaDesk.Activate");
-        if (!fresh) { activateEvent.Set(); Shutdown(); return; }
+        if (!fresh) { if (!e.Args.Contains("--tray")) activateEvent.Set(); Shutdown(); return; }
         activationRegistration = ThreadPool.RegisterWaitForSingleObject(activateEvent, (_, _) => Dispatcher.BeginInvoke(() => { if (MainWindow is MainWindow main) main.ShowQuick(); }), null, Timeout.Infinite, false);
         DispatcherUnhandledException += (_, args) => { Storage.Log(args.Exception.ToString()); MessageBox.Show(args.Exception.Message, L.T("s79be13bdf0")); args.Handled = true; };
         var window = new MainWindow(); MainWindow = window;
+        window.ShowActivated = false;
         window.Show(); window.Hide();
+        window.ShowActivated = true;
+        window.StartAutoUpdates();
         if (!e.Args.Contains("--tray")) window.ShowQuick();
     }
     protected override void OnExit(ExitEventArgs e) { activationRegistration?.Unregister(null); activateEvent?.Dispose(); mutex?.Dispose(); base.OnExit(e); }

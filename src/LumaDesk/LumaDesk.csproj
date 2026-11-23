@@ -15,5 +15,6 @@
   <ItemGroup><PackageReference Include="System.Management" Version="8.0.0"/></ItemGroup>
   <ItemGroup><InternalsVisibleTo Include="LumaDesk.UiTests"/><InternalsVisibleTo Include="LumaDesk.WorkflowTests"/></ItemGroup>
   <ItemGroup><Resource Include="Assets/app.ico"/><Resource Include="Assets/brand.png"/></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="ApplyUpdate.ps1" LogicalName="LumaDesk.ApplyUpdate.ps1"/></ItemGroup>
   <ItemGroup><EmbeddedResource Include="Localization/*.json" LogicalName="LumaDesk.Localization.%(Filename).json"/><EmbeddedResource Include="Assets/logo.png" LogicalName="LumaDesk.Assets.logo.png"/></ItemGroup>
 </Project>

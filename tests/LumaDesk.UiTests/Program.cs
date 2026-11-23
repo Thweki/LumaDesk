@@ -54,7 +54,7 @@ internal static partial class Program
                 Check(rejected, "Stale device identity rejected before control command");
                 Snapshot(window, "overview.png");
                 var navigation = window.Navigation.Children.OfType<Button>().ToArray();
-                string[] titles = { "显示器", "显示器组", "应用", "快捷面板", "键盘", "预设", "关于" };
+                string[] titles = { "显示器", "显示器组", "应用", "快捷面板", "键盘", "预设" };
                 for (int i = 0; i < navigation.Length; i++)
                 {
                     Click(navigation[i]); window.UpdateLayout();
@@ -212,7 +212,7 @@ internal static partial class Program
         Check(L.Language == language && window.Language.IetfLanguageTag.Equals(language, StringComparison.OrdinalIgnoreCase), "Window uses selected Windows UI language");
         Check(new[] { "window.minimize", "window.maximize", "window.close" }.All(key => Descendants<Button>(window).Any(b => System.Windows.Automation.AutomationProperties.GetName(b) == L.T(key))), "Window caption accessibility names are localized");
         var navigation = window.Navigation.Children.OfType<Button>().ToArray();
-        string[] labels = { "显示器", "显示器组", "应用", "快捷面板", "键盘", "预设", "关于" };
+        string[] labels = { "显示器", "显示器组", "应用", "快捷面板", "键盘", "预设" };
         for (int i = 0; i < navigation.Length; i++)
         {
             Click(navigation[i]); window.UpdateLayout();

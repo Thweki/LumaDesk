@@ -1,7 +1,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="LumaDesk" Manufacturer="LumaDesk contributors" Version="$(var.AppVersion)"
            UpgradeCode="BB07ED3C-795F-4BCD-9D41-757B3542BFF1" Scope="perMachine" Language="1033">
-    <MajorUpgrade DowngradeErrorMessage="A newer version of LumaDesk is already installed." />
+    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of LumaDesk is already installed." />
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
     <Property Id="WINDOWSBUILDNUMBER" Secure="yes">
       <RegistrySearch Id="BuildNumberSearch" Root="HKLM" Key="SOFTWARE\Microsoft\Windows NT\CurrentVersion"
@@ -13,7 +13,7 @@
     <Property Id="ARPURLINFOABOUT" Value="https://github.com/Thweki/LumaDesk" />
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="LumaDesk">
-        <Component Id="Application" Guid="*">
+        <Component Id="Application" Guid="{A4E04935-C523-5ABE-B658-2DD48A3202CE}">
           <File Id="AppExe" Source="$(var.PublishDir)/LumaDesk.exe" KeyPath="yes">
             <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="LumaDesk"
                       WorkingDirectory="INSTALLFOLDER" Advertise="yes" Icon="AppIcon.exe" />

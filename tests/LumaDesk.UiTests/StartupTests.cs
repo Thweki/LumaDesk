@@ -25,7 +25,7 @@ internal static partial class Program
         Check(ReferenceEquals(overview, window.PageContent.Children[0]),
             "Activating visible settings preserves the current controls");
         window.Hide();
-        Click(navigation[6]); // A render request while hidden must preserve the existing controls.
+        Click(navigation[^1]); // A render request while hidden must preserve the existing controls.
         Click(navigation[0]);
         Check(ReferenceEquals(overview, window.PageContent.Children[0]),
             "Hidden render requests do not rebuild the settings page");
@@ -41,8 +41,8 @@ internal static partial class Program
             window.ShowSettings();
             Check(Descendants<Button>(window.PageContent).Any(b => AutomationProperties.GetName(b) == L.T("s84041df0ce") + display.Name),
                 "Reopening settings renders the latest display data");
-            Click(navigation[6]);
-            Check(window.Breadcrumb.Text.EndsWith((string)navigation[6].Tag),
+            Click(navigation[^1]);
+            Check(window.Breadcrumb.Text.EndsWith((string)navigation[^1].Tag),
                 "Visible navigation still renders immediately");
             window.Hide();
             Click(navigation[0]);
@@ -70,7 +70,8 @@ internal static partial class Program
         bool visible = true;
         var owner = new MainWindow(() => visible) { Displays = new() { display } };
         var navigation = owner.Navigation.Children.OfType<Button>().ToArray();
-        var about = navigation[^1];
+        var application = navigation.Single(b => Equals(b.Tag, L.T("s63c73c4730")));
+        Check(navigation.Length == 6 && navigation.All(b => !Equals(b.Tag, "关于")), "Settings omits the About page");
 
         owner.RefreshView();
         Button DisplayRow() => Descendants<Button>(owner.PageContent).Single(b => AutomationProperties.GetName(b) == L.T("s84041df0ce") + display.Name);
@@ -86,7 +87,7 @@ internal static partial class Program
         visible = false;
         display.Name = "Fixture Beta";
         owner.RefreshView();
-        Click(about);
+        Click(application);
         Check(ReferenceEquals(originalPage, owner.PageContent.Children[0])
             && ReferenceEquals(originalTab, owner.DisplayTabs.Children[1])
             && Equals(originalTab.ToolTip, "Fixture Alpha"),
@@ -96,8 +97,19 @@ internal static partial class Program
         owner.RefreshView();
         Check(!ReferenceEquals(originalPage, owner.PageContent.Children[0])
             && owner.DisplayTabs.Children.Count == 0 && owner.TabStrip.Visibility == Visibility.Collapsed
-            && owner.Breadcrumb.Text.EndsWith((string)about.Tag),
+            && owner.Breadcrumb.Text.EndsWith((string)application.Tag),
             "Visible rendering uses refreshed data and navigation selected while hidden");
+        Check(Descendants<CheckBox>(owner.PageContent).Any(c => AutomationProperties.GetName(c) == L.T("sde38b92ad2")),
+            "Application settings exposes start at sign-in");
+        CheckBox UpdateToggle() => Descendants<CheckBox>(owner.PageContent).Single(c => AutomationProperties.GetName(c) == L.T("updates.title"));
+        Check(UpdateToggle().IsChecked == false, "Automatic updates default off");
+        foreach (bool enabled in new[] { true, false })
+        {
+            var toggle = UpdateToggle();
+            toggle.IsChecked = enabled;
+            toggle.RaiseEvent(new RoutedEventArgs(CheckBox.ClickEvent));
+            Check(Storage.Load().AutoUpdate == enabled && UpdateToggle().IsChecked == enabled, "Automatic updates preference persists");
+        }
         Click(navigation[0]);
         Click(DisplayRow());
         Check(Equals(((Button)owner.DisplayTabs.Children[1]).ToolTip, "Fixture Beta"), "Reopening the display uses its new name");

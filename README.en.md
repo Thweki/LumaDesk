@@ -48,7 +48,8 @@ For **Windows 10 / 11 x64**. A slim EXE is available starting with v0.6.0. Choos
    The panel stays on that display until you close it or the display disconnects. Reopening the panel brings it back to the tray display.
    Under **More → Monitor volume**, use **−5 / +5** to adjust only the selected monitor in five-percentage-point steps (0–100%). These controls appear when Windows exposes monitor volume through DDC/CI; they do not change Windows master volume.
    Choose **Show display list** for numbered, named screens in your saved panel order. Reorder them under **Settings → Quick panel → More options → Move up / Move down**; this never changes desktop positions. **Show display map** returns to the spatial view. The chosen view is remembered; new profiles start with the map. Both views support **Link brightness**.
-3. Save your setup under **Settings → Presets**. Startup and language options live under **Settings → Application**.
+3. Save your setup under **Settings → Presets**. To start LumaDesk in the tray when you sign in to Windows, enable the startup option under **Settings → Application**.
+4. **Automatic updates** under **Settings → Application** is off by default. Enable it to download new GitHub releases, including previews. LumaDesk verifies the SHA-256 digest and installs the update when you quit. Turning the option off cancels a pending update. MSI upgrades may prompt for administrator approval.
 
 After applying a preset, open a screen in **Settings → Displays → Reset to preset** to restore its brightness, scaling, rotation, or all available saved controls. The reset target is the last preset successfully applied to that screen during this session. [Reset behavior and limits](docs/workflows.md#reset-one-display-to-its-preset).
 

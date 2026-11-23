@@ -153,6 +153,7 @@ public sealed class Preferences
 {
     public string Language { get; set; } = "auto";
     public bool CloseToTray { get; set; } = true;
+    public bool AutoUpdate { get; set; }
     public bool SyncBrightness { get; set; }
     public bool Hotkeys { get; set; } = true;
     public bool ExperimentalPresetComparison { get; set; }

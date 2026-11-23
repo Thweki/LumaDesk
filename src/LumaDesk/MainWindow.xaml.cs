@@ -49,7 +49,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         Ui.ConfigureWindow(this);
         DpiChanged += (_, _) => Dispatcher.BeginInvoke(FitToMonitor);
-        AddNavigation("displays", L.T("s1a13ea5910"), "\uE7F4"); AddNavigation("groups", L.T("s563a1990f3"), "\uE8A9"); AddNavigation("application", L.T("s63c73c4730"), "\uE713"); AddNavigation("quick", L.T("s770544f702"), "\uE8A5"); AddNavigation("keyboard", L.T("s864200bbb2"), "\uE765"); AddNavigation("presets", L.T("sf1de1e2621"), "\uE734"); AddNavigation("about", L.T("s52d25a9e30"), "\uE946");
+        AddNavigation("displays", L.T("s1a13ea5910"), "\uE7F4"); AddNavigation("groups", L.T("s563a1990f3"), "\uE8A9"); AddNavigation("application", L.T("s63c73c4730"), "\uE713"); AddNavigation("quick", L.T("s770544f702"), "\uE8A5"); AddNavigation("keyboard", L.T("s864200bbb2"), "\uE765"); AddNavigation("presets", L.T("sf1de1e2621"), "\uE734");
         ShellSurface.SizeChanged += (_, e) => UpdateSidebar(e.NewSize.Width < 800);
         hotplugTimer.Tick += async (_, _) => { hotplugTimer.Stop(); await RestoreAfterConnectionAsync(); };
         Loaded += async (_, _) => { FitToMonitor(); SetupTray(); await RefreshAsync(); StartAutomation(); StartCommands(); };
@@ -64,6 +64,7 @@ public partial class MainWindow : Window
         {
             if (!exiting && Preferences.CloseToTray) { e.Cancel = true; Hide(); return; }
             if (modePending || sceneBusy) { e.Cancel = true; return; }
+            FinishAutoUpdates();
             ShutdownResources();
         };
     }
@@ -164,7 +165,6 @@ public partial class MainWindow : Window
             case "quick": RenderMenu(); break;
             case "keyboard": RenderKeyboard(); break;
             case "presets": RenderPresets(); break;
-            case "about": RenderAbout(); break;
         }
     }
     internal void RefreshView() => Render();
@@ -465,33 +465,51 @@ public partial class MainWindow : Window
         appearance.Children.Add(Ui.Line()); appearance.Children.Add(CreateThemeOption());
         PageContent.Children.Add(Ui.Card(appearance));
         var content = new StackPanel(); content.Children.Add(Ui.Setting(L.T("s78d94f90d2"), Help(L.T("s95e8d6a9f6")), Toggle(Preferences.CloseToTray, v => { Preferences.CloseToTray = v; Save(); })));
-        content.Children.Add(Ui.Line()); content.Children.Add(Ui.Setting(L.T("sde38b92ad2"), Help(L.T("sea9af1c6cc")), Toggle(IsStartupEnabled(), SetStartup)));
+        content.Children.Add(Ui.Line()); content.Children.Add(CreateStartupOption());
+        content.Children.Add(Ui.Line()); content.Children.Add(CreateAutoUpdateOption());
         content.Children.Add(Ui.Line()); content.Children.Add(Ui.Setting(L.T("s6b753d5905"), L.T("sab00c1067a"), Toggle(Preferences.ShowHelp, v => { Preferences.ShowHelp = v; Save(); Render(); }))); PageContent.Children.Add(Ui.Card(content));
         content.Children.Add(Ui.Line()); content.Children.Add(Ui.Setting(L.T("automation.restore"), Help(L.T("automation.restoreHelp")), Toggle(Preferences.RestoreBrightness, value => { Preferences.RestoreBrightness = value; Save(); })));
         RenderDimmingAndSceneOptions();
         PageContent.Children.Add(Ui.Card(Ui.Setting(L.T("s9167ee8b67"), Help(L.T("s22b00c690a")), Ui.Button(L.T("s2cbe04030d"), ExportDiagnostics))));
         PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Labels(L.T("s320388530e"), L.T("sde4f02c8c4")), Ui.Button(L.T("se90c12bb08"), ResetDimming))));
     }
-    private static bool IsStartupEnabled() { using var key = Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Run"); return key?.GetValue("LumaDesk") != null; }
+    private const string StartupKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    private static string StartupCommand => $"\"{Environment.ProcessPath}\" --tray";
+    private UIElement CreateStartupOption()
+    {
+        string title = L.T("sde38b92ad2");
+        string? hint = Help(L.T("sea9af1c6cc"));
+        bool enabled = false;
+        bool readable = true;
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(StartupKey);
+            enabled = string.Equals(key?.GetValue(AppBrand.Name) as string, StartupCommand, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+        {
+            readable = false;
+            hint = ex.Message;
+        }
+        var toggle = Toggle(enabled, SetStartup);
+        toggle.IsEnabled = readable;
+        System.Windows.Automation.AutomationProperties.SetName(toggle, title);
+        return Ui.Setting(title, hint, toggle);
+    }
     private void SetStartup(bool enabled)
     {
-        try { using var key = Registry.CurrentUser.CreateSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Run"); if (enabled) key.SetValue("LumaDesk", "\"" + Environment.ProcessPath + "\" --tray"); else key.DeleteValue("LumaDesk", false); Status(enabled ? L.T("sd68c305919") : L.T("s01f73d5d98")); }
+        try
+        {
+            using var key = Registry.CurrentUser.CreateSubKey(StartupKey);
+            if (enabled) key.SetValue(AppBrand.Name, StartupCommand);
+            else key.DeleteValue(AppBrand.Name, false);
+            Status(enabled ? L.T("sd68c305919") : L.T("s01f73d5d98"));
+        }
         catch (Exception ex) { Status(ex.Message, true); Render(); }
     }
     private void RenderMenu() => RenderPanelPreferences();
     private void RenderKeyboard() => RenderShortcuts();
     private void RenderPresets() => RenderScenes();
-    private void RenderAbout()
-    {
-        Heading("LumaDesk for Windows", detail: L.F("s50a0683450", AppBrand.Version));
-        var details = new StackPanel();
-        foreach (var (title, description) in new[] { ("s64a3850bbb", "sf82e0234a5"), ("s3aecd80a6e", "s910d13c018"), ("s9dcc68b7b6", "sf72355f7b3"), ("s038ad816c5", "sa9ad97fbe4") })
-        {
-            if (details.Children.Count > 0) details.Children.Add(Ui.Line());
-            details.Children.Add(new Expander { Header = L.T(title), Content = Ui.Text(L.T(description), 12, "#626B78") });
-        }
-        PageContent.Children.Add(Ui.Card(details));
-    }
     private void SetupTray()
     {
         lightTrayGlyph = TrayIcon.UseLightGlyph();

@@ -22,6 +22,7 @@ if (args.Contains("--read-inputs"))
 }
 int checks = 0;
 void Check(bool value, string message) { if (!value) throw new Exception(message); checks++; Console.WriteLine("PASS " + message); }
+await ReleaseUpdateTests.RunAsync(Check);
 await SceneRenameTests.RunAsync(Check);
 PresetListTests.Run(Check);
 await DisplayInventoryTests.RunAsync(Check);
