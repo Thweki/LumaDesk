@@ -614,5 +614,12 @@
   "layout.swap.action": "交換位置（實驗性）",
   "layout.swap.with": "交換對象",
   "layout.swap.preview": "已在預覽中交換位置。點擊套用以移動螢幕。",
-  "layout.swap.choose": "請選擇兩個不同的已連接螢幕進行交換。"
+  "layout.swap.choose": "請選擇兩個不同的已連接螢幕進行交換。",
+  "reset.title": "重設為預設",
+  "reset.empty": "在本次工作階段中成功為此螢幕套用預設後，即可重設。",
+  "reset.source": "上次套用的預設：{0}",
+  "reset.help": "僅還原此螢幕的亮度、縮放或旋轉。「所有可用項目」還原這三項中已儲存的設定。",
+  "reset.all": "所有可用項目",
+  "reset.done": "螢幕重設完成。",
+  "reset.partial": "螢幕重設部分完成。將滑鼠停留於此處查看詳細資訊。"
 }

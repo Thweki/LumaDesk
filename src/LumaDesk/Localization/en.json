@@ -614,5 +614,12 @@
   "layout.swap.action": "Swap positions (experimental)",
   "layout.swap.with": "Swap with",
   "layout.swap.preview": "Positions swapped in preview. Click Apply to move the displays.",
-  "layout.swap.choose": "Choose two different connected displays to swap."
+  "layout.swap.choose": "Choose two different connected displays to swap.",
+  "reset.title": "Reset to preset",
+  "reset.empty": "Apply a preset successfully to this display to enable reset for this session.",
+  "reset.source": "Last applied preset: {0}",
+  "reset.help": "Restore brightness, scaling or rotation on this display only. All available restores these three saved controls.",
+  "reset.all": "All available",
+  "reset.done": "Display reset completed.",
+  "reset.partial": "Display reset partially completed. Hover here for details."
 }

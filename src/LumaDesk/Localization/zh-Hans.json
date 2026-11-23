@@ -614,5 +614,12 @@
   "layout.swap.action": "交换位置（实验性）",
   "layout.swap.with": "交换对象",
   "layout.swap.preview": "已在预览中交换位置。点击应用以移动屏幕。",
-  "layout.swap.choose": "请选择两个不同的已连接屏幕进行交换。"
+  "layout.swap.choose": "请选择两个不同的已连接屏幕进行交换。",
+  "reset.title": "重置为预设",
+  "reset.empty": "在本次会话中成功为此屏幕应用预设后，即可重置。",
+  "reset.source": "上次应用的预设：{0}",
+  "reset.help": "仅恢复此屏幕的亮度、缩放或旋转。“所有可用项”恢复这三项中已保存的设置。",
+  "reset.all": "所有可用项",
+  "reset.done": "屏幕重置完成。",
+  "reset.partial": "屏幕重置部分完成。将鼠标悬停于此处查看详情。"
 }

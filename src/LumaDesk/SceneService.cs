@@ -25,6 +25,7 @@ internal sealed class SceneResult
 {
     public int Applied { get; set; }
     public List<string> Issues { get; } = new();
+    public HashSet<string> SuccessfulDisplayIds { get; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
 internal static class SceneService
@@ -189,7 +190,7 @@ internal static class SceneService
                 if (d.Contrast != contrast) await backend.Contrast(d, contrast);
             });
             if (!outputOnly) await Step(L.T("scene.brightness"), d => backend.Brightness(d, saved));
-            if (!failed) result.Applied++;
+            if (!failed) { result.Applied++; result.SuccessfulDisplayIds.Add(saved.Id); }
         }
         if (scene.Displays.Any(d => d.X.HasValue))
         {
