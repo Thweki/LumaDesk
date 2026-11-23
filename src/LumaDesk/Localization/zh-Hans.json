@@ -585,5 +585,7 @@
   "compare.y": "垂直位置（像素）",
   "compare.primary": "主屏幕",
   "compare.yes": "是",
-  "compare.no": "否"
+  "compare.no": "否",
+  "quick.scaleDecrease": "降低缩放（文字更小）",
+  "quick.scaleIncrease": "提高缩放（文字更大）"
 }

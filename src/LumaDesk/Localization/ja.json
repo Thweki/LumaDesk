@@ -585,5 +585,7 @@
   "compare.y": "垂直位置（px）",
   "compare.primary": "メイン画面",
   "compare.yes": "はい",
-  "compare.no": "いいえ"
+  "compare.no": "いいえ",
+  "quick.scaleDecrease": "拡大率を下げる（文字を小さく）",
+  "quick.scaleIncrease": "拡大率を上げる（文字を大きく）"
 }

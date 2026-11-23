@@ -25,7 +25,7 @@ internal sealed partial class QuickWindow
     internal IReadOnlyCollection<string> SelectedBrightnessIds => multiSelection.ToArray();
     internal string? SelectedDisplayId => selectedDisplayId;
     private bool CanRebuild => !closed && !dpiBusy && !dpiDragging && keepOpenCount == 0 &&
-        !body.IsMouseCaptureWithin && activeDpiSlider?.IsKeyboardFocusWithin != true &&
+        !body.IsMouseCaptureWithin && (activeDpiSlider?.Parent as UIElement)?.IsKeyboardFocusWithin != true &&
         !(Keyboard.FocusedElement is Slider slider && body.IsAncestorOf(slider));
 
     private DisplayInfo? ResolveSelectedDisplay()

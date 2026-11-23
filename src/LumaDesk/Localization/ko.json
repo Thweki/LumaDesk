@@ -585,5 +585,7 @@
   "compare.y": "세로 위치(px)",
   "compare.primary": "주 디스플레이",
   "compare.yes": "예",
-  "compare.no": "아니요"
+  "compare.no": "아니요",
+  "quick.scaleDecrease": "배율 줄이기 (작은 글자)",
+  "quick.scaleIncrease": "배율 늘리기 (큰 글자)"
 }

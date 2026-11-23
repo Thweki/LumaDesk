@@ -585,5 +585,7 @@
   "compare.y": "Vertical position (px)",
   "compare.primary": "Main display",
   "compare.yes": "Yes",
-  "compare.no": "No"
+  "compare.no": "No",
+  "quick.scaleDecrease": "Decrease scaling (smaller text)",
+  "quick.scaleIncrease": "Increase scaling (larger text)"
 }

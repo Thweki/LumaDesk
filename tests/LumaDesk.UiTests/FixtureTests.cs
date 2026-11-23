@@ -67,6 +67,7 @@ internal static partial class Program
                     TestSceneNoteFixture(owner);
                     TestSceneSearchFixture(owner);
                     await TestLiveBrightnessFixtureAsync(owner);
+                    await TestQuickScaleFixtureAsync(owner);
                     await TestBrightnessStepsFixtureAsync(owner);
                     await TestInputSwitchUiAsync(owner, offscreen: true);
                     await TestInputConnectionUiAsync(owner);
