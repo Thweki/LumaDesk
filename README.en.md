@@ -34,7 +34,7 @@ Select a display by its position and drag the brightness slider. To adjust sever
 
 ## Download and get started
 
-For **Windows 10 / 11 x64**. Releases after v0.5.0 also offer a slim EXE. Choose a download from [Releases](https://github.com/Thweki/LumaDesk/releases).
+For **Windows 10 / 11 x64**. A slim EXE is available starting with v0.6.0. Choose a download from [Releases](https://github.com/Thweki/LumaDesk/releases).
 
 | File | Use it to… |
 | --- | --- |

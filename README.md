@@ -31,7 +31,7 @@ LumaDesk 是一个开源 Windows 显示管理工具。调亮度、改缩放、�
 
 ## 下载与上手
 
-适用于 **Windows 10 / 11 x64**。轻量 EXE 从 v0.5.0 之后的版本开始提供。请到 [Releases](https://github.com/Thweki/LumaDesk/releases) 查看下载选项。
+适用于 **Windows 10 / 11 x64**。从 v0.6.0 起可选轻量 EXE。请到 [Releases](https://github.com/Thweki/LumaDesk/releases) 查看下载选项。
 
 | 文件 | 适合你，如果…… |
 | --- | --- |
