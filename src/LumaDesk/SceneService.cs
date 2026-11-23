@@ -120,8 +120,25 @@ internal static class SceneService
         return draft;
     }
 
+    internal static Preset CaptureOutput(IReadOnlyList<DisplayInfo> displays) => new()
+    {
+        Name = L.T("scene.previous"),
+        Displays = displays.Select(d => new PresetDisplay
+        {
+            Id = d.Id, Name = d.Name, Mode = d.Current, Orientation = d.Orientation,
+            Dpi = d.DpiScale.CanSet ? d.DpiScale.CurrentPercent : null,
+            X = d.X, Y = d.Y, Primary = d.Primary
+        }).ToList()
+    };
+
+    internal static Preset CaptureScale(DisplayInfo display, int percent) => new()
+    {
+        Name = L.T("scene.previous"),
+        Displays = new() { new() { Id = display.Id, Name = display.Name, Dpi = percent } }
+    };
+
     // Resolve the device again between operations: a mode change can replace every DisplayInfo.
-    internal static async Task<SceneResult> Apply(ISceneBackend backend, Preset scene)
+    internal static async Task<SceneResult> Apply(ISceneBackend backend, Preset scene, bool outputOnly = false)
     {
         var result = new SceneResult();
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -145,14 +162,14 @@ internal static class SceneService
                 await backend.Mode(d, saved.Mode, orientation);
             });
             if (saved.Dpi.HasValue) await Step(L.T("scene.scale"), d => saved.Dpi == d.DpiScale.CurrentPercent ? Task.CompletedTask : backend.Dpi(d, saved.Dpi.Value));
-            if (saved.Hdr.HasValue) await Step("HDR", async d =>
+            if (!outputOnly && saved.Hdr.HasValue) await Step("HDR", async d =>
             {
                 var state = await backend.Color(d);
                 if (!state.HdrKnown || !state.HdrSupported) throw new InvalidOperationException(L.T("scene.unsupported"));
                 if (state.HdrUserEnabled != saved.Hdr) await backend.Hdr(d, saved.Hdr.Value);
             });
-            if (saved.UserProfiles.HasValue) await Step("ICC", d => backend.Profiles(d, saved));
-            await Step(L.T("scene.brightness"), d => backend.Brightness(d, saved));
+            if (!outputOnly && saved.UserProfiles.HasValue) await Step("ICC", d => backend.Profiles(d, saved));
+            if (!outputOnly) await Step(L.T("scene.brightness"), d => backend.Brightness(d, saved));
             if (!failed) result.Applied++;
         }
         if (scene.Displays.Any(d => d.X.HasValue))

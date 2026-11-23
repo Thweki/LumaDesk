@@ -477,6 +477,7 @@
   "scene.previous": "切换前的设置",
   "scene.scale": "缩放",
   "scene.undo": "撤销上次切换",
+  "scene.undoOutput": "撤销上次显示调整",
   "scene.unsupported": "当前设备不支持此设置",
   "scene.rename": "重命名",
   "scene.renamed": "预设已重命名",

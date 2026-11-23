@@ -36,6 +36,13 @@ Each click reads a fresh snapshot and shows **current → saved** differences fo
 The comparison does not apply settings, modify presets, or replace the undo snapshot. Unknown readings remain visible as **Unknown**. It is a snapshot, not a driver capability check or a guarantee of successful apply: layout restoration still requires matching screens and valid geometry, and unavailable ICC assignments are not installed. Click again after changing your setup to refresh the report. Applying the preset remains a separate action.
 
 默认关闭。在 **设置 → 应用 → 预设比较（实验性）** 中启用，然后打开预设的 **更多选项 → 与当前设置比较**。每次点击读取当前快照，按“当前 → 已保存”显示亮度、调暗、模式、旋转、缩放、HDR/ICC、位置和主屏差异，并列出未连接或未包含的屏幕。旧预设只比较已保存的项目。无法读取的值显示为“未知”。比较不会应用设置、更改预设或替换撤销快照，也不保证驱动支持或排列能够恢复。更改设置后再次点击可刷新；关闭开关可移除比较控件。
+## 撤销显示调整 / Undo a display adjustment
+
+调整分辨率、刷新率、旋转或缩放后，在快捷面板的“预设”菜单或设置的“预设”页点击“撤销上次显示调整”。缩放撤销只恢复该屏幕的缩放；模式撤销恢复切换前的输出、缩放和排列，不改动亮度、软件调暗、HDR 或 ICC。与预设切换共用一个会话内撤销位置，下一次成功的显示调整或预设切换会替换它；无变化或已回滚的失败调整不会替换它。部分撤销失败时保留原快照供重试，退出应用后不保留。
+
+After changing resolution, refresh rate, rotation or scaling, choose **Undo last display adjustment** in the quick panel's **Presets** menu or **Settings → Presets**. Scaling undo restores only that screen's scale. Mode undo restores the previous outputs, scaling and arrangement; brightness, software dimming, HDR and ICC remain as they are.
+
+There is one undo slot per app session, shared with **Undo last switch** for presets. The next successful output/scaling adjustment or preset application replaces it. No-op changes and failed adjustments that roll back preserve it. An undo that partially fails retains the original snapshot for retry; reconnect missing displays before retrying. Layout restoration requires the same screen set and a valid extended layout, as with presets. This does not undo brightness, input, topology or layout-editor changes, and there is no redo or history across restarts.
 ## 排序预设 / Reorder presets
 
 在“预设”页点击预设卡片上的“上移”或“下移”，即可将常用预设放在前面。顺序会自动保存，重启后保留，托盘预设菜单也使用同一顺序。排序不读取或应用屏幕设置，也不改变预设 ID、显示设置、快捷键或自动触发配置。多个自动化规则同时匹配时，仍按列表顺序选择第一个匹配项。

@@ -477,6 +477,7 @@
   "scene.previous": "Previous setup",
   "scene.scale": "Scaling",
   "scene.undo": "Undo last switch",
+  "scene.undoOutput": "Undo last display adjustment",
   "scene.unsupported": "This setting is unavailable on this device",
   "scene.rename": "Rename",
   "scene.renamed": "Preset renamed",

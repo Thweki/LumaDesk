@@ -477,6 +477,7 @@
   "scene.previous": "切り替え前の設定",
   "scene.scale": "拡大縮小",
   "scene.undo": "直前の切り替えを元に戻す",
+  "scene.undoOutput": "直前のディスプレイ調整を元に戻す",
   "scene.unsupported": "このデバイスではこの設定を利用できません",
   "scene.rename": "名前を変更",
   "scene.renamed": "プリセットの名前を変更しました",

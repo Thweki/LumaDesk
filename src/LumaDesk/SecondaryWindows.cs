@@ -171,7 +171,7 @@ internal sealed partial class QuickWindow : Window
             var card = new Border { Child = stack, Padding = new Thickness(12, 7, 12, 7), BorderThickness = new Thickness(0, 0, 0, 1), BorderBrush = Ui.Brush("#16000000") }; body.Children.Add(card);
         }
         if (!brightnessMultiSelect && owner.Displays.Count == 0) body.Children.Add(Ui.Card(Ui.Text(L.T("s7d06b98afa"), 12, "#8B93A2")));
-        if (!brightnessMultiSelect && owner.Preferences.Presets.Count > 0) { var scenes = owner.SceneMenuButton(); scenes.Margin = new Thickness(8, 6, 8, 0); body.Children.Add(scenes); }
+        if (!brightnessMultiSelect && (owner.Preferences.Presets.Count > 0 || owner.UndoHistory.Snapshot != null)) { var scenes = owner.SceneMenuButton(); scenes.Margin = new Thickness(8, 6, 8, 0); body.Children.Add(scenes); }
         RefreshScheduleStatus(DateTime.Now);
         body.Children.Add(scheduleStatus);
         var footer = new UniformGrid { Columns = 4, Margin = new Thickness(4, 8, 4, 4) };

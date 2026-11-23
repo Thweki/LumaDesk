@@ -14,7 +14,9 @@ namespace LumaDesk;
 public partial class MainWindow
 {
     private bool sceneBusy;
-    private Preset? undoScene;
+    internal DisplayUndoHistory UndoHistory { get; } = new();
+    private Preset? undoScene => UndoHistory.Snapshot;
+    private string UndoLabel => L.T(UndoHistory.OutputOnly ? "scene.undoOutput" : "scene.undo");
     private string sceneReport = "";
     private string sceneSearch = "";
     private sealed class SceneBackend : ISceneBackend
@@ -96,10 +98,9 @@ public partial class MainWindow
         {
             await RefreshAsync(sceneRefresh: true);
             var backend = new SceneBackend(this);
-            var before = await SceneService.Capture(backend, L.T("scene.previous"));
-            if (!undo) undoScene = before;
-            var result = await SceneService.Apply(backend, preset);
-            if (undo && result.Issues.Count == 0) undoScene = null;
+            if (!undo) UndoHistory.Remember(await SceneService.Capture(backend, L.T("scene.previous")));
+            var result = undo ? await UndoHistory.UndoAsync(backend) : await SceneService.Apply(backend, preset);
+            if (result == null) return null;
             sceneReport = string.Join("\n", result.Issues);
             Save();
             string message = L.F("sa40a67f8f2", preset.Name, result.Applied);
@@ -131,7 +132,7 @@ public partial class MainWindow
             if (undoScene != null)
             {
                 menu.Items.Add(new Separator());
-                var item = new MenuItem { Header = L.T("scene.undo"), IsEnabled = !sceneBusy };
+                var item = new MenuItem { Header = UndoLabel, IsEnabled = !sceneBusy };
                 item.Click += (_, _) => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); }); menu.Items.Add(item);
             }
             menu.Items.Add(new Separator());
@@ -205,7 +206,7 @@ public partial class MainWindow
         PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.importHelp"), 12), Ui.Button(L.T("scene.import"), () => _ = RunAsync(ImportSceneAsync)))));
         PageContent.Children.Add(Ui.Card(CreateSceneCaptureButton()));
         if (sceneDraft != null) PageContent.Children.Add(Ui.Card(CreateSceneDraftEditor(sceneDraft)));
-        if (undoScene != null) PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.previous")), Ui.Button(L.T("scene.undo"), () => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); })))));
+        if (undoScene != null) PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.previous")), Ui.Button(UndoLabel, () => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); })))));
         if (!string.IsNullOrEmpty(sceneReport)) PageContent.Children.Add(Ui.Card(new Expander { Header = L.T("scene.details"), Content = Ui.Text(sceneReport, 12) }));
         var search = new TextBox { Text = sceneSearch, MinWidth = 180 };
         System.Windows.Automation.AutomationProperties.SetName(search, L.T("scene.search"));
