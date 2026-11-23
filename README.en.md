@@ -92,6 +92,8 @@ The window is checked at startup, after display refresh, and approximately every
 Optional experiment: [save and restore per-display gamma ramps in presets](docs/workflows.md#gamma-预设实验性--gamma-presets-experimental), disabled by default (`LUMADESK_EXPERIMENTAL_GAMMA=1`).
 Optional experiment: [inspect fractional refresh timing and Windows DRR status](docs/refresh-timing.md) (disabled by default).
 
+Optional experiment: [compact tray display picker](docs/tray-compact.md) for large display setups (disabled by default).
+
 ## License
 
 Version 0.4.0 onward: [GPL-3.0-only](LICENSE). Versions through 0.3.1 retain their original MIT license. Third-party components keep their own licenses; see [NOTICE](NOTICE).

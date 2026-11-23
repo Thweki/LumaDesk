@@ -127,6 +127,7 @@ internal static partial class Program
                 TestNextScheduleFixture(window);
                 await TestHdrBadgesAsync(window);
                 await TestQuickDisplayListAsync(window);
+                await TestQuickCompactLayoutAsync(window, offscreen: false);
                 await TestMultiBrightnessAsync(window);
                 await TestBrightnessStepsFixtureAsync(window);
                 await TestVolumeStepsFixtureAsync(window);

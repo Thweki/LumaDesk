@@ -660,5 +660,7 @@
   "scene.nextPreset": "次のプリセット",
   "scene.lastApplied": "最後に正常に適用したプリセット：{0}\n{1}",
   "scene.lastAppliedNone": "正常に適用したプリセットの記録はまだありません。",
-  "scene.lastAppliedHelp": "履歴です。その後の調整や元に戻す操作により、現在の設定は変わる場合があります。"
+  "scene.lastAppliedHelp": "履歴です。その後の調整や元に戻す操作により、現在の設定は変わる場合があります。",
+  "quick.compactLayout": "コンパクト",
+  "quick.mapLayout": "配置図"
 }

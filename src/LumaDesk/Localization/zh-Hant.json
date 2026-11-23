@@ -660,5 +660,7 @@
   "scene.nextPreset": "下一個預設",
   "scene.lastApplied": "上次成功套用：{0}\n{1}",
   "scene.lastAppliedNone": "尚無成功套用預設的記錄。",
-  "scene.lastAppliedHelp": "僅為歷史記錄；之後的調整或復原可能改變目前配置。"
+  "scene.lastAppliedHelp": "僅為歷史記錄；之後的調整或復原可能改變目前配置。",
+  "quick.compactLayout": "緊湊",
+  "quick.mapLayout": "配置圖"
 }

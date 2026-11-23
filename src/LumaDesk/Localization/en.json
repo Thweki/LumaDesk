@@ -660,5 +660,7 @@
   "scene.nextPreset": "Next preset",
   "scene.lastApplied": "Last successfully applied: {0}\n{1}",
   "scene.lastAppliedNone": "No successful preset application recorded yet.",
-  "scene.lastAppliedHelp": "History only; later adjustments or undo may change the current setup."
+  "scene.lastAppliedHelp": "History only; later adjustments or undo may change the current setup.",
+  "quick.compactLayout": "Compact",
+  "quick.mapLayout": "Map"
 }
