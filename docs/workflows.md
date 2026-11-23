@@ -102,6 +102,21 @@ The listing waits before reading a fresh result file. To change display settings
 
 已有应用时，命令通过限定当前 Windows 用户及桌面会话的本地命名管道交给应用执行；不会另建调暗覆盖层。未运行时，查询直接读取，修改命令启动托盘应用后再执行。发送命令后不自动重试，避免超时导致重复写入。管道不对网络开放。
 
+## Diagnostic log export / 诊断日志导出
+
+To collect logs for a support report without probing or changing displays:
+
+```powershell
+$process = Start-Process -FilePath '.\LumaDesk.exe' -ArgumentList '--export-log .\lumadesk-logs.zip' -Wait -PassThru
+$process.ExitCode
+```
+
+`--export-log <archive.zip>` creates a new ZIP from the available `app.log` and `app.previous.log` in `%LOCALAPPDATA%\LumaDesk` (or `LUMADESK_DATA_DIR` when set). It works with the tray app running or closed and does not start or activate it. It rejects log entries that are reparse points, have multiple hard links, or cannot be verified as regular files. Use a trusted log directory and a trusted destination directory. The command does not separately collect settings, presets or recovery files. It copies logs verbatim, so review them for device names, local paths and exception details before sharing. While the app is running, logging and rotation may continue during the export.
+
+The exit code is 0 on success or 1 for invalid arguments, no available logs, an invalid log entry, an existing destination or a read/write failure. The destination's parent directory must exist. The command finishes the ZIP before moving it to the requested name and never overwrites an existing destination. Export failures are not appended to the source logs. Unlike the automation commands above, this command takes no `--output` option and does not return JSON.
+
+此命令将现有的当前和上一份日志导出为新的 ZIP，不探测或更改显示器，也不启动托盘窗口。拒绝重解析点（含符号链接）、有多个硬链接或无法验证为普通文件的日志。请使用可信的日志目录和输出目录。命令不会另外收集设置、预设或恢复文件，但会原样复制日志；分享前请检查其中的设备名称、路径和异常详情。ZIP 写完后才移动到指定位置，不覆盖已有文件。成功返回 0；参数无效、无日志、日志不合规、目标已存在或读写失败时返回 1。
+
 ## 硬件与性能边界
 
 DDC 调用按设备串行，不同设备的探测及组合亮度同步可并行；实际延迟仍受显卡驱动和显示器限制。慢调用记录耗时。输入源能力仅在展开控件时读取，并缓存五分钟；列表来自能力串，不猜测不存在的 HDMI/DP 端口。参照 [Microsoft 低层显示器配置 API](https://learn.microsoft.com/en-us/windows/win32/monitor/using-the-low-level-monitor-configuration-functions)。输入切换成功返回后可能立即断开当前电脑，故不继续回读或自动重试。

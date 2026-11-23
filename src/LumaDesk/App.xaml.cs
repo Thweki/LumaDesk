@@ -24,6 +24,7 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
         if (IntegrationTest) return;
+        if (e.Args.Length > 0 && e.Args[0] == "--export-log") { Shutdown(LogExport.Run(e.Args, Storage.Folder)); return; }
         if (CommandService.IsCommand(e.Args)) { Shutdown(await CommandService.RunClient(e.Args)); return; }
         System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
         if (e.Args.Length == 2 && e.Args[0] == "--install-color-profile")
