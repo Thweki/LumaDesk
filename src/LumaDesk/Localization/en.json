@@ -551,5 +551,10 @@
   "timing.unknown": "Windows Dynamic Refresh Rate (DRR): not reported",
   "timing.help": "Read-only snapshot of configured rates, not live FPS. DRR automatically boosts desktop refresh rate. Gaming VRR / Adaptive-Sync support and activity are not reported by this inspector; DRR disabled does not mean VRR is unsupported.",
   "layout.undo": "Undo preview (Ctrl+Z)",
-  "layout.redo": "Redo preview (Ctrl+Y)"
+  "layout.redo": "Redo preview (Ctrl+Y)",
+  "scene.import": "Import preset…",
+  "scene.export": "Export preset…",
+  "scene.importHelp": "Import adds a preset with automation off. Apply it when ready.",
+  "scene.imported": "Preset imported. Display settings have not changed.",
+  "scene.fileInvalid": "Invalid preset file. Expected a LumaDesk scene (version 1), up to 1 MiB, with valid display settings."
 }

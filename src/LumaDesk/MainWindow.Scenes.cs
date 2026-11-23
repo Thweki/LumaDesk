@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -201,6 +202,7 @@ public partial class MainWindow
         while (Preferences.Presets.Any(p => p.Name == defaultName)) defaultName = L.T("s3cbfca23b6") + " " + suffix++;
         var name = new TextBox { Text = defaultName, MaxLength = SceneService.MaxNameLength, MinWidth = 180 };
         PageContent.Children.Add(Ui.Card(Ui.Row(name, Ui.Button(L.T("sce211a5a47"), () => _ = RunAsync(() => SaveSceneAsync(name.Text)), true))));
+        PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.importHelp"), 12), Ui.Button(L.T("scene.import"), () => _ = RunAsync(ImportSceneAsync)))));
         PageContent.Children.Add(Ui.Card(CreateSceneCaptureButton()));
         if (sceneDraft != null) PageContent.Children.Add(Ui.Card(CreateSceneDraftEditor(sceneDraft)));
         if (undoScene != null) PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.previous")), Ui.Button(L.T("scene.undo"), () => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); })))));
@@ -245,6 +247,7 @@ public partial class MainWindow
             System.Windows.Automation.AutomationProperties.SetName(rename, L.T("s2c09021a16"));
             details.Children.Add(Ui.Row(rename, Ui.Button(L.T("scene.rename"), () => RenameScene(scene, rename.Text))));
             details.Children.Add(Ui.Button(L.T("scene.update"), () => _ = RunAsync(() => SaveSceneAsync(rename.Text, scene))));
+            details.Children.Add(Ui.Button(L.T("scene.export"), () => _ = RunAsync(() => ExportSceneAsync(scene))));
             details.Children.Add(Ui.Line());
             details.Children.Add(CreateSceneDuplicateEditor(scene));
             details.Children.Add(Ui.Line());
@@ -283,5 +286,25 @@ public partial class MainWindow
         // Change visibility in place so typing retains focus and unsaved card edits.
         search.TextChanged += (_, _) => Filter();
         Filter();
+    }
+
+    private Task ImportSceneAsync()
+    {
+        if (sceneBusy || modePending || scanning || Service.IsWriting) throw new InvalidOperationException(L.T("s92f637408f"));
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "JSON|*.json", CheckFileExists = true };
+        if (dialog.ShowDialog(this) != true) return Task.CompletedTask;
+        using var stream = File.OpenRead(dialog.FileName);
+        var scene = SceneFile.Import(stream, Preferences.Presets);
+        Preferences.Presets.Add(scene);
+        Save(); Render(); quick?.Render(); Status(L.T("scene.imported"));
+        return Task.CompletedTask;
+    }
+
+    private Task ExportSceneAsync(Preset scene)
+    {
+        string json = SceneFile.Export(scene);
+        var dialog = new Microsoft.Win32.SaveFileDialog { FileName = "lumadesk-scene.json", DefaultExt = ".json", Filter = "JSON|*.json" };
+        if (dialog.ShowDialog(this) == true) File.WriteAllText(dialog.FileName, json);
+        return Task.CompletedTask;
     }
 }

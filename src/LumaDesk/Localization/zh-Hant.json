@@ -551,5 +551,10 @@
   "timing.unknown": "Windows 動態更新頻率（DRR）：未回報",
   "timing.help": "唯讀檢視設定的更新頻率，並非即時幀率。DRR 會自動提升桌面更新頻率。此檢查器不回報遊戲 VRR / Adaptive-Sync 的支援情況或活動狀態；DRR 已停用不代表不支援 VRR。",
   "layout.undo": "復原預覽 (Ctrl+Z)",
-  "layout.redo": "重做預覽 (Ctrl+Y)"
+  "layout.redo": "重做預覽 (Ctrl+Y)",
+  "scene.import": "匯入預設…",
+  "scene.export": "匯出預設…",
+  "scene.importHelp": "匯入將新增預設並關閉自動化。準備好後再套用。",
+  "scene.imported": "預設已匯入，顯示設定未變更。",
+  "scene.fileInvalid": "預設檔案無效。需要不超過 1 MiB 的 LumaDesk 場景（版本 1），且顯示設定有效。"
 }

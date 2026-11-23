@@ -551,5 +551,10 @@
   "timing.unknown": "Windows 动态刷新率（DRR）：未报告",
   "timing.help": "只读查看配置的刷新率，并非实时帧率。DRR 会自动提升桌面刷新率。此检查器不报告游戏 VRR / Adaptive-Sync 的支持情况或活动状态；DRR 已禁用不代表不支持 VRR。",
   "layout.undo": "撤销预览 (Ctrl+Z)",
-  "layout.redo": "重做预览 (Ctrl+Y)"
+  "layout.redo": "重做预览 (Ctrl+Y)",
+  "scene.import": "导入预设…",
+  "scene.export": "导出预设…",
+  "scene.importHelp": "导入将添加预设并关闭自动化。准备好后再应用。",
+  "scene.imported": "预设已导入，显示设置未更改。",
+  "scene.fileInvalid": "预设文件无效。需要不超过 1 MiB 的 LumaDesk 场景（版本 1），且显示设置有效。"
 }

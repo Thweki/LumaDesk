@@ -59,6 +59,16 @@ Enable **Daily schedule** under a preset's **More options**, then open the tray 
 
 托盘面板中的“联调亮度”用于临时多选：勾选的屏幕只接受亮度调整，不沿用组成员或相对偏移，仍遵守各屏亮度上下限。未选择屏幕时滑块不可用；退出联调恢复此前的单屏控制，不创建或修改显示器组。关闭面板后，下次默认进入单屏模式。
 
+## 预设导入与导出 / Preset import and export
+
+在“预设”页选择“导入预设”，或展开某个预设的更多选项并选择“导出预设”。每个 JSON 文件保存一个场景，可用于备份或在使用相同屏幕设备 ID 的 LumaDesk 安装之间迁移。
+
+导入会新建预设，同名时自动添加编号，不覆盖现有预设，也不立即应用。快捷键、连接触发、定时和电源触发不会随文件转移；需要时请在导入后重新配置。文件保留屏幕 ID、名称及 ICC 配置文件引用，不包含 ICC 文件本身，不映射到其他屏幕，也不安装驱动或配置文件。分享前可检查 JSON 中的设备名称和配置文件引用。仅支持版本 1 的场景文件，最大 1 MiB；不能直接导入整个 `settings.json`。
+
+In **Settings → Presets**, choose **Import preset…**, or expand a preset's additional options and choose **Export preset…**. Each JSON file contains one scene for backup or transfer between LumaDesk installations using the same display device IDs.
+
+Import creates a separate preset and adds a number if its name is already used. It does not apply display changes. Shortcuts, connection triggers, schedules and power triggers are excluded; configure them again after import if needed. Device IDs, display names and ICC profile references are retained. ICC files are not bundled, displays are not remapped, and nothing is installed. Review the JSON's device names and profile references before sharing. The importer accepts version 1 scene files up to 1 MiB, not a complete `settings.json`. Missing displays or unavailable capabilities are reported by the existing scene apply flow when you choose to apply the preset.
+
 ## 命令行
 
 这是脚本接口；普通用户无需使用。所有命令要求结果文件，返回 JSON，成功退出码为 0，失败/部分完成为 1。
