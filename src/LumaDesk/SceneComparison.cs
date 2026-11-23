@@ -33,6 +33,7 @@ internal sealed class SceneComparison
                 result.Differences.Add(new(target.Id, Name(now), setting, Format(before, suffix), Format(after, suffix)));
             }
             Add("scene.brightness", now.Brightness, target.Brightness, "%");
+            Add("s4cbc753240", now.Contrast, target.Contrast, "%");
             Add("s8fb81ba8f3", now.Dimming, target.Dimming, "%");
             Add("scene.mode", now.Mode, target.Mode);
             if (target.Mode != null) Add("s60cc99cc00", Degrees(now.Orientation), Degrees(target.Orientation), "°");

@@ -64,7 +64,7 @@ internal static class SceneFile
         foreach (var d in document.Displays)
         {
             if (d == null || string.IsNullOrWhiteSpace(d.Id) || !ids.Add(d.Id) ||
-                d.Brightness is < 0 or > 100 || d.Dimming is < 0 or > 85 ||
+                d.Brightness is < 0 or > 100 || d.Contrast is < 0 or > 100 || d.Dimming is < 0 or > 85 ||
                 d.Orientation is > 3 || d.Dpi is <= 0 or > 500) throw InvalidFile();
             if (d.Mode is { } mode && (mode.Width == 0 || mode.Width > int.MaxValue ||
                 mode.Height == 0 || mode.Height > int.MaxValue || mode.Frequency == 0 ||

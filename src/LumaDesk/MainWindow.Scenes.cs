@@ -39,25 +39,12 @@ public partial class MainWindow
         }
         public Task Layout(IReadOnlyList<ScreenPlacement> placements) => owner.ChangeLayoutAsync(placements);
         public Task Profiles(DisplayInfo d, PresetDisplay saved) => Task.Run(() =>
-        {
-            var current = AdvancedColorService.Read(d);
-            if (saved.UserProfiles == false) { AdvancedColorService.UseSystemProfiles(d); return; }
-            if (!string.IsNullOrEmpty(saved.SdrProfile) && (!current.UseUserProfiles || current.SdrProfile != saved.SdrProfile))
-                AdvancedColorService.SetDefaultProfile(d, saved.SdrProfile, false);
-            if (!string.IsNullOrEmpty(saved.HdrProfile) && (!current.UseUserProfiles || current.HdrProfile != saved.HdrProfile))
-                AdvancedColorService.SetDefaultProfile(d, saved.HdrProfile, true);
-            var actual = AdvancedColorService.Read(d);
-            if (!actual.ProfilesAvailable || !actual.UseUserProfiles ||
-                (saved.SdrProfile != null && !string.Equals(actual.SdrProfile, saved.SdrProfile, StringComparison.OrdinalIgnoreCase)) ||
-                (saved.HdrProfile != null && !string.Equals(actual.HdrProfile, saved.HdrProfile, StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException(L.T("scene.unsupported"));
-        });
+            AdvancedColorService.RestoreProfiles(d, saved.UserProfiles, saved.SdrProfile, saved.HdrProfile));
         public async Task Contrast(DisplayInfo d, int percent)
         {
             await owner.Service.SetPercentAsync(d, 0x12, percent);
             d.Contrast = percent;
         }
-            AdvancedColorService.RestoreProfiles(d, saved.UserProfiles, saved.SdrProfile, saved.HdrProfile));
         public Task Brightness(DisplayInfo d, PresetDisplay saved)
         {
             owner.CancelReconnect(d.Id);
@@ -126,12 +113,12 @@ public partial class MainWindow
                 }, scope => CreateSceneApplyPreviewDialog(preset.Name, scope).ShowDialog() == true)) return null;
             await RefreshAsync(sceneRefresh: true);
             var backend = new SceneBackend(this);
+            var target = displayId == null ? preset : SceneService.ForDisplay(preset, displayId);
             if (!undo)
             {
                 var before = await SceneService.Capture(backend, L.T("scene.previous"));
                 UndoHistory.Remember(displayId == null ? before : SceneService.ForDisplay(before, displayId));
             }
-            var target = displayId == null ? preset : SceneService.ForDisplay(preset, displayId);
             var result = undo ? await UndoHistory.UndoAsync(backend) : await SceneService.ApplyAndRemember(backend, Preferences, target);
             if (result == null) return null;
             if (!undo) DisplayResets.Remember(target, result);

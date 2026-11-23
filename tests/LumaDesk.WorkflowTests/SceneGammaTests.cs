@@ -171,6 +171,7 @@ internal static class SceneGammaTests
             For(d).State.HdrActive = enabled;
         }
         public Task Profiles(DisplayInfo d, PresetDisplay saved) => Core.Profiles(d, saved);
+        public Task Contrast(DisplayInfo d, int percent) => Core.Contrast(d, percent);
         public Task Brightness(DisplayInfo d, PresetDisplay saved) => Core.Brightness(d, saved);
         public async Task Layout(IReadOnlyList<ScreenPlacement> placements)
         {

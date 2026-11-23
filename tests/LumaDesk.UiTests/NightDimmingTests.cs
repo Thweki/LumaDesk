@@ -15,6 +15,8 @@ internal static partial class Program
     {
         var original = owner.Displays;
         var preferences = owner.Preferences;
+        bool idleEnabled = preferences.ExperimentalIdleDimming;
+        int idleMinutes = preferences.IdleDimmingMinutes;
         var now = new DateTime(2026, 11, 15, 22, 0, 0);
         var first = new DisplayInfo { Id = "night-a", Brightness = 50, Dimming = 0 };
         var second = new DisplayInfo { Id = "night-b", Brightness = null, Dimming = 60 };
@@ -66,6 +68,22 @@ internal static partial class Program
             writes.Clear(); owner.SuspendNightDimming(now.Date.AddDays(1).AddHours(7), Apply);
             Check(writes.Contains((first.Id, 20d)), "Reset at an unpolled end boundary still removes the previous overlay");
 
+            preferences.ExperimentalIdleDimming = true;
+            preferences.IdleDimmingMinutes = 1;
+            owner.UpdateNightDimming(now.AddDays(1), applyOverlay: Apply);
+            writes.Clear();
+            for (int milliseconds = 0; milliseconds <= 60_000; milliseconds += 1000)
+                owner.UpdateIdleDimming((uint)milliseconds, milliseconds, Apply);
+            Check(writes.Contains((first.Id, 60d)), "Idle dimming takes precedence during an active night window");
+            writes.Clear(); owner.UpdateIdleDimming(0, 61_000, Apply);
+            Check(writes.Contains((first.Id, 35d)) && first.Dimming == 20,
+                "Activity releases idle dimming while preserving scheduled shading and the manual baseline");
+            for (int milliseconds = 62_000; milliseconds <= 121_000; milliseconds += 1000)
+                owner.UpdateIdleDimming((uint)(milliseconds - 61_000), milliseconds, Apply);
+            writes.Clear(); owner.SuspendNightDimming(now.AddDays(1), Apply);
+            Check(writes.Contains((first.Id, 60d)), "Ending scheduled dimming preserves an active idle shade");
+            owner.UpdateIdleDimming(0, 122_000, Apply);
+
             // Detached options never start discovery or write hardware.
             preferences.ExperimentalNightDimming = false;
             var controls = owner.CreateNightDimmingOptions();
@@ -79,6 +97,8 @@ internal static partial class Program
         {
             preferences.ExperimentalNightDimming = false;
             owner.UpdateNightDimming(now, applyOverlay: Apply);
+            preferences.ExperimentalIdleDimming = idleEnabled;
+            preferences.IdleDimmingMinutes = idleMinutes;
             owner.Displays = original;
         }
     }

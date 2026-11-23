@@ -12,7 +12,7 @@ internal static partial class Program
     private static async Task TestDisplayUndoFixtureAsync()
     {
         // Keep this owner unloaded so neither discovery nor native writes run.
-        var owner = new MainWindow();
+        var owner = new MainWindow(() => true);
         var presets = owner.Navigation.Children.OfType<Button>().ElementAt(5);
         Click(presets);
         bool HasUndo(string key) => Descendants<Button>(owner.PageContent).Any(b => b.Content as string == L.T(key));

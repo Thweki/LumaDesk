@@ -69,7 +69,7 @@ internal static partial class Program
 
             side.SelectedIndex = (int)LayoutSide.Above; alignment.SelectedIndex = (int)LayoutAlignment.Center;
             Click(place); var preview = layout.Placements.ToArray(); Click(apply);
-            Check(calls == 1 && received!.SequenceEqual(LayoutRules.Normalize(preview)) && received[0].X == 740 && received[0].Y == -1920,
+            Check(calls == 1 && received is { } applied && applied.SequenceEqual(LayoutRules.Normalize(preview)) && applied[0].X == 740 && applied[0].Y == -1920,
                 "Apply submits the exact validated relative layout through the existing transaction");
             Click(place); Click(apply);
             Check(!place.IsEnabled && calls == 1 && layout.Placements.SequenceEqual(preview),

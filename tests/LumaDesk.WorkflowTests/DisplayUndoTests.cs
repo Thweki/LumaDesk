@@ -153,6 +153,7 @@ internal static class DisplayUndoTests
         }
         public Task Hdr(DisplayInfo d, bool enabled) { Call("hdr", d); return Task.CompletedTask; }
         public Task Profiles(DisplayInfo d, PresetDisplay saved) { Call("profiles", d); return Task.CompletedTask; }
+        public Task Contrast(DisplayInfo d, int percent) { Call("contrast", d); d.Contrast = percent; return Task.CompletedTask; }
         public Task Brightness(DisplayInfo d, PresetDisplay saved)
         {
             Call("brightness", d); d.Brightness = saved.Brightness; d.Dimming = saved.Dimming; return Task.CompletedTask;

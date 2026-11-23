@@ -244,13 +244,13 @@ internal sealed class FakeBackend : ISceneBackend
     }
     public Task Dpi(DisplayInfo d, int percent) { Call("dpi", d); d.DpiScale.CurrentPercent = percent; return Task.CompletedTask; }
     public Task Hdr(DisplayInfo d, bool enabled) { Call("hdr", d); AfterHdr?.Invoke(d); return Task.CompletedTask; }
-    public Task Profiles(DisplayInfo d, PresetDisplay saved) { Call("profiles", d); return Task.CompletedTask; }
     public Task Contrast(DisplayInfo d, int percent)
     {
         Call("contrast", d);
         if (FailContrast.Contains(d.Id)) throw new InvalidOperationException("Contrast write rejected");
         d.Contrast = percent;
-    public Task Hdr(DisplayInfo d, bool enabled) { Call("hdr", d); return Task.CompletedTask; }
+        return Task.CompletedTask;
+    }
     public Task Profiles(DisplayInfo d, PresetDisplay saved)
     {
         Call("profiles", d);

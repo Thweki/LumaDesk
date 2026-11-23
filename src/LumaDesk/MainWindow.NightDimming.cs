@@ -26,7 +26,7 @@ public partial class MainWindow
         nightDimmingRetry = false;
         foreach (var display in Displays)
         {
-            try { (applyOverlay ?? ApplyDimmingOverlay)(display, nightDimming.EffectiveDimming(display.Dimming)); }
+            try { (applyOverlay ?? ApplyDimmingOverlay)(display, EffectiveOverlayDimming(display.Dimming)); }
             catch (Exception ex) { nightDimmingRetry = true; Status(ex.Message, true); }
         }
     }

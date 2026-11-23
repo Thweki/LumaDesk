@@ -154,6 +154,7 @@ internal static class DisplayResetTests
         public Task<DisplayColorState> Color(DisplayInfo d) => throw new Exception("Reset must not read color");
         public Task Hdr(DisplayInfo d, bool enabled) => throw new Exception("Reset must not write HDR");
         public Task Profiles(DisplayInfo d, PresetDisplay saved) => throw new Exception("Reset must not write ICC");
+        public Task Contrast(DisplayInfo d, int percent) => throw new Exception("Reset must not write contrast");
         public Task Layout(IReadOnlyList<ScreenPlacement> placements) => throw new Exception("Reset must not write layout");
     }
 }

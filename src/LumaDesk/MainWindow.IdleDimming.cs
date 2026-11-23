@@ -36,14 +36,16 @@ public partial class MainWindow
         var input = new LastInputInfo { Size = (uint)Marshal.SizeOf<LastInputInfo>() };
         uint? idle = GetLastInputInfo(ref input)
             ? IdleDimming.IdleMilliseconds(unchecked((uint)Environment.TickCount), input.Time) : null;
-        if (!idleDimming.Update(Preferences.ExperimentalIdleDimming, Preferences.IdleDimmingMinutes, idle, Environment.TickCount64)) return;
+        UpdateIdleDimming(idle, Environment.TickCount64);
+    }
+
+    internal void UpdateIdleDimming(uint? idle, long now, Action<DisplayInfo, double>? applyOverlay = null)
+    {
+        if (!idleDimming.Update(Preferences.ExperimentalIdleDimming, Preferences.IdleDimmingMinutes, idle, now)) return;
         try
         {
-            foreach (var display in Displays)
-            {
-                if (idleDimming.IsDimmed) DisplayService.ValidateIdentity(display.Device, display.Id);
-                RenderDimming(display, idleDimming.EffectiveDimming(display.Dimming));
-            }
+            var render = applyOverlay ?? (idleDimming.IsDimmed ? ApplyDimmingOverlay : RenderDimming);
+            foreach (var display in Displays) render(display, EffectiveOverlayDimming(display.Dimming));
         }
         catch (Exception ex)
         {
@@ -58,7 +60,7 @@ public partial class MainWindow
         bool restore = idleDimming.IsDimmed;
         idleDimming.Reset();
         if (restore)
-            foreach (var display in Displays) RenderDimming(display, display.Dimming);
+            foreach (var display in Displays) RenderDimming(display, EffectiveOverlayDimming(display.Dimming));
     }
 
     [StructLayout(LayoutKind.Sequential)]

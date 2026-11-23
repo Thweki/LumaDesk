@@ -36,6 +36,8 @@ internal sealed class SceneApplyPreview
             if (saved.Dpi.HasValue) settings.Add(L.T("scene.scale"));
             if (saved.Hdr.HasValue) settings.Add("HDR");
             if (saved.UserProfiles.HasValue) settings.Add("ICC");
+            if (saved.Contrast.HasValue) settings.Add(L.T("s4cbc753240"));
+            if (saved.GammaRamp != null && GammaService.Enabled) settings.Add("Gamma");
             string? name = display?.Name;
             if (string.IsNullOrWhiteSpace(name)) name = string.IsNullOrWhiteSpace(saved.Name) ? saved.Id : saved.Name;
             if (display?.Number > 0) name = display.Number + " · " + name;

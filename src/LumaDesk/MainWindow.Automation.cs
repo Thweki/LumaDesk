@@ -188,6 +188,15 @@ internal static class AutomationRules
                 !SceneService.SameScreens(preset, displays)) continue;
             DateTime at = now.Date + time;
             if (at <= now) at = at.AddDays(1);
+            if (preset.ExperimentalWeeklySchedule)
+            {
+                var days = preset.ScheduleDays;
+                if (days == null) continue;
+                int offset = 0;
+                while (offset < 7 && !days.Contains(at.AddDays(offset).DayOfWeek)) offset++;
+                if (offset == 7) continue;
+                at = at.AddDays(offset);
+            }
             // As in TickAutomationAsync, the first preset in list order wins ties.
             if (next == null || at < next.Value.At) next = (preset, at);
         }

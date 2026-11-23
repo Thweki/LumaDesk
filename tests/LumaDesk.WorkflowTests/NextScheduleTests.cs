@@ -43,6 +43,15 @@ internal static class NextScheduleTests
             check(AutomationRules.NextScheduledPreset(new[] { disabled }, displays, day) == null,
                 "Disabled or invalid daily schedules are ignored even with other triggers: " + invalid);
         }
+        var weekly = Scheduled("Weekly", "09:00");
+        weekly.ExperimentalWeeklySchedule = true;
+        weekly.ScheduleDays = new() { DayOfWeek.Thursday };
+        next = AutomationRules.NextScheduledPreset(new[] { weekly }, displays, day.AddHours(9));
+        check(next?.At == day.AddDays(7).AddHours(9),
+            "The next weekly occurrence skips unselected days and advances at the exact boundary");
+        weekly.ScheduleDays.Clear();
+        check(AutomationRules.NextScheduledPreset(new[] { weekly }, displays, day) == null,
+            "A weekly schedule with no selected days has no upcoming occurrence");
         var missing = Scheduled("Missing display", "08:00");
         missing.Displays.Add(new() { Id = "C" });
         check(AutomationRules.NextScheduledPreset(new[] { missing, morning }, displays, day)?.Preset == morning,

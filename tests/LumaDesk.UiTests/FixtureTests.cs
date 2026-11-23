@@ -78,6 +78,7 @@ internal static partial class Program
                     await TestLiveBrightnessFixtureAsync(owner);
                     await TestQuickScaleFixtureAsync(owner);
                     await TestBrightnessStepsFixtureAsync(owner);
+                    await TestVolumeStepsFixtureAsync(owner);
                     await TestInputSwitchUiAsync(owner, offscreen: true);
                     await TestInputConnectionUiAsync(owner);
                     TestNightDimmingFixture(owner);

@@ -340,14 +340,16 @@ public partial class MainWindow : Window
     }
     private void SetDimming(DisplayInfo display, double value)
     {
-        ApplyDimmingOverlay(display, nightDimming.EffectiveDimming(value));
+        ApplyDimmingOverlay(display, EffectiveOverlayDimming(value));
         display.Dimming = value;
     }
+    private double EffectiveOverlayDimming(double baseline) =>
+        idleDimming.EffectiveDimming(nightDimming.EffectiveDimming(baseline));
+
     private void ApplyDimmingOverlay(DisplayInfo display, double value)
     {
         if (value > 0) DisplayService.ValidateIdentity(display.Device, display.Id);
         RenderDimming(display, value);
-        display.Dimming = value;
     }
     private void RenderDimming(DisplayInfo display, double value)
     {

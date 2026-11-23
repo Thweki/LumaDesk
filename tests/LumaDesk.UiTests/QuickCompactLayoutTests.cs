@@ -17,7 +17,8 @@ internal static partial class Program
         string? flag = Environment.GetEnvironmentVariable(QuickCompactLayout.Flag);
         var real = owner.Displays;
         string? selected = owner.Preferences.QuickSelectedDisplayId, more = owner.Preferences.QuickMoreDisplayId;
-        bool sync = owner.Preferences.SyncBrightness;
+        bool sync = owner.Preferences.SyncBrightness, list = owner.Preferences.QuickDisplayList;
+        owner.Preferences.QuickDisplayList = false;
         var displays = Enumerable.Range(1, 9).Select(n => new DisplayInfo
         {
             Id = "compact-fixture-" + n, Number = n, Name = "Display " + n + " with a long descriptive name",
@@ -47,7 +48,12 @@ internal static partial class Program
                 display.Brightness = value;
             }, applySelectedBrightness: (ids, value) =>
             {
-                foreach (var display in displays.Where(d => ids.Contains(d.Id))) display.Brightness = value;
+                foreach (var display in displays.Where(d => ids.Contains(d.Id)))
+                {
+                    var level = BrightnessRules.Adjust(value, display.Brightness, display.Dimming);
+                    display.Brightness = level.Hardware;
+                    display.Dimming = level.Dimming;
+                }
                 return Task.CompletedTask;
             });
             quick.Render(); root = (FrameworkElement)quick.Content;
@@ -110,9 +116,20 @@ internal static partial class Program
             Check(quick.SelectedBrightnessIds.OrderBy(x => x).SequenceEqual(expected.OrderBy(x => x)), "Switching layouts preserves the entire brightness selection");
             var slider = Descendants<Slider>(root).Single(s => AutomationProperties.GetAutomationId(s) == "quick-multi-brightness");
             slider.Value = 35; await Task.Delay(150); Layout();
-            Check(displays[0].Brightness == 35 && displays[8].Brightness == 35 && displays.Skip(1).Take(7).All(d => d.Brightness == 50),
+            Check(owner.GetCombinedBrightness(displays[0]) == 35 && owner.GetCombinedBrightness(displays[8]) == 35 && displays.Skip(1).Take(7).All(d => d.Brightness == 50),
                 "Compact multi-brightness changes exactly the selected identities");
             Check(Descendants<TextBlock>(Find("quick-display-select-9")).Any(t => t.Text == "35%"), "Compact percentages track completed multi-brightness writes");
+            Press("quick-display-view");
+            Check(Has("quick-display-list") && !Has("quick-display-compact") &&
+                !Has("quick-layout-toggle") && owner.Preferences.QuickDisplayList &&
+                quick.SelectedBrightnessIds.Count == 2 &&
+                Find("quick-display-select-9").ActualHeight >= 20 &&
+                Descendants<TextBlock>(Find("quick-display-select-9")).Any(t => t.Text.Contains(displays[8].Name)),
+                "Switching from compact to the named list preserves readable rows and selection");
+            Press("quick-display-view");
+            Check(Has("quick-display-map") && Has("quick-layout-toggle") && !owner.Preferences.QuickDisplayList,
+                "Switching from the named list returns to the map and exposes the compact option");
+            Press("quick-layout-toggle");
             // Only remove an unselected display: this fixture never invokes native fallback discovery.
             owner.Displays = displays.Where(d => d.Number != 2).Reverse().ToList(); quick.Render(); Layout();
             Check(!Has("quick-display-select-2") && quick.SelectedBrightnessIds.Count == 2, "Reordering and unplugging an unselected display do not retarget selection");
@@ -135,6 +152,7 @@ internal static partial class Program
             pending?.TrySetResult(true); await Task.Delay(100); quick?.Close();
             owner.Displays = real; owner.Preferences.QuickSelectedDisplayId = selected;
             owner.Preferences.QuickMoreDisplayId = more; owner.Preferences.SyncBrightness = sync;
+            owner.Preferences.QuickDisplayList = list;
             foreach (var display in displays) owner.Preferences.DisplayOptions.Remove(display.Id);
             owner.SavePreferences(); Environment.SetEnvironmentVariable(QuickCompactLayout.Flag, flag);
         }
