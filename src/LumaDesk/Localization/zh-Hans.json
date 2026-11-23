@@ -646,5 +646,12 @@
   "awake.error": "无法保持屏幕唤醒：{0}",
   "awake.reason": "LumaDesk：托盘面板打开时保持屏幕唤醒",
   "quick.volumeDown": "显示器音量降低 5 个百分点",
-  "quick.volumeUp": "显示器音量提高 5 个百分点"
+  "quick.volumeUp": "显示器音量提高 5 个百分点",
+  "scene.previewApply": "预览并应用（实验性）",
+  "scene.previewCancel": "取消",
+  "scene.previewSummary": "将应用到 {0} 个已连接屏幕；跳过 {1} 个缺席屏幕。",
+  "scene.previewHelp": "检查将恢复的屏幕和设置。已匹配的值可能保持不变。点击“应用”之前不会写入屏幕设置。",
+  "scene.previewBrightness": "亮度 / 调暗",
+  "scene.previewLayout": "应用时，如果所有已保存的屏幕、模式及排列验证均匹配，还将恢复屏幕排列。",
+  "scene.previewChanged": "屏幕连接已改变。请重新打开预览后再应用。"
 }

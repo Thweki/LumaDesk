@@ -646,5 +646,12 @@
   "awake.error": "Could not keep displays awake: {0}",
   "awake.reason": "LumaDesk: keep displays awake while the tray panel is open",
   "quick.volumeDown": "Decrease monitor volume by 5 percentage points",
-  "quick.volumeUp": "Increase monitor volume by 5 percentage points"
+  "quick.volumeUp": "Increase monitor volume by 5 percentage points",
+  "scene.previewApply": "Preview and apply (experimental)",
+  "scene.previewCancel": "Cancel",
+  "scene.previewSummary": "{0} connected display(s) will be targeted; {1} missing display(s) will be skipped.",
+  "scene.previewHelp": "Review the displays and settings to restore. Values already matching may stay unchanged. No display settings are written until you click Apply.",
+  "scene.previewBrightness": "Brightness / dimming",
+  "scene.previewLayout": "Screen arrangement will also be restored if all saved displays, modes and layout checks match at apply time.",
+  "scene.previewChanged": "Display connections changed. Open the preview again before applying."
 }

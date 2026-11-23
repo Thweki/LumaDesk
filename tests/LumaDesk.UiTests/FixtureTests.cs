@@ -72,6 +72,7 @@ internal static partial class Program
                     await TestLayoutSwapFixtureAsync(owner);
                     TestDisplayResetFixture(owner);
                     await TestSceneGammaFixtureAsync(owner);
+                    TestSceneApplyPreviewFixture(owner);
                     await TestLiveBrightnessFixtureAsync(owner);
                     await TestQuickScaleFixtureAsync(owner);
                     await TestBrightnessStepsFixtureAsync(owner);

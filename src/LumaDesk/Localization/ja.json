@@ -646,5 +646,12 @@
   "awake.error": "画面のスリープを防止できませんでした：{0}",
   "awake.reason": "LumaDesk：トレイパネルの表示中は画面をスリープさせない",
   "quick.volumeDown": "モニターの音量を5ポイント下げる",
-  "quick.volumeUp": "モニターの音量を5ポイント上げる"
+  "quick.volumeUp": "モニターの音量を5ポイント上げる",
+  "scene.previewApply": "プレビューして適用（実験的）",
+  "scene.previewCancel": "キャンセル",
+  "scene.previewSummary": "接続中の {0} 台が対象です。未接続の {1} 台はスキップされます。",
+  "scene.previewHelp": "復元するディスプレイと設定を確認してください。すでに一致する値は変更されない場合があります。「適用」をクリックするまでディスプレイ設定は書き込まれません。",
+  "scene.previewBrightness": "明るさ / 減光",
+  "scene.previewLayout": "適用時に保存済みの全ディスプレイ、モード、配置の検証が一致した場合、画面配置も復元されます。",
+  "scene.previewChanged": "ディスプレイの接続が変わりました。適用する前にプレビューを開き直してください。"
 }
