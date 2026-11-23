@@ -41,5 +41,6 @@ public partial class MainWindow
         idleLabels.Children.OfType<TextBlock>().Last().TextWrapping = TextWrapping.Wrap;
         PageContent.Children.Add(Ui.Card(Ui.Row(idleLabels, idleToggle)));
         PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("idle.delay")), idleDelay)));
+        PageContent.Children.Add(CreateNightDimmingOptions());
     }
 }

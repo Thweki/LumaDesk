@@ -113,6 +113,7 @@ public partial class MainWindow
     private async Task ResetDimmingAsync()
     {
         if (sceneBusy) throw new InvalidOperationException(L.T("s92f637408f"));
+        SuspendNightDimming(DateTime.Now);
         await Task.WhenAll(Displays.Select(d =>
         {
             CancelReconnect(d.Id);

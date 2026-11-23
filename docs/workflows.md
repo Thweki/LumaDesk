@@ -83,6 +83,14 @@ There is no video/presentation detection: watching without keyboard/mouse input 
 
 To validate on Windows: run `dotnet run --project tests/LumaDesk.Tests -c Release` for deterministic timing/settings tests and `dotnet run --project tests/LumaDesk.UiTests -- --fixtures` for settings UI tests. Manually enable a one-minute delay, test screens with 0%, 25% and 80% existing software dimming, then verify input, reset, disable, unplug/replug and sleep/wake restore correctly. Native input and actual overlay behavior require a Windows desktop.
 
+## 实验性夜间时段 / Experimental night window
+
+在“设置 → 应用 → 夜间时段（实验性）”中设置本地时间的开始和结束时刻（24 小时制 `HH:mm`），点击“应用时段”，再开启开关。默认关闭，建议时段为 `21:00–07:00`，支持跨午夜；开始和结束不能相同。应用运行期间，每个屏幕的软件调暗至少为 35%，更强的手动调暗会保留。它不改变硬件背光、亮度滑块、预设或记忆亮度。
+
+启动、刷新屏幕后以及约每 20 秒检查当前时段。休眠或系统时间变化后按当前本地时间判断，不补跑错过的时段。结束时恢复当前手动调暗，期间的亮度调整不会被旧快照覆盖。关闭开关立即移除夜间调暗；“重置调暗”（默认 `Ctrl+Alt+0`）会清除调暗并暂停本次时段，直到下次每日时段、修改时段、关闭后重新开启或重启应用。这是按时间触发的临时遮罩，与空闲检测无关，也不会关闭显示器电源。
+
+Enable **Settings → Application → Night window (experimental)** after choosing start/end times and clicking **Apply window**. Defaults off. See the [English usage notes](../README.en.md#experimental-night-window) for suspension and restoration behavior.
+
 ## 命令行
 
 这是脚本接口；普通用户无需使用。所有命令要求结果文件，返回 JSON，成功退出码为 0，失败/部分完成为 1。

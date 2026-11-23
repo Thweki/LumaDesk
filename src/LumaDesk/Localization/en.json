@@ -560,5 +560,11 @@
   "idle.title": "Idle dimming (experimental)",
   "idle.help": "Off by default. Temporarily shades all screens to at least 60% dimming after inactivity. Keyboard or mouse activity restores your brightness.",
   "idle.delay": "Dim after inactivity",
-  "idle.minutes": "{0} min"
+  "idle.minutes": "{0} min",
+  "night.title": "Night window (experimental)",
+  "night.help": "Off by default. During this local-time window, apply at least 35% software shading to every screen. Brightness settings stay unchanged. Reset dimming suspends this night until the next window or app restart.",
+  "night.start": "Start (HH:mm)",
+  "night.end": "End (HH:mm)",
+  "night.apply": "Apply window",
+  "night.invalid": "Use different start and end times in 24-hour HH:mm format."
 }

@@ -111,6 +111,7 @@ public partial class MainWindow : Window
                 else dimWindows[id].Position(display);
             }
             foreach (var display in next) BrightnessChanged?.Invoke(display);
+            if (!testing) UpdateNightDimming(DateTime.Now, force: true);
             Render(); quick?.Render(); Status(L.F("sd1362bfd3f", Displays.Count, DateTime.Now));
         }
         catch (Exception ex) { Status(L.T("sf7293a061e") + ex.Message, true); Render(); }
@@ -331,6 +332,11 @@ public partial class MainWindow : Window
         return stack;
     }
     private void SetDimming(DisplayInfo display, double value)
+    {
+        ApplyDimmingOverlay(display, nightDimming.EffectiveDimming(value));
+        display.Dimming = value;
+    }
+    private void ApplyDimmingOverlay(DisplayInfo display, double value)
     {
         if (value > 0) DisplayService.ValidateIdentity(display.Device, display.Id);
         RenderDimming(display, value);
