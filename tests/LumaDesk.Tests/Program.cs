@@ -145,4 +145,5 @@ Check(snapped.X == -1920 && snapped.Y == 0, "Dragged screen snaps to neighboring
 LayoutHistoryTests.Run(Check);
 SceneFileTests.Run(Check);
 RelativePlacementTests.Run(Check);
+AutoLayoutTests.Run(Check);
 Console.WriteLine($"{tests} tests passed.");

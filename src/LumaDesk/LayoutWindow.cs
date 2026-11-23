@@ -61,6 +61,18 @@ internal sealed class LayoutWindow : Window
         historyRow.Children.Add(undoButton); historyRow.Children.Add(redoButton); body.Children.Add(historyRow);
         CommandBindings.Add(new CommandBinding(ApplicationCommands.Undo, (_, _) => RestorePreview(false), (_, e) => { e.CanExecute = !busy && !canvas.IsMouseCaptureWithin && history.CanUndo; e.Handled = true; }));
         CommandBindings.Add(new CommandBinding(ApplicationCommands.Redo, (_, _) => RestorePreview(true), (_, e) => { e.CanExecute = !busy && !canvas.IsMouseCaptureWithin && history.CanRedo; e.Handled = true; }));
+        if (LayoutRules.AutoTidyEnabled)
+        {
+            var tidy = Ui.Button(L.T("layout.tidy.action"), () => _ = ExecuteAsync(() =>
+            {
+                EditPreview(LayoutRules.Tidy(placements));
+                feedback.Text = L.T("layout.tidy.preview");
+                return Task.CompletedTask;
+            }));
+            tidy.Margin = new Thickness(0, 8, 0, 0);
+            System.Windows.Automation.AutomationProperties.SetAutomationId(tidy, "layout-tidy");
+            body.Children.Add(tidy);
+        }
         var topology = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 12) };
         topology.Children.Add(Ui.Button(L.T("sa60416dbac"), () => _ = TopologyAsync(true))); var clone = Ui.Button(L.T("s99c94fd883"), () => _ = TopologyAsync(false)); clone.Margin = new Thickness(8, 0, 0, 0); topology.Children.Add(clone); body.Children.Add(topology);
         feedback.Margin = new Thickness(0, 7, 0, 14); body.Children.Add(feedback);
