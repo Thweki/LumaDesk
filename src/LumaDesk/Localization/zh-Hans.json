@@ -657,5 +657,8 @@
   "quick.showList": "显示屏幕列表",
   "quick.showMap": "显示屏幕布局图",
   "scene.previousPreset": "上一个预设",
-  "scene.nextPreset": "下一个预设"
+  "scene.nextPreset": "下一个预设",
+  "scene.lastApplied": "上次成功应用：{0}\n{1}",
+  "scene.lastAppliedNone": "尚无成功应用预设的记录。",
+  "scene.lastAppliedHelp": "仅为历史记录；之后的调整或撤销可能改变当前配置。"
 }

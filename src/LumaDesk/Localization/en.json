@@ -657,5 +657,8 @@
   "quick.showList": "Show display list",
   "quick.showMap": "Show display map",
   "scene.previousPreset": "Previous preset",
-  "scene.nextPreset": "Next preset"
+  "scene.nextPreset": "Next preset",
+  "scene.lastApplied": "Last successfully applied: {0}\n{1}",
+  "scene.lastAppliedNone": "No successful preset application recorded yet.",
+  "scene.lastAppliedHelp": "History only; later adjustments or undo may change the current setup."
 }

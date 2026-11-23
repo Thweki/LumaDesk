@@ -132,7 +132,7 @@ public partial class MainWindow
                 UndoHistory.Remember(displayId == null ? before : SceneService.ForDisplay(before, displayId));
             }
             var target = displayId == null ? preset : SceneService.ForDisplay(preset, displayId);
-            var result = undo ? await UndoHistory.UndoAsync(backend) : await SceneService.Apply(backend, target);
+            var result = undo ? await UndoHistory.UndoAsync(backend) : await SceneService.ApplyAndRemember(backend, Preferences, target);
             if (result == null) return null;
             if (!undo) DisplayResets.Remember(target, result);
             if (displayId == null) sceneCycle.RecordApplied(preset, result, undo);
@@ -158,25 +158,42 @@ public partial class MainWindow
         var button = Ui.Button(L.T("sf1de1e2621"), () => { });
         button.Click += (_, _) =>
         {
-            var menu = new ContextMenu();
-            foreach (var preset in Preferences.Presets)
-            {
-                var item = new MenuItem { Header = preset.Name, IsEnabled = !sceneBusy };
-                if (SceneApplyPreview.Enabled) item.ToolTip = L.T("scene.previewApply");
-                item.Click += (_, _) => _ = RunAsync(async () => await ApplySceneAsync(preset, preview: true)); menu.Items.Add(item);
-            }
-            if (undoScene != null)
-            {
-                menu.Items.Add(new Separator());
-                var item = new MenuItem { Header = UndoLabel, IsEnabled = !sceneBusy };
-                item.Click += (_, _) => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); }); menu.Items.Add(item);
-            }
-            menu.Items.Add(new Separator());
-            var manage = new MenuItem { Header = L.T("scene.manage") };
-            manage.Click += (_, _) => { page = "presets"; Render(); ShowSettings(); }; menu.Items.Add(manage);
+            var menu = CreateSceneMenu();
             menu.PlacementTarget = button; button.ContextMenu = menu; menu.IsOpen = true;
         };
         return button;
+    }
+
+    private string LastAppliedSceneText() => Preferences.LastPresetApplication is { } last
+        ? L.F("scene.lastApplied", last.PresetName, last.AppliedAtUtc.ToLocalTime().ToString("G"))
+        : L.T("scene.lastAppliedNone");
+
+    internal ContextMenu CreateSceneMenu()
+    {
+        var menu = new ContextMenu();
+        var summary = Ui.Text(LastAppliedSceneText());
+        summary.TextWrapping = TextWrapping.Wrap; summary.MaxWidth = 360;
+        var history = new MenuItem { Header = summary, IsEnabled = false, ToolTip = L.T("scene.lastAppliedHelp") };
+        System.Windows.Automation.AutomationProperties.SetName(history, summary.Text);
+        ToolTipService.SetShowOnDisabled(history, true);
+        menu.Items.Add(history);
+        menu.Items.Add(new Separator());
+        foreach (var preset in Preferences.Presets)
+        {
+            var item = new MenuItem { Header = preset.Name, IsEnabled = !sceneBusy };
+            if (SceneApplyPreview.Enabled) item.ToolTip = L.T("scene.previewApply");
+            item.Click += (_, _) => _ = RunAsync(async () => await ApplySceneAsync(preset, preview: true)); menu.Items.Add(item);
+        }
+        if (undoScene != null)
+        {
+            menu.Items.Add(new Separator());
+            var item = new MenuItem { Header = UndoLabel, IsEnabled = !sceneBusy };
+            item.Click += (_, _) => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); }); menu.Items.Add(item);
+        }
+        menu.Items.Add(new Separator());
+        var manage = new MenuItem { Header = L.T("scene.manage") };
+        manage.Click += (_, _) => { page = "presets"; Render(); ShowSettings(); }; menu.Items.Add(manage);
+        return menu;
     }
 
     internal StackPanel CreateSceneDuplicateEditor(Preset source)
@@ -257,6 +274,9 @@ public partial class MainWindow
     {
         Heading(L.T("s0b2fca3986"), L.T("scene.description"));
         if (GammaService.Enabled) PageContent.Children.Add(Ui.Card(Ui.Text(L.T("gamma.help"), 12)));
+        var history = Ui.Labels(LastAppliedSceneText(), L.T("scene.lastAppliedHelp"));
+        foreach (var text in history.Children.OfType<TextBlock>()) text.TextWrapping = TextWrapping.Wrap;
+        PageContent.Children.Add(Ui.Card(history));
         string defaultName = L.T("s3cbfca23b6"); int suffix = 2;
         while (Preferences.Presets.Any(p => p.Name == defaultName)) defaultName = L.T("s3cbfca23b6") + " " + suffix++;
         var name = new TextBox { Text = defaultName, MaxLength = SceneService.MaxNameLength, MinWidth = 180 };
