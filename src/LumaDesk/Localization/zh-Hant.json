@@ -587,5 +587,10 @@
   "compare.yes": "是",
   "compare.no": "否",
   "quick.scaleDecrease": "降低縮放（文字更小）",
-  "quick.scaleIncrease": "提高縮放（文字更大）"
+  "quick.scaleIncrease": "提高縮放（文字更大）",
+  "scene.targetDisplay": "目標顯示器",
+  "scene.applyDisplay": "套用至單一顯示器",
+  "scene.applyDisplayHelp": "選擇此預設中已儲存且已連接的顯示器。僅套用其儲存的設定，不還原儲存的位置或主螢幕。",
+  "scene.noMatchingDisplay": "沒有已連接的顯示器與此預設相符。",
+  "scene.displayMissing": "所選顯示器不存在或識別碼不唯一。請重新整理並再次選擇。"
 }

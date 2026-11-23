@@ -204,6 +204,7 @@ await SceneDuplicateTests.Run(Check);
 WeeklyScheduleTests.Run(Check);
 await SceneComparisonTests.Run(Check);
 await DisplayUndoTests.Run(Check);
+await SceneDisplayTests.Run(Check);
 await SceneDraftTests.Run(Check);
 await SceneOrderTests.Run(Check);
 NextScheduleTests.Run(Check);

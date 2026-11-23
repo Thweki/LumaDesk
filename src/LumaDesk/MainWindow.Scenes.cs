@@ -87,7 +87,7 @@ public partial class MainWindow
         Render(); quick?.Render(); Status(L.T("scene.renamed"));
     }
 
-    internal async Task<SceneResult?> ApplySceneAsync(Preset preset, bool undo = false)
+    internal async Task<SceneResult?> ApplySceneAsync(Preset preset, bool undo = false, string? displayId = null)
     {
         if (sceneBusy || modePending || scanning || Service.IsWriting) throw new InvalidOperationException(L.T("s92f637408f"));
         sceneBusy = true;
@@ -98,8 +98,13 @@ public partial class MainWindow
         {
             await RefreshAsync(sceneRefresh: true);
             var backend = new SceneBackend(this);
-            if (!undo) UndoHistory.Remember(await SceneService.Capture(backend, L.T("scene.previous")));
-            var result = undo ? await UndoHistory.UndoAsync(backend) : await SceneService.Apply(backend, preset);
+            if (!undo)
+            {
+                var before = await SceneService.Capture(backend, L.T("scene.previous"));
+                UndoHistory.Remember(displayId == null ? before : SceneService.ForDisplay(before, displayId));
+            }
+            var target = displayId == null ? preset : SceneService.ForDisplay(preset, displayId);
+            var result = undo ? await UndoHistory.UndoAsync(backend) : await SceneService.Apply(backend, target);
             if (result == null) return null;
             sceneReport = string.Join("\n", result.Issues);
             Save();
@@ -150,6 +155,27 @@ public partial class MainWindow
         var panel = new StackPanel();
         panel.Children.Add(Ui.Labels(L.T("scene.duplicateName"), L.T("scene.duplicateHelp")));
         panel.Children.Add(Ui.Row(name, Ui.Button(L.T("scene.duplicate"), () => DuplicateScene(source, name.Text))));
+        return panel;
+    }
+
+    internal StackPanel CreateSceneDisplayEditor(Preset source, Func<Preset, string, Task>? apply = null)
+    {
+        apply ??= async (preset, id) => { await ApplySceneAsync(preset, displayId: id); };
+        var picker = new ComboBox { MinWidth = 180 };
+        System.Windows.Automation.AutomationProperties.SetName(picker, L.T("scene.targetDisplay"));
+        foreach (var display in Displays.Where(d => source.Displays.Count(s => string.Equals(s.Id, d.Id, StringComparison.OrdinalIgnoreCase)) == 1))
+            picker.Items.Add(new ComboBoxItem { Content = $"{display.Number} · {display.Name}", Tag = display.Id });
+        var button = Ui.Button(L.T("scene.applyDisplay"), () =>
+        {
+            if (picker.SelectedItem is ComboBoxItem { Tag: string id })
+                _ = RunAsync(() => apply(source, id));
+        });
+        button.IsEnabled = false;
+        picker.SelectionChanged += (_, _) => button.IsEnabled = picker.SelectedItem != null;
+        picker.IsEnabled = picker.Items.Count > 0;
+        var panel = new StackPanel();
+        panel.Children.Add(Ui.Labels(L.T("scene.applyDisplay"), L.T(picker.Items.Count == 0 ? "scene.noMatchingDisplay" : "scene.applyDisplayHelp")));
+        panel.Children.Add(Ui.Row(picker, button));
         return panel;
     }
 
@@ -252,6 +278,8 @@ public partial class MainWindow
             if (CreateSceneComparison(scene) is UIElement comparison) details.Children.Add(comparison);
             details.Children.Add(Ui.Line());
             details.Children.Add(CreateSceneDuplicateEditor(scene));
+            details.Children.Add(Ui.Line());
+            details.Children.Add(CreateSceneDisplayEditor(scene));
             details.Children.Add(Ui.Line());
             details.Children.Add(Ui.Row(Ui.Labels(L.T("scene.onConnect"), L.T("scene.onConnectHelp")), Toggle(scene.OnConnect, v =>
             {

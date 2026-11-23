@@ -43,12 +43,18 @@ The comparison does not apply settings, modify presets, or replace the undo snap
 After changing resolution, refresh rate, rotation or scaling, choose **Undo last display adjustment** in the quick panel's **Presets** menu or **Settings → Presets**. Scaling undo restores only that screen's scale. Mode undo restores the previous outputs, scaling and arrangement; brightness, software dimming, HDR and ICC remain as they are.
 
 There is one undo slot per app session, shared with **Undo last switch** for presets. The next successful output/scaling adjustment or preset application replaces it. No-op changes and failed adjustments that roll back preserve it. An undo that partially fails retains the original snapshot for retry; reconnect missing displays before retrying. Layout restoration requires the same screen set and a valid extended layout, as with presets. This does not undo brightness, input, topology or layout-editor changes, and there is no redo or history across restarts.
+## 应用到单个显示器 / Apply a preset to one display
+
+在“预设”页展开“更多选项”，在“应用到单个显示器”中选择已连接的屏幕，再点击同名按钮。仅列出此预设已保存的设备，按设备 ID 匹配，不按名称或编号猜测。应用该屏幕的亮度、调暗、输出模式、旋转、DPI 和已保存的 HDR/ICC 设置；不恢复预设的排列或主屏。原预设不会被修改，“撤销上次切换”也仅恢复此次选择的屏幕。
+
+Open **Presets → More options → Apply to one display**, choose a connected screen, then click **Apply to one display**. This is useful when you want one screen's saved setup while keeping the other screens' current settings. Only connected devices saved in that preset are offered; matching uses stable device IDs, not names or numbers. No experimental flag is required.
+
+The action applies that screen's saved brightness, dimming, resolution, refresh rate, rotation, scaling, and HDR/ICC settings using the usual validation and recovery paths. Unspecified legacy settings stay untouched. Saved positions and the main-display choice are skipped, and the saved preset and its automation remain unchanged. Windows may still rearrange the desktop as a consequence of a resolution or rotation change. **Undo last switch** restores only the selected screen for this action and remains available after partial failure. Disconnection never redirects the operation to another screen.
 ## 排序预设 / Reorder presets
 
 在“预设”页点击预设卡片上的“上移”或“下移”，即可将常用预设放在前面。顺序会自动保存，重启后保留，托盘预设菜单也使用同一顺序。排序不读取或应用屏幕设置，也不改变预设 ID、显示设置、快捷键或自动触发配置。多个自动化规则同时匹配时，仍按列表顺序选择第一个匹配项。
 
 On the **Presets** page, use **Move up** or **Move down** on a preset card to put frequently used presets first. The order is saved immediately, survives restarts, and also appears in the tray preset menu. Reordering does not capture or apply display settings or change preset IDs, saved values, shortcuts, or trigger settings. Existing automation still selects the first matching preset in list order when multiple rules match. No experimental flag is required.
-
 ## 预设备注 / Preset notes
 
 在“预设”页展开预设的“更多选项”，输入备注并点击“保存备注”。备注最多 500 个字符，支持多行文字，例如记录适用场景或连接提示。卡片显示备注预览，完整内容可在编辑框或悬停提示中查看。清空文字后保存即可删除备注。备注随预设保存，复制预设时一并复制；更新显示设置不会删除已有备注。保存备注无需连接屏幕，也不会读取或应用显示设置，更不会改变快捷键或自动触发配置。

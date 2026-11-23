@@ -61,6 +61,7 @@ internal static partial class Program
                     TestWeeklyScheduleFixture(owner);
                     await TestSceneComparisonFixtureAsync(owner);
                     await TestDisplayUndoFixtureAsync();
+                    TestSceneDisplayFixture(owner);
                     await TestSceneDraftFixtureAsync(owner);
                     TestSceneOrderFixture(owner);
                     TestNextScheduleFixture(owner);

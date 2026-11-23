@@ -587,5 +587,10 @@
   "compare.yes": "はい",
   "compare.no": "いいえ",
   "quick.scaleDecrease": "拡大率を下げる（文字を小さく）",
-  "quick.scaleIncrease": "拡大率を上げる（文字を大きく）"
+  "quick.scaleIncrease": "拡大率を上げる（文字を大きく）",
+  "scene.targetDisplay": "対象ディスプレイ",
+  "scene.applyDisplay": "1 台のディスプレイに適用",
+  "scene.applyDisplayHelp": "このプリセットに保存されている接続済みディスプレイを選択します。その画面の設定のみを適用し、保存された位置やメイン画面は復元しません。",
+  "scene.noMatchingDisplay": "このプリセットに一致する接続済みディスプレイがありません。",
+  "scene.displayMissing": "選択したディスプレイが見つからないか、識別できません。更新して選び直してください。"
 }
