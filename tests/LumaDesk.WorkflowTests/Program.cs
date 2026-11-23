@@ -24,6 +24,7 @@ int checks = 0;
 void Check(bool value, string message) { if (!value) throw new Exception(message); checks++; Console.WriteLine("PASS " + message); }
 await SceneRenameTests.RunAsync(Check);
 PresetListTests.Run(Check);
+await DisplayInventoryTests.RunAsync(Check);
 var backend = new FakeBackend();
 var scene = await SceneService.Capture(backend, "Work");
 Check(scene.Displays.Count == 2 && scene.Displays[0].Dpi == 125 && scene.Displays[0].Hdr == false && scene.Displays[1].X == 1920, "Capture includes output, scale, HDR, ICC and arrangement");
@@ -200,12 +201,22 @@ using (var cancelled = new CancellationTokenSource())
     Check(stopped && !service.IsWriting, "Cancelled reconnect write exits before device lookup and releases its busy state");
 }
 await SceneDuplicateTests.Run(Check);
+WeeklyScheduleTests.Run(Check);
+await SceneComparisonTests.Run(Check);
+await DisplayUndoTests.Run(Check);
+await SceneDisplayTests.Run(Check);
+await SceneContrastTests.Run(Check);
+await DisplayResetTests.Run(Check);
 await SceneDraftTests.Run(Check);
 await SceneOrderTests.Run(Check);
 NextScheduleTests.Run(Check);
 LayoutConfigurationTests.Run(Check);
 await SceneNoteTests.Run(Check);
 SceneSearchTests.Run(Check);
+await SceneGammaTests.Run(Check);
+await SceneApplyPreviewTests.Run(Check);
+await SceneCycleTests.Run(Check);
+await SceneLastAppliedTests.Run(Check);
 await ReconnectTests.RunAsync(Check);
 PipBufferTests.Run(Check);
 Console.WriteLine($"{checks} workflow checks passed. No native writes were issued.");
@@ -220,6 +231,8 @@ internal sealed class FakeBackend : ISceneBackend
     public IReadOnlyList<DisplayInfo> Displays => Screens;
     public List<string> Calls { get; } = new();
     public HashSet<string> FailBrightness { get; } = new();
+    public HashSet<string> FailContrast { get; } = new();
+    public Action<DisplayInfo>? AfterHdr;
     public bool FailColor;
     public FakeProfileOperations? ProfileOperations;
     public int StaleReferences;
@@ -227,10 +240,17 @@ internal sealed class FakeBackend : ISceneBackend
     private void Call(string name, DisplayInfo d) { Calls.Add(name + ":" + d.Id); if (!Screens.Contains(d)) StaleReferences++; }
     public Task Mode(DisplayInfo d, DisplayMode mode, uint orientation)
     {
-        Call("mode", d); Screens[Screens.IndexOf(d)] = new() { Id = d.Id, Name = d.Name, Current = mode, Orientation = orientation, X = d.X, Y = d.Y, Primary = d.Primary, Brightness = d.Brightness, DpiScale = d.DpiScale }; return Task.CompletedTask;
+        Call("mode", d); Screens[Screens.IndexOf(d)] = new() { Id = d.Id, Name = d.Name, Current = mode, Orientation = orientation, X = d.X, Y = d.Y, Primary = d.Primary, Brightness = d.Brightness, Contrast = d.Contrast, DpiScale = d.DpiScale }; return Task.CompletedTask;
     }
     public Task Dpi(DisplayInfo d, int percent) { Call("dpi", d); d.DpiScale.CurrentPercent = percent; return Task.CompletedTask; }
-    public Task Hdr(DisplayInfo d, bool enabled) { Call("hdr", d); return Task.CompletedTask; }
+    public Task Hdr(DisplayInfo d, bool enabled) { Call("hdr", d); AfterHdr?.Invoke(d); return Task.CompletedTask; }
+    public Task Contrast(DisplayInfo d, int percent)
+    {
+        Call("contrast", d);
+        if (FailContrast.Contains(d.Id)) throw new InvalidOperationException("Contrast write rejected");
+        d.Contrast = percent;
+        return Task.CompletedTask;
+    }
     public Task Profiles(DisplayInfo d, PresetDisplay saved)
     {
         Call("profiles", d);

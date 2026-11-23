@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -13,16 +14,21 @@ namespace LumaDesk;
 public partial class MainWindow
 {
     private bool sceneBusy;
-    private Preset? undoScene;
+    internal DisplayUndoHistory UndoHistory { get; } = new();
+    private Preset? undoScene => UndoHistory.Snapshot;
+    private string UndoLabel => L.T(UndoHistory.OutputOnly ? "scene.undoOutput" : "scene.undo");
     private string sceneReport = "";
     private string sceneSearch = "";
-    private sealed class SceneBackend : ISceneBackend
+    private sealed class SceneBackend : ISceneBackend, ISceneGammaBackend
     {
         private readonly MainWindow owner;
         private readonly IReadOnlyList<DisplayInfo>? snapshot;
         internal SceneBackend(MainWindow owner, IReadOnlyList<DisplayInfo>? snapshot = null)
         { this.owner = owner; this.snapshot = snapshot; }
         public IReadOnlyList<DisplayInfo> Displays => snapshot ?? owner.Displays;
+        public bool GammaEnabled => GammaService.Enabled;
+        public Task<ushort[]?> ReadGamma(DisplayInfo d) => Task.Run(() => GammaService.Capture(d));
+        public Task RestoreGamma(DisplayInfo d, ushort[] ramp) => Task.Run(() => GammaService.Restore(d, ramp));
         public Task<DisplayColorState> Color(DisplayInfo d) => Task.Run(() => AdvancedColorService.Read(d));
         public Task Mode(DisplayInfo d, DisplayMode mode, uint orientation) => owner.ChangeModeAsync(d, mode, orientation, exactOutput: true);
         public Task Dpi(DisplayInfo d, int percent) => owner.ChangeDpiAsync(d, percent);
@@ -34,6 +40,11 @@ public partial class MainWindow
         public Task Layout(IReadOnlyList<ScreenPlacement> placements) => owner.ChangeLayoutAsync(placements);
         public Task Profiles(DisplayInfo d, PresetDisplay saved) => Task.Run(() =>
             AdvancedColorService.RestoreProfiles(d, saved.UserProfiles, saved.SdrProfile, saved.HdrProfile));
+        public async Task Contrast(DisplayInfo d, int percent)
+        {
+            await owner.Service.SetPercentAsync(d, 0x12, percent);
+            d.Contrast = percent;
+        }
         public Task Brightness(DisplayInfo d, PresetDisplay saved)
         {
             owner.CancelReconnect(d.Id);
@@ -84,7 +95,7 @@ public partial class MainWindow
         Render(); quick?.Render(); Status(L.T("scene.renamed"));
     }
 
-    internal async Task<SceneResult?> ApplySceneAsync(Preset preset, bool undo = false)
+    internal async Task<SceneResult?> ApplySceneAsync(Preset preset, bool undo = false, string? displayId = null, bool preview = false)
     {
         if (sceneBusy || modePending || scanning || Service.IsWriting) throw new InvalidOperationException(L.T("s92f637408f"));
         sceneBusy = true;
@@ -93,12 +104,25 @@ public partial class MainWindow
         foreach (var window in windows) window.IsEnabled = false;
         try
         {
+            if (preview && !undo && SceneApplyPreview.Enabled &&
+                !await SceneApplyPreview.ConfirmAsync(preset, async () =>
+                {
+                    var displays = await Service.ScanAsync();
+                    foreach (var display in displays) ApplyAlias(display);
+                    return displays;
+                }, scope => CreateSceneApplyPreviewDialog(preset.Name, scope).ShowDialog() == true)) return null;
             await RefreshAsync(sceneRefresh: true);
             var backend = new SceneBackend(this);
-            var before = await SceneService.Capture(backend, L.T("scene.previous"));
-            if (!undo) undoScene = before;
-            var result = await SceneService.Apply(backend, preset);
-            if (undo && result.Issues.Count == 0) undoScene = null;
+            var target = displayId == null ? preset : SceneService.ForDisplay(preset, displayId);
+            if (!undo)
+            {
+                var before = await SceneService.Capture(backend, L.T("scene.previous"));
+                UndoHistory.Remember(displayId == null ? before : SceneService.ForDisplay(before, displayId));
+            }
+            var result = undo ? await UndoHistory.UndoAsync(backend) : await SceneService.ApplyAndRemember(backend, Preferences, target);
+            if (result == null) return null;
+            if (!undo) DisplayResets.Remember(target, result);
+            if (displayId == null) sceneCycle.RecordApplied(preset, result, undo);
             sceneReport = string.Join("\n", result.Issues);
             Save();
             string message = L.F("sa40a67f8f2", preset.Name, result.Applied);
@@ -121,24 +145,42 @@ public partial class MainWindow
         var button = Ui.Button(L.T("sf1de1e2621"), () => { });
         button.Click += (_, _) =>
         {
-            var menu = new ContextMenu();
-            foreach (var preset in Preferences.Presets)
-            {
-                var item = new MenuItem { Header = preset.Name, IsEnabled = !sceneBusy };
-                item.Click += (_, _) => _ = RunAsync(async () => await ApplySceneAsync(preset)); menu.Items.Add(item);
-            }
-            if (undoScene != null)
-            {
-                menu.Items.Add(new Separator());
-                var item = new MenuItem { Header = L.T("scene.undo"), IsEnabled = !sceneBusy };
-                item.Click += (_, _) => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); }); menu.Items.Add(item);
-            }
-            menu.Items.Add(new Separator());
-            var manage = new MenuItem { Header = L.T("scene.manage") };
-            manage.Click += (_, _) => { page = "presets"; Render(); ShowSettings(); }; menu.Items.Add(manage);
+            var menu = CreateSceneMenu();
             menu.PlacementTarget = button; button.ContextMenu = menu; menu.IsOpen = true;
         };
         return button;
+    }
+
+    private string LastAppliedSceneText() => Preferences.LastPresetApplication is { } last
+        ? L.F("scene.lastApplied", last.PresetName, last.AppliedAtUtc.ToLocalTime().ToString("G"))
+        : L.T("scene.lastAppliedNone");
+
+    internal ContextMenu CreateSceneMenu()
+    {
+        var menu = new ContextMenu();
+        var summary = Ui.Text(LastAppliedSceneText());
+        summary.TextWrapping = TextWrapping.Wrap; summary.MaxWidth = 360;
+        var history = new MenuItem { Header = summary, IsEnabled = false, ToolTip = L.T("scene.lastAppliedHelp") };
+        System.Windows.Automation.AutomationProperties.SetName(history, summary.Text);
+        ToolTipService.SetShowOnDisabled(history, true);
+        menu.Items.Add(history);
+        menu.Items.Add(new Separator());
+        foreach (var preset in Preferences.Presets)
+        {
+            var item = new MenuItem { Header = preset.Name, IsEnabled = !sceneBusy };
+            if (SceneApplyPreview.Enabled) item.ToolTip = L.T("scene.previewApply");
+            item.Click += (_, _) => _ = RunAsync(async () => await ApplySceneAsync(preset, preview: true)); menu.Items.Add(item);
+        }
+        if (undoScene != null)
+        {
+            menu.Items.Add(new Separator());
+            var item = new MenuItem { Header = UndoLabel, IsEnabled = !sceneBusy };
+            item.Click += (_, _) => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); }); menu.Items.Add(item);
+        }
+        menu.Items.Add(new Separator());
+        var manage = new MenuItem { Header = L.T("scene.manage") };
+        manage.Click += (_, _) => { page = "presets"; Render(); ShowSettings(); }; menu.Items.Add(manage);
+        return menu;
     }
 
     internal StackPanel CreateSceneDuplicateEditor(Preset source)
@@ -148,6 +190,27 @@ public partial class MainWindow
         var panel = new StackPanel();
         panel.Children.Add(Ui.Labels(L.T("scene.duplicateName"), L.T("scene.duplicateHelp")));
         panel.Children.Add(Ui.Row(name, Ui.Button(L.T("scene.duplicate"), () => DuplicateScene(source, name.Text))));
+        return panel;
+    }
+
+    internal StackPanel CreateSceneDisplayEditor(Preset source, Func<Preset, string, Task>? apply = null)
+    {
+        apply ??= async (preset, id) => { await ApplySceneAsync(preset, displayId: id); };
+        var picker = new ComboBox { MinWidth = 180 };
+        System.Windows.Automation.AutomationProperties.SetName(picker, L.T("scene.targetDisplay"));
+        foreach (var display in Displays.Where(d => source.Displays.Count(s => string.Equals(s.Id, d.Id, StringComparison.OrdinalIgnoreCase)) == 1))
+            picker.Items.Add(new ComboBoxItem { Content = $"{display.Number} · {display.Name}", Tag = display.Id });
+        var button = Ui.Button(L.T("scene.applyDisplay"), () =>
+        {
+            if (picker.SelectedItem is ComboBoxItem { Tag: string id })
+                _ = RunAsync(() => apply(source, id));
+        });
+        button.IsEnabled = false;
+        picker.SelectionChanged += (_, _) => button.IsEnabled = picker.SelectedItem != null;
+        picker.IsEnabled = picker.Items.Count > 0;
+        var panel = new StackPanel();
+        panel.Children.Add(Ui.Labels(L.T("scene.applyDisplay"), L.T(picker.Items.Count == 0 ? "scene.noMatchingDisplay" : "scene.applyDisplayHelp")));
+        panel.Children.Add(Ui.Row(picker, button));
         return panel;
     }
 
@@ -197,6 +260,10 @@ public partial class MainWindow
     private void RenderScenes()
     {
         Heading(L.T("s0b2fca3986"), L.T("scene.description"));
+        if (GammaService.Enabled) PageContent.Children.Add(Ui.Card(Ui.Text(L.T("gamma.help"), 12)));
+        var history = Ui.Labels(LastAppliedSceneText(), L.T("scene.lastAppliedHelp"));
+        foreach (var text in history.Children.OfType<TextBlock>()) text.TextWrapping = TextWrapping.Wrap;
+        PageContent.Children.Add(Ui.Card(history));
         string defaultName = L.T("s3cbfca23b6"); int suffix = 2;
         while (Preferences.Presets.Any(p => p.Name == defaultName)) defaultName = L.T("s3cbfca23b6") + " " + suffix++;
         var name = new TextBox { Text = defaultName, MaxLength = SceneService.MaxNameLength, MinWidth = 180 };
@@ -209,8 +276,9 @@ public partial class MainWindow
         create.Children.Add(Ui.Row(name, Ui.Button(L.T("sce211a5a47"), () => _ = RunAsync(() => SaveSceneAsync(name.Text)), true)));
         create.Children.Add(capture);
         PageContent.Children.Add(Ui.Card(create));
+        PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.importHelp"), 12), Ui.Button(L.T("scene.import"), () => _ = RunAsync(ImportSceneAsync)))));
         if (sceneDraft != null) PageContent.Children.Add(Ui.Card(CreateSceneDraftEditor(sceneDraft)));
-        if (undoScene != null) PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.previous")), Ui.Button(L.T("scene.undo"), () => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); })))));
+        if (undoScene != null) PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.previous")), Ui.Button(UndoLabel, () => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); })))));
         if (!string.IsNullOrEmpty(sceneReport)) PageContent.Children.Add(Ui.Card(new Expander { Header = L.T("scene.details"), Content = Ui.Text(sceneReport, 12) }));
         var search = new TextBox { Text = sceneSearch, MinWidth = 180 };
         System.Windows.Automation.AutomationProperties.SetName(search, L.T("scene.search"));
@@ -233,7 +301,7 @@ public partial class MainWindow
         foreach (var scene in Preferences.Presets.ToArray())
         {
             var card = new StackPanel();
-            card.Children.Add(Ui.Row(Ui.Labels(scene.Name, L.F("sb91b8e2562", scene.Displays.Count)), Ui.Button(L.T("scene.apply"), () => _ = RunAsync(async () => await ApplySceneAsync(scene)), true)));
+            card.Children.Add(Ui.Row(Ui.Labels(scene.Name, L.F("sb91b8e2562", scene.Displays.Count)), Ui.Button(L.T(SceneApplyPreview.Enabled ? "scene.previewApply" : "scene.apply"), () => _ = RunAsync(async () => await ApplySceneAsync(scene, preview: true)), true)));
             if (!string.IsNullOrWhiteSpace(scene.Note))
             {
                 var note = Ui.Text(scene.Note, 12, "#617681");
@@ -248,14 +316,21 @@ public partial class MainWindow
             var order = CreateSceneOrderControls(scene);
             card.Children.Add(order);
             var details = new StackPanel { Margin = new Thickness(0, 10, 0, 0) };
+            if (GammaService.Enabled)
+                foreach (var display in scene.Displays)
+                    details.Children.Add(Ui.Labels(display.Name, L.T(display.GammaRamp == null ? "gamma.absent" : "gamma.saved")));
             details.Children.Add(CreateSceneNoteEditor(scene));
             details.Children.Add(Ui.Line());
             var rename = new TextBox { Text = scene.Name, MaxLength = SceneService.MaxNameLength };
             System.Windows.Automation.AutomationProperties.SetName(rename, L.T("s2c09021a16"));
             details.Children.Add(Ui.Row(rename, Ui.Button(L.T("scene.rename"), () => RenameScene(scene, rename.Text))));
             details.Children.Add(Ui.Button(L.T("scene.update"), () => _ = RunAsync(() => SaveSceneAsync(rename.Text, scene))));
+            details.Children.Add(Ui.Button(L.T("scene.export"), () => _ = RunAsync(() => ExportSceneAsync(scene))));
+            if (CreateSceneComparison(scene) is UIElement comparison) details.Children.Add(comparison);
             details.Children.Add(Ui.Line());
             details.Children.Add(CreateSceneDuplicateEditor(scene));
+            details.Children.Add(Ui.Line());
+            details.Children.Add(CreateSceneDisplayEditor(scene));
             details.Children.Add(Ui.Line());
             details.Children.Add(Ui.Setting(L.T("scene.onConnect"), L.T("scene.onConnectHelp"), Toggle(scene.OnConnect, v =>
             {
@@ -292,5 +367,25 @@ public partial class MainWindow
         // Change visibility in place so typing retains focus and unsaved card edits.
         search.TextChanged += (_, _) => Filter();
         Filter();
+    }
+
+    private Task ImportSceneAsync()
+    {
+        if (sceneBusy || modePending || scanning || Service.IsWriting) throw new InvalidOperationException(L.T("s92f637408f"));
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "JSON|*.json", CheckFileExists = true };
+        if (dialog.ShowDialog(this) != true) return Task.CompletedTask;
+        using var stream = File.OpenRead(dialog.FileName);
+        var scene = SceneFile.Import(stream, Preferences.Presets);
+        Preferences.Presets.Add(scene);
+        Save(); Render(); quick?.Render(); Status(L.T("scene.imported"));
+        return Task.CompletedTask;
+    }
+
+    private Task ExportSceneAsync(Preset scene)
+    {
+        string json = SceneFile.Export(scene);
+        var dialog = new Microsoft.Win32.SaveFileDialog { FileName = "lumadesk-scene.json", DefaultExt = ".json", Filter = "JSON|*.json" };
+        if (dialog.ShowDialog(this) == true) File.WriteAllText(dialog.FileName, json);
+        return Task.CompletedTask;
     }
 }

@@ -19,7 +19,7 @@ internal sealed partial class QuickWindow
     {
         string status = AutomationProperties.GetItemStatus(button);
         string name = AutomationProperties.GetName(button);
-        var face = new Grid { Height = Math.Max(1, bounds.Height - 5), ClipToBounds = true };
+        var face = new Grid { Height = bounds.IsEmpty ? double.NaN : Math.Max(1, bounds.Height - 5), ClipToBounds = true };
         face.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         face.RowDefinitions.Add(new RowDefinition());
         if (button.Content is UIElement content)
@@ -44,14 +44,14 @@ internal sealed partial class QuickWindow
         return active =>
         {
             // Tiny map tiles retain status in their tooltip and accessibility text.
-            badge.Visibility = active && bounds.Width >= 42 && bounds.Height >= 48 ? Visibility.Visible : Visibility.Collapsed;
+            badge.Visibility = active && (bounds.IsEmpty || (bounds.Width >= 42 && bounds.Height >= 48)) ? Visibility.Visible : Visibility.Collapsed;
             string hdr = active ? L.T("s166778a827") : "";
             button.ToolTip = active ? name + " · " + hdr : name;
             AutomationProperties.SetItemStatus(button, active ? (status.Length == 0 ? hdr : status + " · " + hdr) : status);
         };
     }
 
-    private void ObserveHdrBadges(Canvas canvas, DisplayInfo[] displays, HashSet<string> states, Dictionary<string, Action<bool>> updates)
+    private void ObserveHdrBadges(Panel canvas, DisplayInfo[] displays, HashSet<string> states, Dictionary<string, Action<bool>> updates)
     {
         var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         bool busy = false;

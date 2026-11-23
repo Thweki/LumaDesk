@@ -12,6 +12,9 @@ namespace LumaDesk;
 public partial class MainWindow
 {
     private readonly Dictionary<string, SemaphoreSlim> brightnessGates = new(StringComparer.OrdinalIgnoreCase);
+    private readonly bool brightnessTransitionsEnabled = BrightnessTransition.IsEnabled(
+        Environment.GetEnvironmentVariable(BrightnessTransition.EnvironmentVariable));
+    private readonly CancellationTokenSource brightnessTransitionLifetime = new();
     internal event Action<DisplayInfo>? BrightnessChanged;
     internal int GetCombinedBrightness(DisplayInfo display)
     {
@@ -58,7 +61,8 @@ public partial class MainWindow
             var target = request.Display;
             try
             {
-                await WriteBrightnessAsync(target.Id, d => BrightnessRules.Adjust(request.Value, d.Brightness, d.Dimming));
+                await WriteBrightnessAsync(target.Id, d => BrightnessRules.Adjust(request.Value, d.Brightness, d.Dimming),
+                    transition: brightnessTransitionsEnabled && System.Windows.SystemParameters.ClientAreaAnimation);
             }
             catch (Exception ex)
             {
@@ -83,8 +87,10 @@ public partial class MainWindow
             return new(saved.Brightness ?? d.Brightness, Math.Clamp(saved.Dimming, 0, BrightnessRules.MaxDimming));
         }, cancellation);
 
-    private async Task WriteBrightnessAsync(string id, Func<DisplayInfo, CombinedLevel> plan, CancellationToken cancellation = default)
+    private async Task WriteBrightnessAsync(string id, Func<DisplayInfo, CombinedLevel> plan, CancellationToken cancellation = default,
+        bool transition = false)
     {
+        ResetIdleDimming();
         // Slider, keyboard, restore and reset operations can overlap at a slow DDC write.
         // Plan from the last completed pair while holding this display's gate.
         if (!brightnessGates.TryGetValue(id, out var gate)) brightnessGates[id] = gate = new(1, 1);
@@ -93,17 +99,23 @@ public partial class MainWindow
         {
             var display = CurrentBrightnessDisplay(id);
             var level = plan(display);
-            if (level.Hardware is int hardware && display.Brightness != hardware)
+            async Task WriteLevel(CombinedLevel next)
             {
-                await Service.SetPercentAsync(display, 0x10, hardware, cancellation);
-                display.Brightness = hardware;
-                // Keep the actual backlight even if a later overlay change fails.
-                // Reconnect retries use their saved target until both steps finish.
-                if (!cancellation.CanBeCanceled && level.Dimming != display.Dimming) RememberBrightness(display);
+                var token = transition ? brightnessTransitionLifetime.Token : cancellation;
+                token.ThrowIfCancellationRequested();
+                if (next.Hardware is int hardware && display.Brightness != hardware)
+                {
+                    await Service.SetPercentAsync(display, 0x10, hardware, token);
+                    display.Brightness = hardware;
+                    // Keep the actual backlight even if a later overlay change fails.
+                    if (!cancellation.CanBeCanceled && next.Dimming != display.Dimming) RememberBrightness(display);
+                }
+                token.ThrowIfCancellationRequested();
+                if (next.Dimming != display.Dimming) SetDimming(display, next.Dimming);
+                RememberBrightness(display);
             }
-            cancellation.ThrowIfCancellationRequested();
-            if (level.Dimming != display.Dimming) SetDimming(display, level.Dimming);
-            RememberBrightness(display);
+            await BrightnessTransition.ApplyAsync(new(display.Brightness, display.Dimming), level, transition, WriteLevel,
+                transition ? brightnessTransitionLifetime.Token : cancellation);
             BrightnessChanged?.Invoke(display);
         }
         finally { gate.Release(); }
@@ -112,6 +124,7 @@ public partial class MainWindow
     private async Task ResetDimmingAsync()
     {
         if (sceneBusy) throw new InvalidOperationException(L.T("s92f637408f"));
+        SuspendNightDimming(DateTime.Now);
         await Task.WhenAll(Displays.Select(d =>
         {
             CancelReconnect(d.Id);

@@ -12,6 +12,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -115,15 +116,21 @@ internal static partial class Program
                 var quickScroll = Descendants<ScrollViewer>(quick).First();
                 Check(quick.Height < 620 && quickScroll.ScrollableHeight == 0, "Compact selected-screen panel sizes to content without blank height or scrolling");
                 Snapshot(quick, "quick-panel.png"); quick.Close();
+                TestKeepAwake(window);
                 await TestQuickPlacementAsync(window);
                 await TestFocusDisplayAsync(window);
                 await TestQuickDisplayPickerAsync(window);
                 TestNextScheduleFixture(window);
                 await TestHdrBadgesAsync(window);
+                await TestQuickDisplayListAsync(window);
+                await TestQuickCompactLayoutAsync(window, offscreen: false);
                 await TestMultiBrightnessAsync(window);
                 await TestCompactBrightnessFixtureAsync(window);
+                await TestVolumeStepsFixtureAsync(window);
                 await TestInputSwitchUiAsync(window);
                 await TestInputConnectionUiAsync(window);
+                window.Hide(); await TestQuickScaleFixtureAsync(window); window.Show();
+                await TestScanModeFixtureAsync(window);
                 await TestRefreshTimingUiAsync(window);
                 await TestQuickDpiAsync(window);
                 await TestQuickModesAsync(window);
@@ -134,6 +141,9 @@ internal static partial class Program
                     Check(window.Displays.All(d => { var m = DisplayService.CurrentMode(d.Device); return m.X == d.X && m.Y == d.Y; }), "Alternate primary layout passes whole-topology SDC_VALIDATE without moving monitors");
                 }
                 await TestLayoutAsync(window);
+                await TestRelativePlacementFixtureAsync(window);
+                TestAutoLayoutFixture(window);
+                await TestLayoutSwapFixtureAsync(window);
                 await TestLiveBrightnessAndDismissAsync(window);
                 await TestBrightnessPopupLifetimeAsync(window);
                 await TestBrightnessReadbackAsync(window);
@@ -338,14 +348,49 @@ internal static partial class Program
         {
             layout.Show(); layout.UpdateLayout(); Snapshot(layout, "layout.png");
             Check(Descendants<FrameworkElement>(layout).Count(e => System.Windows.Automation.AutomationProperties.GetAutomationId(e).StartsWith("layout-screen-")) == 2, "Layout renders each monitor in its physical position");
-            var primary = Descendants<ComboBox>(layout).Last(); primary.SelectedItem = a;
+            var undo = Descendants<Button>(layout).Single(btn => System.Windows.Automation.AutomationProperties.GetAutomationId(btn) == "layout-undo");
+            var redo = Descendants<Button>(layout).Single(btn => System.Windows.Automation.AutomationProperties.GetAutomationId(btn) == "layout-redo");
+            Check(!undo.IsEnabled && !redo.IsEnabled, "Loaded layout has no undo or redo steps");
+            var primary = Descendants<ComboBox>(layout).Single(c => System.Windows.Automation.AutomationProperties.GetAutomationId(c) == "layout-primary"); primary.SelectedItem = a;
             Check(calls == 0 && layout.Placements.Single(p => p.Id == a.Id).Primary, "Primary selection only previews and sends no display command");
+            Check(ApplicationCommands.Undo.InputGestures.OfType<KeyGesture>().Any(g => g.Key == Key.Z && g.Modifiers == ModifierKeys.Control) &&
+                ApplicationCommands.Redo.InputGestures.OfType<KeyGesture>().Any(g => g.Key == Key.Y && g.Modifiers == ModifierKeys.Control), "Layout undo and redo commands expose Ctrl+Z and Ctrl+Y");
+            Check(ApplicationCommands.Undo.CanExecute(null, layout) && undo.IsEnabled, "Primary preview enables layout undo command and button");
+            ApplicationCommands.Undo.Execute(null, layout);
+            Check(ReferenceEquals(primary.SelectedItem, b) && layout.Placements.Single(p => p.Id == b.Id).Primary && !undo.IsEnabled && redo.IsEnabled, "Undo command restores the preview and primary selector");
+            ApplicationCommands.Redo.Execute(null, layout);
+            Check(ReferenceEquals(primary.SelectedItem, a) && undo.IsEnabled && !redo.IsEnabled, "Redo command restores the primary preview without a recursive edit");
+            Click(undo); Click(redo);
+            Check(ReferenceEquals(primary.SelectedItem, a) && calls == 0, "Undo and redo buttons only change the preview");
+            var beforeCoordinates = layout.Placements.ToArray();
+            var xBox = Descendants<TextBox>(layout).First(); xBox.Text = "-1800";
+            Click(Descendants<Button>(layout).Single(btn => btn.Content as string == L.T("s4a05c9ce76")));
+            Check(layout.Placements[0].X == -1800, "Coordinate update records a preview edit");
+            Click(undo);
+            Check(layout.Placements.SequenceEqual(beforeCoordinates) && xBox.Text == "-1920", "Undo coordinates updates the preview and its text fields");
+            Click(Descendants<Button>(layout).Single(btn => btn.Content as string == L.T("s86d5bec31e")));
+            Check(layout.Placements[1].Y == 1080 && !redo.IsEnabled, "New arrangement replaces the redo path");
+            Click(undo);
+            Check(layout.Placements.SequenceEqual(beforeCoordinates), "Undo restores all arranged monitors in one step");
+            xBox.Focus(); xBox.SelectAll(); xBox.SelectedText = "-1200";
+            ApplicationCommands.Undo.Execute(null, xBox);
+            Check(xBox.Text != "-1200" && layout.Placements.SequenceEqual(beforeCoordinates), "Undo inside a coordinate field edits text without undoing the layout");
+            // Toggling undo clears WPF's text history before checking command routing.
+            xBox.IsUndoEnabled = false; xBox.IsUndoEnabled = true;
+            ApplicationCommands.Undo.Execute(null, xBox);
+            Check(layout.Placements.SequenceEqual(beforeCoordinates), "An empty text undo history does not fall through to layout undo");
             var apply = Descendants<Button>(layout).Single(btn => System.Windows.Automation.AutomationProperties.GetAutomationId(btn) == "layout-apply");
             Click(apply); await Task.Delay(20);
             Check(calls == 1 && received!.Single(p => p.Id == a.Id).X == 0 && received!.Single(p => p.Id == b.Id).X == 1920 && !window.IsVisible, "Layout applies a normalized exact set from its own window without opening settings");
             Click(apply); Check(calls == 1 && !apply.IsEnabled, "Pending layout blocks duplicate submission");
-            hold.SetResult(); await Task.Delay(60); fail = true; Click(apply); await Task.Delay(60);
+            Check(!undo.IsEnabled && !redo.IsEnabled && !ApplicationCommands.Undo.CanExecute(null, layout) && !ApplicationCommands.Redo.CanExecute(null, layout), "Pending apply blocks preview undo and redo");
+            hold.SetResult(); await Task.Delay(60);
+            Check(!undo.IsEnabled && !redo.IsEnabled && !ApplicationCommands.Undo.CanExecute(null, layout), "Successful apply reloads the layout and clears preview history");
+            primary.SelectedItem = a; fail = true; Click(apply); await Task.Delay(60);
             Check(calls == 2 && Descendants<TextBlock>(layout).Any(t => t.Text == "测试：排列应用被拒绝"), "Layout errors remain visible in app and controls recover");
+            Check(undo.IsEnabled, "Failed apply keeps preview history available");
+            Click(undo);
+            Check(ReferenceEquals(primary.SelectedItem, b) && calls == 2, "Undo after a rejected apply restores the preview without another display write");
         }
         finally { hold.TrySetResult(); await Task.Delay(20); layout.Close(); window.Displays = real; window.Show(); }
     }
@@ -458,14 +503,21 @@ internal static partial class Program
             Check(FindDpi(2).IsEnabled && FindDpi(2).Value == 1 && !window.IsVisible, "Release keeps the confirmed live scale without opening settings");
             SelectQuick(quick, 1); slider = FindDpi(1); slider.Value = 2; await Task.Delay(10); slider.Value = 1; await Task.Delay(180);
             Check(calls == 3 && ReferenceEquals(requestedDisplay, first) && requestedPercent == 150, "Fast keyboard input coalesces to latest supported step");
-            SelectQuick(quick, 2); quick.UpdateLayout(); fail = true; slider = FindDpi(2); slider.Value = 2; await Task.Delay(420); quick.UpdateLayout();
+            SelectQuick(quick, 2); quick.UpdateLayout(); fail = true; slider = FindDpi(2);
+            Click(Descendants<Button>(quick).Single(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b) == "quick-dpi-decrease-2"));
+            await Task.Delay(420); quick.UpdateLayout();
             Check(calls == 4 && Descendants<TextBlock>(quick).Any(t => t.Text == "测试：缩放命令被拒绝") && FindDpi(2).Value == 1, "Quick failure is displayed inline and value reloads actual current scale");
             quick.Render(); quick.UpdateLayout();
             Check(Descendants<TextBlock>(quick).Any(t => t.Text == "测试：缩放命令被拒绝") && !window.IsVisible, "Inline failure survives discovery rerender without opening main settings");
             SelectQuick(quick, 1); fail = false; slider = FindDpi(1); BeginDrag(slider); slider.Value = 0; await Task.Delay(160); EndDrag(slider, true); await Task.Delay(60);
             Check(calls == 5 && first.DpiScale.CurrentPercent == 175, "Cancel keeps an already confirmed live setting without a stale queued command");
-            slider = FindDpi(1); slider.Value = 1; quick.Close(); await Task.Delay(180);
-            Check(calls == 6 && !quick.IsVisible && first.DpiScale.CurrentPercent == 150, "Closing waits for final live target then closes without losing adjustment");
+            var decrease = Descendants<Button>(quick).Single(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b) == "quick-dpi-decrease-1");
+            decrease.Focus(); Click(decrease); await Task.Delay(180); quick.Render();
+            Check(calls == 6 && first.DpiScale.CurrentPercent == 150 && decrease.IsKeyboardFocused &&
+                ReferenceEquals(decrease, Descendants<Button>(quick).Single(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b) == "quick-dpi-decrease-1")),
+                "A keyboard nudge keeps its focused button through completion and discovery refresh");
+            slider = FindDpi(1); slider.Value = 2; quick.Close(); await Task.Delay(180);
+            Check(calls == 7 && !quick.IsVisible && first.DpiScale.CurrentPercent == 125, "Closing waits for final live target then closes without losing adjustment");
         }
         finally
         {
@@ -495,8 +547,10 @@ internal static partial class Program
         {
             quick.Render(); quick.Show(); quick.UpdateLayout();
             Check(!Has("quick-output-toggle-1") && !Descendants<TextBlock>(quick).Any(t => t.Text == "显示器音量"), "Mode and volume controls stay inside More by default");
+            Check(!Has("quick-volume-down") && !Has("quick-volume-up"), "Volume steps stay inside More by default");
             Toggle("quick-more-toggle-1");
             Check(Has("quick-output-toggle-1") && Has("quick-refresh-toggle-1") && Descendants<TextBlock>(quick).Any(t => t.Text == "显示器音量"), "More exposes real output, refresh and supported monitor volume controls");
+            Check(Has("quick-volume-down") && Has("quick-volume-up"), "More exposes volume steps for the selected supported monitor");
             Toggle("quick-refresh-toggle-1"); var rates = List("quick-refresh-list-1");
             Check(rates.Items.Cast<DisplayMode>().SequenceEqual(new[] { current, slower }) && Equals(rates.SelectedItem, current), "Refresh list filters current pixel dimensions, deduplicates and selects current rate");
             Check(calls == 0, "Expanding mode lists does not send a display command");
@@ -529,6 +583,7 @@ internal static partial class Program
                 "Quick rotation uses the selected display and existing validated mode transaction");
             SelectQuick(quick, 2);
             Check(!Has("quick-output-toggle-2") && !Has("quick-refresh-toggle-2") && !Descendants<TextBlock>(quick).Any(t => t.Text == "显示器音量"), "Unsupported display has no fabricated output, refresh or volume controls");
+            Check(!Has("quick-volume-down") && !Has("quick-volume-up"), "Selecting an unsupported monitor removes volume steps");
             Check(!window.IsVisible, "All quick mode operations leave main settings hidden");
         }
         finally

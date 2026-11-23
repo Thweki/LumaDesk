@@ -56,19 +56,37 @@ internal static partial class Program
                     // without invoking the real window lifecycle.
                     var owner = new MainWindow(() => true);
                     TestSceneRenameFixture(owner);
+                    TestIdleDimmingOptions(owner);
                     TestSceneDuplicateFixture(owner);
+                    TestWeeklyScheduleFixture(owner);
+                    await TestSceneComparisonFixtureAsync(owner);
+                    await TestDisplayUndoFixtureAsync();
+                    TestSceneDisplayFixture(owner);
                     await TestSceneDraftFixtureAsync(owner);
                     TestSceneOrderFixture(owner);
                     TestNextScheduleFixture(owner);
                     TestSceneNoteFixture(owner);
                     TestSceneSearchFixture(owner);
+                    await TestRelativePlacementFixtureAsync(owner);
+                    TestAutoLayoutFixture(owner);
+                    await TestLayoutSwapFixtureAsync(owner);
+                    TestDisplayResetFixture(owner);
+                    await TestSceneGammaFixtureAsync(owner);
+                    TestSceneApplyPreviewFixture(owner);
+                    await TestSceneCycleFixtureAsync(owner);
+                    TestSceneLastAppliedFixture(owner);
                     await TestLiveBrightnessFixtureAsync(owner);
                     await TestCompactBrightnessFixtureAsync(owner);
+                    await TestQuickScaleFixtureAsync(owner);
+                    await TestVolumeStepsFixtureAsync(owner);
                     await TestInputSwitchUiAsync(owner, offscreen: true);
                     await TestInputConnectionUiAsync(owner);
+                    TestNightDimmingFixture(owner);
+                    await TestScanModeFixtureAsync(owner);
                     await TestRefreshTimingUiAsync(owner);
                     TestDeferredSettingsRenderingFixture();
                     TestDetachedPanelLayout();
+                    await TestQuickCompactLayoutAsync(owner);
                     Check(!owner.IsLoaded && new WindowInteropHelper(owner).Handle == IntPtr.Zero && owner.Displays.Count == 0,
                         "Fixture owner never loads a desktop window or discovers displays");
                     Result($"PASS: {checks} desktop-independent WPF fixture checks. No hardware queries or writes.");

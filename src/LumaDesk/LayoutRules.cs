@@ -8,8 +8,118 @@ using System.Linq;
 namespace LumaDesk;
 
 public sealed record ScreenPlacement(string Id, int X, int Y, int Width, int Height, bool Primary);
+public enum LayoutSide { Left, Right, Above, Below }
+public enum LayoutAlignment { Start, Center, End }
 public static class LayoutRules
 {
+    public static ScreenPlacement PlaceRelative(ScreenPlacement moving, ScreenPlacement anchor, LayoutSide side, LayoutAlignment alignment)
+    {
+        if (string.Equals(moving.Id, anchor.Id, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(L.T("layout.relative.same"));
+        if (moving.Width <= 0 || moving.Height <= 0 || anchor.Width <= 0 || anchor.Height <= 0)
+            throw new InvalidOperationException(L.T("sa9fa1bf809"));
+        if (!Enum.IsDefined(side)) throw new ArgumentOutOfRangeException(nameof(side));
+        if (!Enum.IsDefined(alignment)) throw new ArgumentOutOfRangeException(nameof(alignment));
+
+        bool horizontal = side is LayoutSide.Left or LayoutSide.Right;
+        long difference = horizontal ? (long)anchor.Height - moving.Height : (long)anchor.Width - moving.Width;
+        // Odd pixel differences round toward the top/left, never creating a gap.
+        long offset = alignment == LayoutAlignment.Start ? 0 : alignment == LayoutAlignment.End ? difference : (long)Math.Floor(difference / 2.0);
+        long x = side switch
+        {
+            LayoutSide.Left => (long)anchor.X - moving.Width,
+            LayoutSide.Right => (long)anchor.X + anchor.Width,
+            _ => (long)anchor.X + offset
+        };
+        long y = side switch
+        {
+            LayoutSide.Above => (long)anchor.Y - moving.Height,
+            LayoutSide.Below => (long)anchor.Y + anchor.Height,
+            _ => (long)anchor.Y + offset
+        };
+        if (x < int.MinValue || x > int.MaxValue || y < int.MinValue || y > int.MaxValue)
+            throw new InvalidOperationException(L.T("sa9fa1bf809"));
+        return moving with { X = (int)x, Y = (int)y };
+    }
+
+    internal static bool AutoTidyEnabled => Environment.GetEnvironmentVariable("LUMADESK_EXPERIMENTAL_AUTOLAYOUT") == "1";
+
+    public static List<ScreenPlacement> Tidy(IEnumerable<ScreenPlacement> screens)
+    {
+        var items = screens.ToList();
+        if (items.Count == 0 || items.Count(i => i.Primary) != 1 ||
+            items.Any(i => string.IsNullOrWhiteSpace(i.Id)) ||
+            items.Select(i => i.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count() != items.Count)
+            throw new InvalidOperationException(L.T("sc918c29047"));
+        if (items.Any(i => i.Width <= 0 || i.Height <= 0 || i.Width > 65535 || i.Height > 65535))
+            throw new InvalidOperationException(L.T("sa9fa1bf809"));
+        // Already connected, non-overlapping layouts need no tidying (also makes repeat clicks stable).
+        try { return Normalize(items); }
+        catch (InvalidOperationException) { }
+
+        var primary = items.Single(i => i.Primary);
+        var placed = new List<ScreenPlacement> { primary with { X = 0, Y = 0 } };
+        // Place nearby screens first; identity breaks ties independently of discovery order.
+        foreach (var screen in items.Where(i => !i.Primary)
+            .OrderBy(i => Math.Abs((long)i.X - primary.X) + Math.Abs((long)i.Y - primary.Y))
+            .ThenBy(i => i.Id, StringComparer.OrdinalIgnoreCase))
+        {
+            long desiredX = (long)screen.X - primary.X, desiredY = (long)screen.Y - primary.Y;
+            var candidates = new List<ScreenPlacement>();
+            foreach (var anchor in placed)
+            {
+                // Edge alignments plus the nearest position with full overlap of the smaller edge.
+                int overlapY = Math.Min(anchor.Height, screen.Height), overlapX = Math.Min(anchor.Width, screen.Width);
+                foreach (int y in new[] { anchor.Y, anchor.Y + anchor.Height - screen.Height,
+                    (int)Math.Clamp(desiredY, anchor.Y - screen.Height + overlapY, anchor.Y + anchor.Height - overlapY) })
+                {
+                    candidates.Add(screen with { X = anchor.X - screen.Width, Y = y });
+                    candidates.Add(screen with { X = anchor.X + anchor.Width, Y = y });
+                }
+                foreach (int x in new[] { anchor.X, anchor.X + anchor.Width - screen.Width,
+                    (int)Math.Clamp(desiredX, anchor.X - screen.Width + overlapX, anchor.X + anchor.Width - overlapX) })
+                {
+                    candidates.Add(screen with { X = x, Y = anchor.Y - screen.Height });
+                    candidates.Add(screen with { X = x, Y = anchor.Y + anchor.Height });
+                }
+            }
+            var next = candidates.Where(c => Math.Abs((long)c.X) + c.Width <= 65535 && Math.Abs((long)c.Y) + c.Height <= 65535 &&
+                    placed.All(p => Math.Min(c.X + c.Width, p.X + p.Width) <= Math.Max(c.X, p.X) ||
+                                    Math.Min(c.Y + c.Height, p.Y + p.Height) <= Math.Max(c.Y, p.Y)))
+                .OrderBy(c => Math.Abs((long)c.X - desiredX) + Math.Abs((long)c.Y - desiredY))
+                .ThenBy(c => c.X).ThenBy(c => c.Y).FirstOrDefault();
+            if (next == null) throw new InvalidOperationException(L.T("layout.tidy.unavailable"));
+            placed.Add(next);
+        }
+        // Preserve UI order and run the same validation as manual placement before publishing a preview.
+        return Normalize(items.Select(i => placed.Single(p => p.Id == i.Id)));
+    }
+
+    public static List<ScreenPlacement> SwapPositions(IEnumerable<ScreenPlacement> screens, string firstId, string secondId)
+    {
+        var items = Normalize(screens);
+        var first = items.FirstOrDefault(p => string.Equals(p.Id, firstId, StringComparison.OrdinalIgnoreCase));
+        var second = items.FirstOrDefault(p => string.Equals(p.Id, secondId, StringComparison.OrdinalIgnoreCase));
+        if (first == null || second == null || first == second)
+            throw new InvalidOperationException(L.T("layout.swap.choose"));
+
+        var movedFirst = first with { X = second.X, Y = second.Y };
+        var movedSecond = second with { X = first.X, Y = first.Y };
+        // Unequal neighbors must exchange places around their shared edge,
+        // keeping the pair's outer edges, rather than exchanging origins alone.
+        if (Touch(first, second) && first.X + first.Width == second.X)
+            movedFirst = movedFirst with { X = second.X + second.Width - first.Width };
+        else if (Touch(first, second) && second.X + second.Width == first.X)
+            movedSecond = movedSecond with { X = first.X + first.Width - second.Width };
+        else if (Touch(first, second) && first.Y + first.Height == second.Y)
+            movedFirst = movedFirst with { Y = second.Y + second.Height - first.Height };
+        else if (Touch(first, second) && second.Y + second.Height == first.Y)
+            movedSecond = movedSecond with { Y = first.Y + first.Height - second.Height };
+
+        // Validate the whole desktop before publishing any preview change. Other
+        // screens retain their positions apart from primary-origin translation.
+        return Normalize(items.Select(p => p == first ? movedFirst : p == second ? movedSecond : p));
+    }
     public static List<ScreenPlacement> Normalize(IEnumerable<ScreenPlacement> screens)
     {
         var items = screens.ToList();

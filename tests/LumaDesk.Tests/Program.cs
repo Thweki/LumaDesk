@@ -7,6 +7,11 @@ using System.Text.Json;
 
 int tests = 0;
 void Check(bool condition, string name) { if (!condition) throw new Exception("FAIL: " + name); tests++; Console.WriteLine("PASS " + name); }
+LogExportTests.Run(Check);
+Check(!new Preferences().QuickDisplayList && !JsonSerializer.Deserialize<Preferences>("{}", Storage.Json)!.QuickDisplayList,
+    "New and legacy preferences keep the spatial display map by default");
+Check(JsonSerializer.Deserialize<Preferences>(JsonSerializer.Serialize(new Preferences { QuickDisplayList = true }, Storage.Json), Storage.Json)!.QuickDisplayList,
+    "Named display list preference survives serialization");
 Check(Marshal.SizeOf<Native.DevMode>() == 220, "DEVMODEW native layout is 220 bytes");
 Check(Marshal.OffsetOf<Native.DevMode>(nameof(Native.DevMode.Width)).ToInt32() == 172, "DEVMODEW width offset");
 Check(Marshal.SizeOf<Native.DisplayDevice>() == 840, "DISPLAY_DEVICEW native layout");
@@ -30,6 +35,9 @@ lease = new ModeLease(() => {}, () => { if (failRestore) throw new InvalidOperat
 try { lease.Revert(); } catch (InvalidOperationException) { }
 Check(lease.Pending, "Failed rollback remains pending"); failRestore = false; lease.Revert(); Check(!lease.Pending && restored == 3, "Failed rollback can retry");
 await RecoveryLifecycleTests.RunAsync(Check);
+IdleDimmingTests.Run(Check);
+NightDimmingTests.Run(Check);
+SceneComparisonTests.Run(Check);
 var original = Native.DevMode.Create(); original.Width = 2560; original.X = -2560; original.Frequency = 144; original.Fields = 0x80000;
 var copy = JsonSerializer.Deserialize<Native.DevMode>(JsonSerializer.Serialize(original, Storage.Json), Storage.Json);
 Check(copy.Width == 2560 && copy.X == -2560 && copy.Size == 220 && copy.Fields == original.Fields, "Watchdog recovery data roundtrip preserves native mode");
@@ -67,6 +75,8 @@ writer = new LatestValueWriter(v => { if (v == 5) throw new InvalidOperationExce
 writer.Request(5); await writer.WhenIdle; writer.Request(55); await writer.WhenIdle;
 Check(errors == 1 && writes.SequenceEqual(new[] { 55 }), "Slider writer reports failures and accepts later input");
 await LatestValueWriterTests.Run(Check);
+await BrightnessTransitionTests.Run(Check);
+PanelKeepAwakeTests.Run(Check);
 Check(BrightnessRules.Split(100, true) == new CombinedLevel(100, 0) && BrightnessRules.Split(20, true) == new CombinedLevel(0, 0), "Combined brightness reaches full and minimum hardware backlight without dimming");
 Check(BrightnessRules.Split(0, true) == new CombinedLevel(0, 85) && BrightnessRules.Split(10, true) == new CombinedLevel(0, 42.5), "Combined low range extends below backlight minimum");
 Check(Enumerable.Range(0,101).All(v => { var level = BrightnessRules.Split(v, true); return Math.Abs(BrightnessRules.Combine(level.Hardware, level.Dimming)-v) <= 1; }), "Combined brightness mapping roundtrips full control range");
@@ -138,4 +148,10 @@ foreach (var invalid in new[] {
 }
 var snapped = LayoutRules.Snap(layout[0] with { X = -1900, Y = 15 }, new[] { layout[1] }, 30);
 Check(snapped.X == -1920 && snapped.Y == 0, "Dragged screen snaps to neighboring edge and alignment");
+LayoutHistoryTests.Run(Check);
+SceneFileTests.Run(Check);
+RelativePlacementTests.Run(Check);
+AutoLayoutTests.Run(Check);
+LayoutSwapTests.Run(Check);
+ScanModeTests.Run(Check);
 Console.WriteLine($"{tests} tests passed.");

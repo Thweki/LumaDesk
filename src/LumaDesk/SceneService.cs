@@ -16,14 +16,23 @@ internal interface ISceneBackend
     Task Dpi(DisplayInfo display, int percent);
     Task Hdr(DisplayInfo display, bool enabled);
     Task Profiles(DisplayInfo display, PresetDisplay saved);
+    Task Contrast(DisplayInfo display, int percent);
     Task Brightness(DisplayInfo display, PresetDisplay saved);
     Task Layout(IReadOnlyList<ScreenPlacement> placements);
+}
+
+internal interface ISceneGammaBackend
+{
+    bool GammaEnabled { get; }
+    Task<ushort[]?> ReadGamma(DisplayInfo display);
+    Task RestoreGamma(DisplayInfo display, ushort[] ramp);
 }
 
 internal sealed class SceneResult
 {
     public int Applied { get; set; }
     public List<string> Issues { get; } = new();
+    public HashSet<string> SuccessfulDisplayIds { get; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
 internal static class SceneService
@@ -76,14 +85,65 @@ internal static class SceneService
         {
             Name = name,
             Note = source.Note,
-            Displays = source.Displays.Select(d => new PresetDisplay
-            {
-                Id = d.Id, Name = d.Name, Brightness = d.Brightness, Dimming = d.Dimming,
-                Mode = d.Mode, Orientation = d.Orientation, Dpi = d.Dpi, Hdr = d.Hdr,
-                UserProfiles = d.UserProfiles, SdrProfile = d.SdrProfile, HdrProfile = d.HdrProfile,
-                X = d.X, Y = d.Y, Primary = d.Primary
-            }).ToList()
+            Displays = source.Displays.Select(CopyDisplay).ToList()
         };
+    }
+
+    private static PresetDisplay CopyDisplay(PresetDisplay d) => new()
+    {
+        Id = d.Id, Name = d.Name, Brightness = d.Brightness, Contrast = d.Contrast, Dimming = d.Dimming,
+        GammaRamp = d.GammaRamp?.ToArray(),
+        Mode = d.Mode, Orientation = d.Orientation, Dpi = d.Dpi, Hdr = d.Hdr,
+        UserProfiles = d.UserProfiles, SdrProfile = d.SdrProfile, HdrProfile = d.HdrProfile,
+        X = d.X, Y = d.Y, Primary = d.Primary
+    };
+
+    // A single-screen application (and its undo snapshot) must never restore desktop layout.
+    internal static Preset ForDisplay(Preset source, string displayId)
+    {
+        var matches = source.Displays.Where(d => string.Equals(d.Id, displayId, StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (string.IsNullOrWhiteSpace(displayId) || matches.Length != 1)
+            throw new ArgumentException(L.T("scene.displayMissing"));
+        var saved = CopyDisplay(matches[0]);
+        saved.X = saved.Y = null; saved.Primary = null;
+        return new Preset { Name = source.Name, Displays = new() { saved } };
+    }
+
+    internal static Task<Preset> Capture(ISceneBackend backend, string name) =>
+        Capture(backend.Displays, backend.Color, name, backend as ISceneGammaBackend);
+
+    internal static async Task<Preset> Capture(IReadOnlyList<DisplayInfo> displays,
+        Func<DisplayInfo, Task<DisplayColorState>> readColor, string name, ISceneGammaBackend? gammaBackend = null)
+    {
+        var scene = new Preset { Name = name };
+        foreach (var d in displays.ToArray())
+        {
+            var saved = new PresetDisplay { Id = d.Id, Name = d.Name, Brightness = d.Brightness, Contrast = d.Contrast, Dimming = d.Dimming,
+                Mode = d.Current, Orientation = d.Orientation, Dpi = d.DpiScale.CanSet ? d.DpiScale.CurrentPercent : null,
+                X = d.X, Y = d.Y, Primary = d.Primary };
+            try
+            {
+                var color = await readColor(d);
+                if (color.HdrKnown && color.HdrSupported) saved.Hdr = color.HdrUserEnabled;
+                if (color.ProfilesAvailable)
+                {
+                    saved.UserProfiles = color.UseUserProfiles;
+                    saved.SdrProfile = color.SdrProfile; saved.HdrProfile = color.HdrProfile;
+                }
+            }
+            catch (Exception ex) { Storage.Log("Scene color capture: " + ex.Message); }
+            if (gammaBackend is { GammaEnabled: true })
+            {
+                try
+                {
+                    var ramp = await gammaBackend.ReadGamma(d);
+                    if (ramp != null) { GammaService.Validate(ramp); saved.GammaRamp = ramp.ToArray(); }
+                }
+                catch (Exception ex) { Storage.Log("Scene gamma capture: " + ex.Message); }
+            }
+            scene.Displays.Add(saved);
+        }
+        return scene;
     }
 
     internal static async Task<Preset> CaptureDraft(ISceneBackend backend)
@@ -93,32 +153,38 @@ internal static class SceneService
         return draft;
     }
 
-    internal static async Task<Preset> Capture(ISceneBackend backend, string name)
+    internal static Preset CaptureOutput(IReadOnlyList<DisplayInfo> displays) => new()
     {
-        var scene = new Preset { Name = name };
-        foreach (var d in backend.Displays.ToArray())
+        Name = L.T("scene.previous"),
+        Displays = displays.Select(d => new PresetDisplay
         {
-            var saved = new PresetDisplay { Id = d.Id, Name = d.Name, Brightness = d.Brightness, Dimming = d.Dimming,
-                Mode = d.Current, Orientation = d.Orientation, Dpi = d.DpiScale.CanSet ? d.DpiScale.CurrentPercent : null,
-                X = d.X, Y = d.Y, Primary = d.Primary };
-            try
+            Id = d.Id, Name = d.Name, Mode = d.Current, Orientation = d.Orientation,
+            Dpi = d.DpiScale.CanSet ? d.DpiScale.CurrentPercent : null,
+            X = d.X, Y = d.Y, Primary = d.Primary
+        }).ToList()
+    };
+
+    internal static Preset CaptureScale(DisplayInfo display, int percent) => new()
+    {
+        Name = L.T("scene.previous"),
+        Displays = new() { new() { Id = display.Id, Name = display.Name, Dpi = percent } }
+    };
+
+    internal static async Task<SceneResult> ApplyAndRemember(ISceneBackend backend, Preferences preferences, Preset scene, bool undo = false)
+    {
+        var result = await Apply(backend, scene);
+        // This is application history, not a claim that the current setup still matches.
+        // Keep the name at application time, even if the saved preset is later edited or deleted.
+        if (!undo && result.Applied > 0 && result.Issues.Count == 0 && preferences.Presets.Contains(scene))
+            preferences.LastPresetApplication = new PresetApplication
             {
-                var color = await backend.Color(d);
-                if (color.HdrKnown && color.HdrSupported) saved.Hdr = color.HdrUserEnabled;
-                if (color.ProfilesAvailable)
-                {
-                    saved.UserProfiles = color.UseUserProfiles;
-                    saved.SdrProfile = color.SdrProfile; saved.HdrProfile = color.HdrProfile;
-                }
-            }
-            catch (Exception ex) { Storage.Log("Scene color capture: " + ex.Message); }
-            scene.Displays.Add(saved);
-        }
-        return scene;
+                PresetId = scene.Id, PresetName = scene.Name, AppliedAtUtc = DateTimeOffset.UtcNow
+            };
+        return result;
     }
 
     // Resolve the device again between operations: a mode change can replace every DisplayInfo.
-    internal static async Task<SceneResult> Apply(ISceneBackend backend, Preset scene)
+    internal static async Task<SceneResult> Apply(ISceneBackend backend, Preset scene, bool outputOnly = false)
     {
         var result = new SceneResult();
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -142,15 +208,22 @@ internal static class SceneService
                 await backend.Mode(d, saved.Mode, orientation);
             });
             if (saved.Dpi.HasValue) await Step(L.T("scene.scale"), d => saved.Dpi == d.DpiScale.CurrentPercent ? Task.CompletedTask : backend.Dpi(d, saved.Dpi.Value));
-            if (saved.Hdr.HasValue) await Step("HDR", async d =>
+            if (!outputOnly && saved.Hdr.HasValue) await Step("HDR", async d =>
             {
                 var state = await backend.Color(d);
                 if (!state.HdrKnown || !state.HdrSupported) throw new InvalidOperationException(L.T("scene.unsupported"));
                 if (state.HdrUserEnabled != saved.Hdr) await backend.Hdr(d, saved.Hdr.Value);
             });
-            if (saved.UserProfiles.HasValue) await Step("ICC", d => backend.Profiles(d, saved));
-            await Step(L.T("scene.brightness"), d => backend.Brightness(d, saved));
-            if (!failed) result.Applied++;
+            if (!outputOnly && saved.UserProfiles.HasValue) await Step("ICC", d => backend.Profiles(d, saved));
+            if (!outputOnly && saved.Contrast is int contrast) await Step(L.T("s4cbc753240"), async d =>
+            {
+                if (contrast is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(saved.Contrast));
+                // Mode/HDR changes can remove DDC support; use the freshly resolved display.
+                if (!d.Contrast.HasValue) throw new InvalidOperationException(L.T("scene.unsupported"));
+                if (d.Contrast != contrast) await backend.Contrast(d, contrast);
+            });
+            if (!outputOnly) await Step(L.T("scene.brightness"), d => backend.Brightness(d, saved));
+            if (!failed) { result.Applied++; result.SuccessfulDisplayIds.Add(saved.Id); }
         }
         if (scene.Displays.Any(d => d.X.HasValue))
         {
@@ -160,6 +233,33 @@ internal static class SceneService
             {
                 try { await backend.Layout(layout); }
                 catch (Exception ex) { result.Issues.Add(L.T("scene.layout") + ": " + ex.Message); }
+            }
+        }
+        // Mode, HDR, ICC and layout changes can reset gamma. Restore ramps last,
+        // resolving stable identities again after all topology-changing operations.
+        if (!outputOnly && backend is ISceneGammaBackend { GammaEnabled: true } gamma)
+        {
+            ids.Clear();
+            foreach (var saved in scene.Displays)
+            {
+                if (!ids.Add(saved.Id) || saved.GammaRamp == null) continue;
+                var display = backend.Displays.FirstOrDefault(d => string.Equals(d.Id, saved.Id, StringComparison.OrdinalIgnoreCase));
+                if (display == null)
+                {
+                    if (result.SuccessfulDisplayIds.Remove(saved.Id))
+                    { result.Applied--; result.Issues.Add(saved.Name + " · Gamma: " + L.T("scene.disconnected")); }
+                    continue;
+                }
+                try
+                {
+                    GammaService.Validate(saved.GammaRamp);
+                    await gamma.RestoreGamma(display, saved.GammaRamp.ToArray());
+                }
+                catch (Exception ex)
+                {
+                    if (result.SuccessfulDisplayIds.Remove(saved.Id)) result.Applied--;
+                    result.Issues.Add(display.Name + " · Gamma: " + ex.Message);
+                }
             }
         }
         return result;

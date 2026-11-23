@@ -93,6 +93,11 @@ public sealed class Preset : IJsonOnDeserialized
     public List<PresetDisplay> Displays { get; set; } = new();
     public bool OnConnect { get; set; }
     public string? AtTime { get; set; }
+    public bool ExperimentalWeeklySchedule { get; set; }
+    public List<DayOfWeek>? ScheduleDays { get; set; } = new()
+    {
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday
+    };
     public string? OnPower { get; set; }
     public HotkeyBinding? Shortcut { get; set; }
 }
@@ -101,7 +106,11 @@ public sealed class PresetDisplay
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
     public int? Brightness { get; set; }
+    // Null leaves contrast unchanged (legacy presets or an unreadable DDC control).
+    public int? Contrast { get; set; }
     public double Dimming { get; set; }
+    // RGB, 256 unsigned 16-bit entries per channel; null leaves gamma unchanged.
+    public ushort[]? GammaRamp { get; set; }
     public DisplayMode? Mode { get; set; }
     public uint? Orientation { get; set; }
     public int? Dpi { get; set; }
@@ -118,6 +127,12 @@ public sealed class HotkeyBinding
 {
     public uint Modifiers { get; set; } = 3;
     public uint Key { get; set; }
+}
+public sealed class PresetApplication
+{
+    public string PresetId { get; set; } = "";
+    public string PresetName { get; set; } = "";
+    public DateTimeOffset AppliedAtUtc { get; set; }
 }
 public sealed class DisplayPreference
 {
@@ -140,14 +155,22 @@ public sealed class Preferences
     public bool CloseToTray { get; set; } = true;
     public bool SyncBrightness { get; set; }
     public bool Hotkeys { get; set; } = true;
+    public bool ExperimentalPresetComparison { get; set; }
     public bool ShowHelp { get; set; } = true;
     public HashSet<string> QuickCollapsedDisplays { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public string? QuickMoreDisplayId { get; set; }
     public string? QuickSelectedDisplayId { get; set; }
+    public bool QuickDisplayList { get; set; }
     public List<Preset> Presets { get; set; } = new();
+    public PresetApplication? LastPresetApplication { get; set; }
     public List<DisplayGroup> Groups { get; set; } = new();
     public Dictionary<string, DisplayPreference> DisplayOptions { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public bool RestoreBrightness { get; set; } = true;
+    public bool ExperimentalIdleDimming { get; set; }
+    public int IdleDimmingMinutes { get; set; } = 5;
+    public bool ExperimentalNightDimming { get; set; }
+    public string NightDimmingStart { get; set; } = "21:00";
+    public string NightDimmingEnd { get; set; } = "07:00";
     public Dictionary<string, PresetDisplay> RememberedBrightness { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public HotkeyBinding BrightnessUp { get; set; } = new() { Key = 0x26 };
     public HotkeyBinding BrightnessDown { get; set; } = new() { Key = 0x28 };

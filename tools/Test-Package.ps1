@@ -63,6 +63,60 @@ if ($Install) {
         $shortcut = Join-Path ([Environment]::GetFolderPath('CommonPrograms')) 'LumaDesk.lnk'
         if (-not (Test-Path $shortcut)) { throw 'Start menu shortcut missing.' }
         Test-ExeStartup $installed
+
+        # Exercise the installed log-export CLI using only isolated, synthetic files.
+        $logSmoke = Join-Path ([IO.Path]::GetTempPath()) ("lumadesk-log-smoke-" + [Guid]::NewGuid().ToString('N'))
+        $data = Join-Path $logSmoke 'test data'
+        $zipPath = Join-Path $logSmoke 'support logs.zip'
+        $previousDataDir = $env:LUMADESK_DATA_DIR
+        try {
+            [void][IO.Directory]::CreateDirectory($data)
+            $env:LUMADESK_DATA_DIR = $data
+            $expectedLogs = @{
+                'app.log' = [Text.Encoding]::UTF8.GetBytes("Current synthetic log $([char]0x2603)`r`n")
+                'app.previous.log' = [Text.Encoding]::UTF8.GetBytes("Previous synthetic log`n")
+            }
+            foreach ($name in $expectedLogs.Keys) {
+                [IO.File]::WriteAllBytes((Join-Path $data $name), $expectedLogs[$name])
+            }
+            [IO.File]::WriteAllText((Join-Path $data 'unrelated.txt'), 'Synthetic non-log fixture')
+            function Invoke-LogExportSmoke {
+                $export = Start-Process $installed -ArgumentList @('--export-log', "`"$zipPath`"") -WindowStyle Hidden -PassThru
+                try {
+                    if (-not $export.WaitForExit(30000)) {
+                        $export.Kill()
+                        if (-not $export.WaitForExit(5000)) { throw 'Installed log export did not stop.' }
+                        throw 'Installed log export timed out.'
+                    }
+                    return $export.ExitCode
+                } finally { $export.Dispose() }
+            }
+
+            if ((Invoke-LogExportSmoke) -ne 0) { throw 'Installed log export failed.' }
+            $logsZip = [IO.Compression.ZipFile]::OpenRead($zipPath)
+            try {
+                if ($logsZip.Entries.Count -ne $expectedLogs.Count) { throw 'Unexpected number of log ZIP entries.' }
+                foreach ($name in $expectedLogs.Keys) {
+                    $entry = $logsZip.GetEntry($name)
+                    if ($null -eq $entry) { throw "Missing log ZIP entry: $name" }
+                    $stream = $entry.Open()
+                    $bytes = [IO.MemoryStream]::new()
+                    try {
+                        $stream.CopyTo($bytes)
+                        if ([Convert]::ToBase64String($bytes.ToArray()) -cne [Convert]::ToBase64String($expectedLogs[$name])) {
+                            throw "Log ZIP entry bytes differ: $name"
+                        }
+                    } finally { $bytes.Dispose(); $stream.Dispose() }
+                }
+            } finally { $logsZip.Dispose() }
+
+            $zipHash = (Get-FileHash -LiteralPath $zipPath).Hash
+            if ((Invoke-LogExportSmoke) -ne 1) { throw 'Installed log export did not reject an existing destination.' }
+            if ((Get-FileHash -LiteralPath $zipPath).Hash -cne $zipHash) { throw 'Installed log export modified the existing ZIP.' }
+        } finally {
+            $env:LUMADESK_DATA_DIR = $previousDataDir
+            if (Test-Path -LiteralPath $logSmoke) { Remove-Item -LiteralPath $logSmoke -Recurse -Force }
+        }
     } finally {
         if ($installAttempted) {
             $process = Start-Process msiexec.exe -ArgumentList @('/x', $productCode, '/qn', '/norestart', '/l*v', "`"$release\uninstall.log`"") -WindowStyle Hidden -Wait -PassThru

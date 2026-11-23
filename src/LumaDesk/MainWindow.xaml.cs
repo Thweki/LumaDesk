@@ -112,6 +112,7 @@ public partial class MainWindow : Window
     internal async Task RefreshAsync(bool sceneRefresh = false)
     {
         if (scanning || modePending || (sceneBusy && !sceneRefresh)) return;
+        ResetIdleDimming();
         scanning = true;
         brightnessScan = new(TaskCreationOptions.RunContinuationsAsynchronously);
         Status(L.T("s117b82fa19"));
@@ -133,6 +134,7 @@ public partial class MainWindow : Window
                 else dimWindows[id].Position(display);
             }
             foreach (var display in next) BrightnessChanged?.Invoke(display);
+            if (!testing) UpdateNightDimming(DateTime.Now, force: true);
             Render(); quick?.Render(); Status(L.F("sd1362bfd3f", Displays.Count, DateTime.Now));
         }
         catch (Exception ex) { Status(L.T("sf7293a061e") + ex.Message, true); Render(); }
@@ -248,6 +250,7 @@ public partial class MainWindow : Window
     private void RenderDisplay(DisplayInfo display)
     {
         Heading(display.Name, detail: display.Subtitle + (display.Primary ? L.T("s28102bcda6") : ""));
+        PageContent.Children.Add(Ui.Card(CreateDisplayResetControls(display)));
         var method = display.HasDdc ? L.T("s77e64220a2") : display.HasWmi ? L.T("s16cc598b36") : L.T("sa81ff06ccd");
         var light = Ui.Hint(new StackPanel(), method);
         if (display.Contrast.HasValue || display.Volume.HasValue)
@@ -283,6 +286,7 @@ public partial class MainWindow : Window
         if (CreateRefreshTimingControls(display) is UIElement timing) PageContent.Children.Add(Ui.Card(timing));
         var extras = new StackPanel(); extras.Children.Add(Ui.Setting(L.T("s850875a753"), Help(L.T("sce70a24e69")), Ui.Button(L.T("s86227fc6df"), () => OpenPip(display)))); extras.Children.Add(Ui.Line());
         extras.Children.Add(CreateColorControls(display)); extras.Children.Add(Ui.Line());
+        if (CreateScanModeControls(display) is { } scanModes) { extras.Children.Add(scanModes); extras.Children.Add(Ui.Line()); }
         extras.Children.Add(Ui.Setting(L.T("sed1989d773"), Help(L.T("sb3bd567058")), Ui.Button(L.T("sab88522dca"), () => ExportEdid(display)))); PageContent.Children.Add(Ui.Card(extras));
         PageContent.Children.Add(Ui.Card(new Expander { Header = L.T("s6c07bb6fd4"), Content = Ui.Text(L.F("sed21095eec", display.Adapter, display.Device, display.X, display.Y, display.Id), 12) }));
     }
@@ -292,7 +296,10 @@ public partial class MainWindow : Window
         return CreateSlider(L.T("s8e2f643ad1"), GetCombinedBrightness(display), 100, value => changed(display, value), help, compact, display);
     }
 
-    internal UIElement CreateSlider(string label, int? value, int maximum, Func<int, Task> changed, string? help = null, bool compact = false, DisplayInfo? brightnessDisplay = null)
+    internal UIElement CreateQuickVolumeSlider(DisplayInfo display, Func<int, Task> changed) =>
+        CreateSlider(L.T("s716ddda53d"), display.Volume, 100, changed, compact: true, volumeSteps: true);
+
+    internal UIElement CreateSlider(string label, int? value, int maximum, Func<int, Task> changed, string? help = null, bool compact = false, DisplayInfo? brightnessDisplay = null, bool volumeSteps = false)
     {
         var stack = new StackPanel(); var amount = Ui.Text(value.HasValue ? value + "%" : L.T("s7c53786065"), 12, "#626B78"); stack.Children.Add(Ui.Row(Ui.Hint(Ui.Text(label), help), amount));
         var slider = new Slider { Value = value ?? 0, Maximum = maximum, IsEnabled = value.HasValue, Margin = new Thickness(0, compact ? 1 : 8, 0, 0), Height = compact ? 22 : 28 }; System.Windows.Automation.AutomationProperties.SetName(slider, label);
@@ -354,15 +361,55 @@ public partial class MainWindow : Window
         }));
         stack.LostKeyboardFocus += (_, _) => Dispatcher.BeginInvoke(new Action(RefreshPopup));
         if (compact && brightnessDisplay != null) slider.LargeChange = 5;
-        stack.Children.Add(slider);
+        if (compact && volumeSteps && value.HasValue)
+        {
+            int StepValue(int delta) => Math.Clamp((int)Math.Round(slider.Value) + delta, 0, maximum);
+            Button StepButton(string text, string key, int delta, string id)
+            {
+                var button = Ui.Button(text, () =>
+                {
+                    int next = StepValue(delta);
+                    // Use the thumb's pending value so rapid clicks accumulate in
+                    // the same serialized queue as dragging, even on slow DDC displays.
+                    if (delta < 0 ? next < slider.Value : next > slider.Value) slider.Value = next;
+                });
+                button.Padding = new Thickness(6, 2, 6, 2); button.MinWidth = 36;
+                button.ToolTip = L.T(key);
+                System.Windows.Automation.AutomationProperties.SetName(button, L.T(key));
+                System.Windows.Automation.AutomationProperties.SetAutomationId(button, id);
+                void UpdateEnabled() => button.IsEnabled = delta < 0 ? StepValue(delta) < slider.Value : StepValue(delta) > slider.Value;
+                slider.ValueChanged += (_, _) => UpdateEnabled();
+                UpdateEnabled();
+                return button;
+            }
+            var controls = new DockPanel();
+            var down = StepButton("−5", "quick.volumeDown", -5, "quick-volume-down");
+            var up = StepButton("+5", "quick.volumeUp", 5, "quick-volume-up");
+            DockPanel.SetDock(down, Dock.Left); controls.Children.Add(down);
+            DockPanel.SetDock(up, Dock.Right); controls.Children.Add(up);
+            slider.Margin = new Thickness(8, 1, 8, 0); controls.Children.Add(slider);
+            stack.Children.Add(controls);
+        }
+        else stack.Children.Add(slider);
         return stack;
     }
     private void SetDimming(DisplayInfo display, double value)
     {
+        ApplyDimmingOverlay(display, EffectiveOverlayDimming(value));
+        display.Dimming = value;
+    }
+    private double EffectiveOverlayDimming(double baseline) =>
+        idleDimming.EffectiveDimming(nightDimming.EffectiveDimming(baseline));
+
+    private void ApplyDimmingOverlay(DisplayInfo display, double value)
+    {
         if (value > 0) DisplayService.ValidateIdentity(display.Device, display.Id);
+        RenderDimming(display, value);
+    }
+    private void RenderDimming(DisplayInfo display, double value)
+    {
         if (value == 0) { if (dimWindows.Remove(display.Id, out var existing)) existing.Close(); }
         else { if (!dimWindows.TryGetValue(display.Id, out var overlay)) { overlay = new DimWindow(); dimWindows[display.Id] = overlay; overlay.Show(); } overlay.Position(display); overlay.Opacity = value / 100.0; }
-        display.Dimming = value;
     }
     internal async Task ChangeModeAsync(DisplayInfo display, DisplayMode mode, uint orientation, Window? dialogOwner = null, bool exactOutput = false)
     {
@@ -370,6 +417,13 @@ public partial class MainWindow : Window
         if (mode == display.Current && orientation == display.Orientation) { Status(L.T("sd75d70fe93")); return; }
         var original = DisplayService.CurrentMode(display.Device); var target = DisplayService.FindMode(display, mode, orientation, exactOutput);
         DisplayService.ApplyMode(display.Device, target, true, display.Id);
+        var before = sceneBusy ? null : SceneService.CaptureOutput(Displays);
+        var saved = before?.Displays.FirstOrDefault(d => string.Equals(d.Id, display.Id, StringComparison.OrdinalIgnoreCase));
+        if (saved != null)
+        {
+            saved.Mode = new(original.Width, original.Height, original.Frequency);
+            saved.Orientation = original.Orientation;
+        }
         string recovery = ModeRecovery.Prepare(display.Device, display.Id, original); modePending = true; ModeLease? lease = null;
         try
         {
@@ -387,6 +441,7 @@ public partial class MainWindow : Window
             }
             if (!matches) throw new InvalidOperationException(L.T("sd26c587007"));
             lease.Keep(); Status(L.T("s3e899a02c0"));
+            if (before != null) UndoHistory.Remember(before, outputOnly: true);
         }
         finally
         {
@@ -413,6 +468,7 @@ public partial class MainWindow : Window
         content.Children.Add(Ui.Line()); content.Children.Add(Ui.Setting(L.T("sde38b92ad2"), Help(L.T("sea9af1c6cc")), Toggle(IsStartupEnabled(), SetStartup)));
         content.Children.Add(Ui.Line()); content.Children.Add(Ui.Setting(L.T("s6b753d5905"), L.T("sab00c1067a"), Toggle(Preferences.ShowHelp, v => { Preferences.ShowHelp = v; Save(); Render(); }))); PageContent.Children.Add(Ui.Card(content));
         content.Children.Add(Ui.Line()); content.Children.Add(Ui.Setting(L.T("automation.restore"), Help(L.T("automation.restoreHelp")), Toggle(Preferences.RestoreBrightness, value => { Preferences.RestoreBrightness = value; Save(); })));
+        RenderDimmingAndSceneOptions();
         PageContent.Children.Add(Ui.Card(Ui.Setting(L.T("s9167ee8b67"), Help(L.T("s22b00c690a")), Ui.Button(L.T("s2cbe04030d"), ExportDiagnostics))));
         PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Labels(L.T("s320388530e"), L.T("sde4f02c8c4")), Ui.Button(L.T("se90c12bb08"), ResetDimming))));
     }
@@ -440,7 +496,9 @@ public partial class MainWindow : Window
     {
         lightTrayGlyph = TrayIcon.UseLightGlyph();
         tray = new Forms.NotifyIcon { Text = L.T("s4f97d4b368"), Icon = TrayIcon.Create(), Visible = true };
-        var menu = new Forms.ContextMenuStrip(); menu.Items.Add(L.T("s770544f702"), null, (_, _) => Dispatcher.Invoke(ShowQuick)); menu.Items.Add(L.T("s3e86e94e26"), null, (_, _) => Dispatcher.Invoke(ShowSettings)); menu.Items.Add(L.T("sa13550662f"), null, (_, _) => Dispatcher.Invoke(() => _ = RefreshAsync())); menu.Items.Add(L.T("s8e6dbec08e"), null, (_, _) => Dispatcher.Invoke(ResetDimming)); menu.Items.Add(new Forms.ToolStripSeparator()); menu.Items.Add(L.T("s2297788756"), null, (_, _) => Dispatcher.Invoke(Quit)); tray.ContextMenuStrip = menu;
+        var menu = new Forms.ContextMenuStrip(); menu.Items.Add(L.T("s770544f702"), null, (_, _) => Dispatcher.Invoke(ShowQuick)); menu.Items.Add(L.T("s3e86e94e26"), null, (_, _) => Dispatcher.Invoke(ShowSettings)); menu.Items.Add(L.T("sa13550662f"), null, (_, _) => Dispatcher.Invoke(() => _ = RefreshAsync())); menu.Items.Add(L.T("s8e6dbec08e"), null, (_, _) => Dispatcher.Invoke(ResetDimming));
+        AddSceneCycleTrayItems(menu);
+        menu.Items.Add(new Forms.ToolStripSeparator()); menu.Items.Add(L.T("s2297788756"), null, (_, _) => Dispatcher.Invoke(Quit)); tray.ContextMenuStrip = menu;
         tray.MouseClick += (_, e) => { if (e.Button == Forms.MouseButtons.Left) Dispatcher.Invoke(ShowQuick); }; tray.DoubleClick += (_, _) => Dispatcher.Invoke(ShowSettings);
     }
     internal void ShowSettings()
@@ -471,6 +529,7 @@ public partial class MainWindow : Window
             var previous = tray.Icon; tray.Icon = replacement; lightTrayGlyph = light; previous?.Dispose();
         });
         if (msg == 0x7e || msg == 0x219 || msg == 0x2e0 || msg == 0x1a || (msg == 0x218 && (w.ToInt32() == 7 || w.ToInt32() == 18))) {
+            ResetIdleDimming();
             if (msg == 0x218) resumeBrightness = true;
             hotplugTimer.Stop(); hotplugTimer.Start();
         }
@@ -493,7 +552,7 @@ public partial class MainWindow : Window
         var dialog = new SaveFileDialog { FileName = "lumadesk-diagnostics.json", Filter = "JSON|*.json" }; if (dialog.ShowDialog(this) != true) return;
         try { File.WriteAllText(dialog.FileName, JsonSerializer.Serialize(Displays, Storage.Json)); Status(L.T("sc23961bae6")); } catch (Exception ex) { Status(ex.Message, true); }
     }
-    private void ShutdownResources() { hotplugTimer.Stop(); StopAutomation(); commands?.Dispose(); UnregisterShortcuts(); brightnessOsd?.Close(); tray?.Dispose(); foreach (var window in dimWindows.Values) window.Close(); dimWindows.Clear(); foreach (var window in pipWindows.ToArray()) window.Close(); quick?.Close(); Save(); System.Windows.Application.Current.Shutdown(); }
+    private void ShutdownResources() { brightnessTransitionLifetime.Cancel(); hotplugTimer.Stop(); StopAutomation(); commands?.Dispose(); UnregisterShortcuts(); brightnessOsd?.Close(); tray?.Dispose(); foreach (var window in dimWindows.Values) window.Close(); dimWindows.Clear(); foreach (var window in pipWindows.ToArray()) window.Close(); quick?.Close(); Save(); System.Windows.Application.Current.Shutdown(); }
     internal void Quit() { if (modePending || sceneBusy) return; exiting = true; Close(); }
     private void MinimizeWindow(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void MaximizeWindow(object sender, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;

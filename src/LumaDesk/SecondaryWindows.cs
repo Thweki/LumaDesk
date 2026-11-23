@@ -43,7 +43,7 @@ internal sealed partial class QuickWindow : Window
     private readonly StackPanel picker = new() { Margin = new Thickness(18, 12, 18, 0) };
     private readonly ScrollViewer controlsScroll;
     private readonly UniformGrid footer = new() { Columns = 4, Margin = new Thickness(10, 4, 10, 10) };
-    public QuickWindow(MainWindow owner, Func<DisplayInfo, int, Window, Task>? applyDpi = null, Func<DisplayInfo, DisplayMode, uint, Window, Task>? applyMode = null, bool dismissOnDeactivate = true, Func<DisplayInfo, int, Task>? applyBrightness = null, Func<IReadOnlyList<string>, int, Task>? applySelectedBrightness = null, Func<DisplayInfo, Task<bool>>? readHdrActive = null)
+    public QuickWindow(MainWindow owner, Func<DisplayInfo, int, Window, Task>? applyDpi = null, Func<DisplayInfo, DisplayMode, uint, Window, Task>? applyMode = null, bool dismissOnDeactivate = true, Func<DisplayInfo, int, Task>? applyBrightness = null, Func<IReadOnlyList<string>, int, Task>? applySelectedBrightness = null, Func<DisplayInfo, Task<bool>>? readHdrActive = null, Func<IDisposable>? acquireWakeRequest = null)
     {
         Ui.ConfigureWindow(this);
         this.owner = owner; this.applyDpi = applyDpi ?? ((display, percent, parent) => owner.ChangeDpiAsync(display, percent, parent));
@@ -53,6 +53,7 @@ internal sealed partial class QuickWindow : Window
         this.readHdrActive = readHdrActive ?? (display => Task.Run(() => AdvancedColorService.ReadHdrActive(display)));
         this.dismissOnDeactivate = dismissOnDeactivate;
         InitializeScheduleStatus();
+        keepAwake = new PanelKeepAwake(PanelKeepAwake.IsEnabled(Environment.GetEnvironmentVariable(PanelKeepAwake.Flag)), acquireWakeRequest ?? DisplayWakeRequest.Acquire);
         Title = AppBrand.Name + L.T("s2c58655791"); Width = 360; Height = 620; MinHeight = 180;
         WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize; AllowsTransparency = false; ShowInTaskbar = false; Topmost = true;
         controlsScroll = new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
@@ -71,7 +72,13 @@ internal sealed partial class QuickWindow : Window
         Activated += (_, _) => { if (!forceDismissRequested) dismissRequested = false; };
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { dismissRequested = forceDismissRequested = true; e.Handled = true; TryDismiss(); } };
         Closing += (_, e) => { if (dpiBusy || keepOpenCount > 0) { e.Cancel = true; dismissRequested = forceDismissRequested = true; } };
-        Closed += (_, _) => { closed = true; CloseIdentifyWindows(); };
+        IsVisibleChanged += (_, _) =>
+        {
+            if (!keepAwake.Available) return;
+            if (!IsVisible) keepAwake.SetEnabled(false, false);
+            else Render();
+        };
+        Closed += (_, _) => { closed = true; keepAwake.Dispose(); CloseIdentifyWindows(); };
     }
     internal IDisposable KeepOpen()
     {
@@ -147,11 +154,11 @@ internal sealed partial class QuickWindow : Window
                 }
                 if (d.Volume.HasValue)
                 {
-                    more.Children.Add(owner.CreateSlider(L.T("s716ddda53d"), d.Volume, 100, async value =>
+                    more.Children.Add(owner.CreateQuickVolumeSlider(d, async value =>
                     {
                         await owner.Service.SetPercentAsync(d, 0x62, value); d.Volume = value;
                         owner.Status(d.Name + L.T("s5caf7d72ba") + value + "%"); owner.RefreshView();
-                    }, compact: true));
+                    }));
                 }
                 if (d.Contrast.HasValue) more.Children.Add(owner.CreateSlider(L.T("s4cbc753240"), d.Contrast, 100, async value =>
                 {
@@ -176,11 +183,12 @@ internal sealed partial class QuickWindow : Window
             body.Children.Add(Ui.Card(stack, new Thickness(12, 8, 12, 4)));
         }
         if (!brightnessMultiSelect && owner.Displays.Count == 0) body.Children.Add(Ui.Card(Ui.Text(L.T("s7d06b98afa"), 12, "#8B93A2")));
-        if (!brightnessMultiSelect && owner.Preferences.Presets.Count > 0) { var scenes = owner.SceneMenuButton(); scenes.Margin = new Thickness(8, 6, 8, 0); body.Children.Add(scenes); }
+        if (!brightnessMultiSelect && (owner.Preferences.Presets.Count > 0 || owner.UndoHistory.Snapshot != null)) { var scenes = owner.SceneMenuButton(); scenes.Margin = new Thickness(8, 6, 8, 0); body.Children.Add(scenes); }
         RefreshScheduleStatus(DateTime.Now);
         body.Children.Add(scheduleStatus);
         footer.Visibility = brightnessMultiSelect ? Visibility.Collapsed : Visibility.Visible;
         footer.Measure(new System.Windows.Size(Width - 2, double.PositiveInfinity));
+        RenderKeepAwake();
         body.Measure(new System.Windows.Size(Width - 2, double.PositiveInfinity));
         picker.Measure(new System.Windows.Size(Width - 2, double.PositiveInfinity));
         // Native pixel rounding at fractional DPI can otherwise create a scrollbar
@@ -298,13 +306,15 @@ internal sealed partial class QuickWindow : Window
         Render();
         ScheduleDismiss();
     }
-    private UIElement CreateDpiControls(DisplayInfo display)
+    internal UIElement CreateDpiControls(DisplayInfo display)
     {
         var section = new StackPanel { Margin = new Thickness(0, 6, 0, 0) };
         System.Windows.Automation.AutomationProperties.SetAutomationId(section, "quick-dpi-" + display.Number);
         var info = display.DpiScale;
         var amount = Ui.Text(info.CanSet ? info.CurrentPercent + "%" : L.T("sf36cac9622"), 12, "#626B78");
-        section.Children.Add(Ui.Row(Ui.Text(L.T("scene.scale"), 12), amount));
+        var scaleValue = new StackPanel { Orientation = Orientation.Horizontal };
+        scaleValue.Children.Add(amount);
+        section.Children.Add(Ui.Row(Ui.Text(L.T("scene.scale"), 12), scaleValue));
         if (!info.CanSet)
         {
             var help = Ui.Text(info.UnavailableReason, 10, "#8790A0"); help.Margin = new Thickness(0, 3, 0, 3); section.Children.Add(help);
@@ -316,6 +326,26 @@ internal sealed partial class QuickWindow : Window
         var slider = new Slider { Minimum = 0, Maximum = steps.Length - 1, TickFrequency = 1, IsSnapToTickEnabled = true, IsMoveToPointEnabled = true, Value = Array.IndexOf(steps, info.CurrentPercent), Height = 22, Margin = new Thickness(0, 2, 0, 0), IsEnabled = steps.Length > 1 };
         System.Windows.Automation.AutomationProperties.SetName(slider, display.Name + L.T("s4fa3927f98"));
         System.Windows.Automation.AutomationProperties.SetAutomationId(slider, "quick-dpi-slider-" + display.Number);
+        Button NudgeButton(string text, string action, int direction)
+        {
+            var button = Ui.Button(text, () =>
+            {
+                if (closed || dpiDragging || (dpiBusy && activeDpiDisplay != display.Id)) return;
+                // Step from the pending slider value, so rapid clicks accumulate
+                // while the same serialized writer applies only the latest target.
+                slider.Value = Math.Clamp(slider.Value + direction, slider.Minimum, slider.Maximum);
+            });
+            button.Width = 28; button.Padding = new Thickness(4, 2, 4, 2); button.Margin = new Thickness(6, 0, 0, 0);
+            button.ToolTip = L.T("quick.scale" + action);
+            System.Windows.Automation.AutomationProperties.SetName(button, display.Name + ": " + button.ToolTip);
+            System.Windows.Automation.AutomationProperties.SetAutomationId(button, "quick-dpi-" + action.ToLowerInvariant() + "-" + display.Number);
+            scaleValue.Children.Add(button);
+            return button;
+        }
+        // The slider is reversed (more desktop space to the right), whereas
+        // +/- describe the Windows scaling percentage and therefore text size.
+        var decrease = NudgeButton("−", "Decrease", 1);
+        var increase = NudgeButton("+", "Increase", -1);
         bool resetting = false;
         int SelectedPercent() => steps[Math.Clamp((int)Math.Round(slider.Value), 0, steps.Length - 1)];
         void ResetToCurrent()
@@ -327,6 +357,8 @@ internal sealed partial class QuickWindow : Window
             int percent = SelectedPercent();
             amount.Text = percent + "%";
             slider.ToolTip = $"{percent}% · {DpiRules.LooksLike(display.Current, percent)}";
+            decrease.IsEnabled = slider.Value < slider.Maximum;
+            increase.IsEnabled = slider.Value > slider.Minimum;
         }
         var writer = new LatestValueWriter(async percent =>
         {
@@ -342,7 +374,7 @@ internal sealed partial class QuickWindow : Window
         }, delay: () => Task.Delay(60), idle: () =>
         {
             dpiBusy = false; activeDpiDisplay = null;
-            if (!dpiDragging && !slider.IsMouseCaptureWithin && !slider.IsKeyboardFocusWithin) { activeDpiSlider = null; Render(); }
+            if (!dpiDragging && !slider.IsMouseCaptureWithin && !section.IsKeyboardFocusWithin) { activeDpiSlider = null; Render(); }
             ScheduleDismiss();
         });
         void RequestCurrent()
@@ -369,9 +401,9 @@ internal sealed partial class QuickWindow : Window
             await writer.WhenIdle;
             activeDpiSlider = null; Render(); ScheduleDismiss();
         }));
-        slider.LostKeyboardFocus += (_, _) =>
+        section.LostKeyboardFocus += (_, _) =>
         {
-            if (activeDpiSlider == slider && !dpiDragging && !writer.IsActive) { activeDpiSlider = null; Render(); }
+            if (activeDpiSlider == slider && !section.IsKeyboardFocusWithin && !dpiDragging && !writer.IsActive) { activeDpiSlider = null; Render(); }
         };
         slider.Unloaded += (_, _) => writer.Stop();
         section.Children.Add(slider);

@@ -8,13 +8,20 @@ To rename a preset, open **Settings → Presets → More options**, edit its nam
 
 ## 场景与恢复
 
-- 新预设记录设备 ID、亮度/调暗、输出模式、旋转、DPI、可读取的 HDR/ICC 默认配置、主屏和坐标。旧预设只恢复原有亮度数据，不补写其他设置。
+- 新预设记录设备 ID、亮度/调暗、可读取的对比度、输出模式、旋转、DPI、可读取的 HDR/ICC 默认配置、主屏和坐标。旧预设只恢复原有亮度数据，不补写其他设置。
 - 缺席屏幕跳过，其他屏幕继续执行；明细保留在预设页。只有屏幕集合、模式及旋转匹配且排列通过验证时才恢复排列。不会创建缺席屏幕、启停驱动或安装 ICC 文件。
 - 模式、DPI、HDR 和排列沿用各自的验证/失败恢复路径。场景是有序的多项操作，不是系统级原子事务；部分成功不会伪装成全部完成。
 - “撤销上次切换”保存本次会话切换前的快照。撤销部分失败时保留快照以便重试；退出后不保留撤销历史。
 - 重连/唤醒恢复亮度默认开启，只恢复在本应用调整过的设备。最多尝试三次；手动调整会取代旧恢复目标。更换端口造成设备 ID 变化时不会猜测映射。
 - 自动恢复亮度不等于恢复完整场景。后者需在预设的更多选项中明确开启“连接这些屏幕时使用”，且屏幕集合必须完全匹配。
 
+## 预设对比度 / Preset contrast
+
+在支持 DDC/CI 对比度的屏幕上调整“对比度”，然后在“预设”中保存当前设置。切换预设会按设备 ID 恢复各屏保存的 0–100% 对比度；复制预设和“撤销上次切换”也保留对比度。已有预设需使用“用当前设置更新”重新捕获才会包含对比度；未记录对比度的预设不会修改该值。
+
+Adjust **Contrast** on a display that exposes the DDC/CI control, then save the current settings under **Presets**. Applying the preset restores each display's saved 0–100% contrast by device ID. Duplicate preset and the existing **Undo last switch** snapshot preserve contrast too. Use **Update from current setup** to recapture an older preset if you want it to include contrast; presets without a saved contrast value leave it unchanged.
+
+Contrast is restored after mode and HDR changes, using the refreshed display capabilities. If contrast is unavailable (including a monitor that locks it in HDR), invalid, or the DDC write fails, the preset reports a partial result and continues with brightness and other displays. This uses the existing DDC write path; an acknowledged write is not a guarantee that monitor firmware honored it. Automatic brightness restoration on reconnect remains brightness-only; contrast is restored when a full preset is applied.
 ## 捕获为草稿 / Capture a live setup as a draft
 
 在“预设”页点击“捕获当前配置”，即可读取当前连接屏幕的设置，生成尚未保存的预设草稿。检查屏幕摘要、输入名称，然后点击“保存草稿”或“丢弃草稿”。保存使用捕获时的设置，不会再次读取或应用屏幕设置；之后调整屏幕或断开连接不会改变草稿。草稿仅在本次运行期间保留，切换页面不会丢失，退出应用后丢弃。一次只保留一份草稿；保存失败可重试，自动触发和快捷键默认关闭。
@@ -27,12 +34,34 @@ On **Presets**, click **Capture current setup** to read the connected displays i
 
 On the **Presets** page, expand **More options** for an existing preset, enter a **New preset name**, and click **Duplicate preset**. Names must contain 1–40 characters and be unique, ignoring case and surrounding whitespace. The copy gets its own ID and saved display settings, even if those screens are disconnected. Duplication does not capture or apply the current setup. Automatic triggers and the shortcut start off; configure them separately on the copy if needed. The original preset and its automation stay unchanged. No experimental flag is required.
 
+## Experimental preset comparison
+
+Disabled by default. Enable **Settings → Application → Preset comparison (experimental)**, then open a preset's **More options → Compare with current setup**. The persisted option is `ExperimentalPresetComparison` (default `false`). Disable the same toggle to remove the comparison controls.
+
+Each click reads a fresh snapshot and shows **current → saved** differences for backlight brightness, software dimming, resolution/refresh rate, rotation, scaling, HDR, personal ICC scope/profiles, position and main display. It also lists disconnected preset displays and connected displays absent from the preset. Device IDs are matched without guessing by name. Older brightness-only presets compare only their saved fields.
+
+The comparison does not apply settings, modify presets, or replace the undo snapshot. Unknown readings remain visible as **Unknown**. It is a snapshot, not a driver capability check or a guarantee of successful apply: layout restoration still requires matching screens and valid geometry, and unavailable ICC assignments are not installed. Click again after changing your setup to refresh the report. Applying the preset remains a separate action.
+
+默认关闭。在 **设置 → 应用 → 预设比较（实验性）** 中启用，然后打开预设的 **更多选项 → 与当前设置比较**。每次点击读取当前快照，按“当前 → 已保存”显示亮度、调暗、模式、旋转、缩放、HDR/ICC、位置和主屏差异，并列出未连接或未包含的屏幕。旧预设只比较已保存的项目。无法读取的值显示为“未知”。比较不会应用设置、更改预设或替换撤销快照，也不保证驱动支持或排列能够恢复。更改设置后再次点击可刷新；关闭开关可移除比较控件。
+## 撤销显示调整 / Undo a display adjustment
+
+调整分辨率、刷新率、旋转或缩放后，在快捷面板的“预设”菜单或设置的“预设”页点击“撤销上次显示调整”。缩放撤销只恢复该屏幕的缩放；模式撤销恢复切换前的输出、缩放和排列，不改动亮度、软件调暗、HDR 或 ICC。与预设切换共用一个会话内撤销位置，下一次成功的显示调整或预设切换会替换它；无变化或已回滚的失败调整不会替换它。部分撤销失败时保留原快照供重试，退出应用后不保留。
+
+After changing resolution, refresh rate, rotation or scaling, choose **Undo last display adjustment** in the quick panel's **Presets** menu or **Settings → Presets**. Scaling undo restores only that screen's scale. Mode undo restores the previous outputs, scaling and arrangement; brightness, software dimming, HDR and ICC remain as they are.
+
+There is one undo slot per app session, shared with **Undo last switch** for presets. The next successful output/scaling adjustment or preset application replaces it. No-op changes and failed adjustments that roll back preserve it. An undo that partially fails retains the original snapshot for retry; reconnect missing displays before retrying. Layout restoration requires the same screen set and a valid extended layout, as with presets. This does not undo brightness, input, topology or layout-editor changes, and there is no redo or history across restarts.
+## 应用到单个显示器 / Apply a preset to one display
+
+在“预设”页展开“更多选项”，在“应用到单个显示器”中选择已连接的屏幕，再点击同名按钮。仅列出此预设已保存的设备，按设备 ID 匹配，不按名称或编号猜测。应用该屏幕的亮度、调暗、输出模式、旋转、DPI 和已保存的 HDR/ICC 设置；不恢复预设的排列或主屏。原预设不会被修改，“撤销上次切换”也仅恢复此次选择的屏幕。
+
+Open **Presets → More options → Apply to one display**, choose a connected screen, then click **Apply to one display**. This is useful when you want one screen's saved setup while keeping the other screens' current settings. Only connected devices saved in that preset are offered; matching uses stable device IDs, not names or numbers. No experimental flag is required.
+
+The action applies that screen's saved brightness, dimming, resolution, refresh rate, rotation, scaling, and HDR/ICC settings using the usual validation and recovery paths. Unspecified legacy settings stay untouched. Saved positions and the main-display choice are skipped, and the saved preset and its automation remain unchanged. Windows may still rearrange the desktop as a consequence of a resolution or rotation change. **Undo last switch** restores only the selected screen for this action and remains available after partial failure. Disconnection never redirects the operation to another screen.
 ## 排序预设 / Reorder presets
 
 在“预设”页点击预设卡片上的“上移”或“下移”，即可将常用预设放在前面。顺序会自动保存，重启后保留，托盘预设菜单也使用同一顺序。排序不读取或应用屏幕设置，也不改变预设 ID、显示设置、快捷键或自动触发配置。多个自动化规则同时匹配时，仍按列表顺序选择第一个匹配项。
 
 On the **Presets** page, use **Move up** or **Move down** on a preset card to put frequently used presets first. The order is saved immediately, survives restarts, and also appears in the tray preset menu. Reordering does not capture or apply display settings or change preset IDs, saved values, shortcuts, or trigger settings. Existing automation still selects the first matching preset in list order when multiple rules match. No experimental flag is required.
-
 ## 预设备注 / Preset notes
 
 在“预设”页展开预设的“更多选项”，输入备注并点击“保存备注”。备注最多 500 个字符，支持多行文字，例如记录适用场景或连接提示。卡片显示备注预览，完整内容可在编辑框或悬停提示中查看。清空文字后保存即可删除备注。备注随预设保存，复制预设时一并复制；更新显示设置不会删除已有备注。保存备注无需连接屏幕，也不会读取或应用显示设置，更不会改变快捷键或自动触发配置。
@@ -45,6 +74,59 @@ Open **Presets → More options**, enter a **Note**, then click **Save note**. U
 
 In **Settings → Presets**, type part of a name into **Search presets by name**. Results update as you type, ignore case and surrounding whitespace, and keep the saved order. The result count and an empty-result message help you narrow the list; **Clear search** restores all presets. Search only matches preset names and treats punctuation literally. Filtering preserves unsaved card edits and does not change saved presets or apply display settings. Reorder controls are hidden during a search; clear it to reorder. The query survives page navigation for this session and is not saved on exit. The tray menu continues to show all presets. No experimental flag is required.
 
+## Reset one display to its preset
+
+After successfully applying a preset, select a screen under **Settings → Displays** and use **Reset to preset**. Choose **Brightness**, **Scaling**, **Rotation**, or **All available**. The panel names the source preset. This is a normal manual control using existing display APIs; no experimental flag or new preference is introduced.
+
+- Each display remembers its own last successfully applied preset values for the current app session. Failed or missing displays keep their earlier baseline; a layout-only failure does not discard successfully applied controls. Editing, renaming or deleting the saved preset does not change this snapshot. Applying another preset successfully replaces it. Undoing a preset switch does not replace it.
+- Brightness restores the saved hardware brightness and software dimming directly for this display, bypassing group/sync targets and relative offsets, just as preset application does. An unspecified hardware brightness stays unchanged. Scaling restores the saved DPI percentage. Rotation preserves the current resolution and refresh rate, swapping width and height when changing between portrait and landscape.
+- **All available** restores only these three controls where saved. It does not restore HDR, ICC, contrast, volume, inputs, output resolution, display arrangement or the primary screen. Rotation still changes the desktop footprint; Windows may adjust placement as part of the mode change. Legacy brightness-only presets leave scaling and rotation unavailable.
+- Before a preset has been applied, or after restarting the app, the panel explains how to enable reset. No factory brightness or orientation is guessed. Reset does not consume or overwrite preset undo history and can be repeated. Missing devices and failed controls are reported in the status bar; hover over a partial result for details. Independent controls continue after a failure, and the baseline remains available for retry.
+- Rotation and scaling reuse existing identity checks, driver validation and recovery paths. Workflow tests cover reset scope, legacy data, immutable snapshots, partial failures and disconnects; detached WPF fixtures cover action wiring. Real display writes still require Windows hardware validation.
+
+在本次会话中成功应用预设后，打开“设置 → 屏幕”，使用“重置为预设”恢复该屏幕的亮度、缩放、旋转或所有可用项。仅重置所选屏幕；旧预设未保存的项目不可用。基准是上次成功应用的值，编辑或删除预设、撤销切换都不会改变它，退出应用后不保留。部分失败时可将鼠标悬停在状态栏查看详情并重试。
+
+## Gamma 预设（实验性） / Gamma presets (experimental)
+
+默认关闭。退出 LumaDesk 后，以 `LUMADESK_EXPERIMENTAL_GAMMA=1` 启动，即可在保存预设或捕获草稿时记录每个受支持 SDR 屏幕当前的 RGB Gamma 曲线。在预设的“更多选项”或草稿中可查看是否捕获成功。应用预设或“撤销上次切换”会在其他显示设置之后恢复曲线。关闭实验功能后不会读取或写入 Gamma；旧预设和未捕获曲线的屏幕保持 Gamma 不变。
+
+This experiment saves and restores **existing per-display RGB gamma ramps** (three channels of 256 unsigned 16-bit values). It does not generate a new curve or add a brightness, contrast, tint, or scheduling control. To try it, exit the running tray app, then launch from PowerShell:
+
+```powershell
+$env:LUMADESK_EXPERIMENTAL_GAMMA = '1'
+& .\LumaDesk.exe
+```
+
+Prepare the display's gamma using your existing calibration software, then **Presets → Save current settings** or **Capture current setup → Save draft**. Drafts and each preset's **More options** show which screens have saved ramps. Applying a preset restores ramps by stable display identity after mode, HDR, ICC, brightness and layout operations. **Undo last switch** uses the gamma captured before the switch. Duplicating a preset preserves independent copies of its ramps. Gamma capture failure leaves that screen's gamma unspecified and does not prevent saving other settings.
+
+Only uniquely mapped displays with a confirmed SDR color mode are eligible. HDR, unknown color modes, mirrored sources and unsupported drivers are skipped during capture; restoration failures appear in the preset's partial-result details. Ramps are validated before writes, and readback must match exactly; an ignored or unverified write is reported without retries. There is no continuous enforcement, gamma editor, startup restore or brightness-reconnect restore. Older presets with no ramp leave gamma unchanged. With the flag off, saved ramps are ignored; saving or updating a preset while off captures no gamma.
+
+The [Windows gamma API](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-setdevicegammaramp) has driver and color-management limitations: other software and display events can overwrite ramps, and a successful API return can still mean the write was ignored. ICC remains the recommended calibration mechanism. This experiment requires Windows hardware validation, especially for driver precision, color-loader interactions and undo after topology changes. Exit the app and remove the environment variable before relaunching to disable it; disabling does not reset an already applied ramp. Apply **Undo last switch** while still opted in if you want to restore the preceding captured ramp first.
+
+Validation added: workflow tests for flag gating, capture/persistence/copies, apply ordering, undo, malformed ramps, missing screens, HDR/unknown color modes and native failure/readback behavior; UI fixtures for default-off visibility and capture summaries. These C# and WPF tests were **not executed in the implementation environment** because `dotnet` and `pwsh` are unavailable. On Windows, run `./test.ps1 -Headless`, then the UI fixtures with `dotnet run --project tests/LumaDesk.UiTests -c Release -- --fixtures` in an interactive desktop.
+
+## 应用前预览（实验性） / Preview before applying (experimental)
+
+默认关闭。启动前设置环境变量 `LUMADESK_EXPERIMENTAL_PRESET_APPLY_PREVIEW=1`，即可在预设页点击“预览并应用（实验性）”或从托盘选择预设时，先检查目标屏幕、缺席屏幕和将恢复的设置类别。点击“应用”才会执行，取消不会改变屏幕或撤销快照。确认期间连接发生变化时需重新预览。移除环境变量并重启即可关闭；不会更改已保存的设置。
+
+Default **OFF**. Launch with `LUMADESK_EXPERIMENTAL_PRESET_APPLY_PREVIEW=1` (PowerShell: `$env:LUMADESK_EXPERIMENTAL_PRESET_APPLY_PREVIEW = '1'`). Use **Presets → Preview and apply (experimental)** or select a preset from the tray menu. Review connected targets, skipped missing screens, and the setting groups to restore, then explicitly click **Apply**. Cancel is the default action; it leaves display settings and the existing undo snapshot intact. Apply is disabled when no saved screens are connected. Connection changes during confirmation require a fresh preview. Remove the variable and restart to disable; no preference is persisted.
+
+This confirmation previews the scope of a manual application, not differences between saved and current values. Already matching values may remain unchanged. Layout is conditional on the existing apply-time validation; hardware failures still use the existing partial-result report and undo. Shortcuts, schedules, reconnect, command-line application, and undo remain direct. The preview reads hardware and can take time on slow monitors.
+
+Validation: workflow tests cover target matching, legacy presets, cancellation, connection changes, scan failure and default-off behavior; WPF fixtures cover the dialog and opt-in action label. These C# tests were added but not executed in the implementation environment because `dotnet` and `pwsh` were unavailable. Run the workflow suite and UI `--fixtures` suite on Windows.
+
+## 从托盘循环切换预设 / Cycle presets from the tray
+
+右键单击托盘图标，选择“上一个预设”或“下一个预设”，即可直接应用菜单中显示的目标预设。顺序与预设页一致，到达末尾后循环。位置以本次运行中最后一次完整成功应用的预设为准，设置页、快捷面板、快捷键、命令行和自动触发的应用都会更新位置；手动调整屏幕不会更新位置。刚启动、上次预设已删除或成功撤销后，“下一个”从首项开始，“上一个”从末项开始。只有一个预设时可重新应用，没有预设或显示操作忙碌时不可用。部分成功或失败不会推进位置，可重试；继续沿用预设的恢复和错误报告机制。不保存循环位置，无需更改设置或启用实验开关。
+
+Right-click the tray icon and choose **Previous preset** or **Next preset** to apply the named target immediately. Actions follow the saved order on the Presets page and wrap at either end. The position follows the last fully successful preset application in this session, including applications from Settings, the quick panel, shortcuts, commands and automation. Manual display adjustments do not change that position. After startup, deletion of the last applied preset, or a successful **Undo last switch**, Next starts at the first preset and Previous at the last. A single preset can be reapplied; actions are disabled when there are no saved presets or display operations are busy. Failed or partial applications leave the position unchanged for retry and use the existing preset recovery and error reporting. The cursor is never saved. No settings change or experimental flag is required.
+
+## 上次成功应用 / Last successful preset
+
+“预设”页和托盘预设菜单会显示上次完整应用成功的预设名称及本地日期、时间，重启后仍保留。手动、快捷键、命令行及自动触发共用此记录；部分完成、失败、空预设和撤销不会覆盖记录。名称保留应用时的值，即使之后编辑或删除预设也不变。这是历史记录，不表示当前屏幕设置仍与该预设一致；旧版设置在首次成功应用后才有记录。
+
+The **Presets** page and tray preset menu show the **last successfully applied** preset and its local date and time, saved across restarts. Manual, shortcut, command-line and automatic applications all update this record after a complete success. Partial or failed applications, empty presets and undo leave it unchanged. The name is kept as it was at application time, even if the preset is later edited or deleted. This is history: later adjustments or undo can change the current setup. Existing installations start with no recorded application until a preset succeeds. No experimental flag or configuration is required.
+
 ## 可选自动化
 
 预设可设置每天的时间（本机 24 小时制）或接通电源/使用电池触发。应用运行期间约每 20 秒检查一次；休眠错过的最近一次时间可在恢复后触发，不补跑历史任务。同一轮多个预设命中时只应用列表中第一个匹配屏幕集合的预设。
@@ -53,11 +135,56 @@ In **Settings → Presets**, type part of a name into **Search presets by name**
 
 Enable **Daily schedule** under a preset's **More options**, then open the tray panel to see **Next scheduled** with the preset name and local date/time in your Windows regional format. Only schedules whose saved display set exactly matches the connected displays are considered; equal times use preset list order. At or after a scheduled time, the indicator advances to the next future occurrence, including tomorrow when needed. It hides when no valid, matching daily schedule exists and refreshes about every 20 seconds while the panel is visible. This read-only indicator needs no new setting or experimental flag. It shows the planned time, not a completion promise: sleep or a busy operation can delay application, and power/connection triggers are not predicted.
 
+### 按星期运行（实验性） / Selected weekdays (experimental)
+
+在“预设 → 更多选项”中启用时间触发，填写本机 24 小时制时间，再开启“按星期运行（实验性）”并选择星期。例如，办公预设可选周一至周五，周末预设可选周六和周日。此选项对每个预设默认关闭；已有每日计划保持原样。首次启用默认选择周一至周五，不选任何星期会暂停该预设的时间触发。关闭实验选项会恢复每日触发；要完全停用时间触发，请关闭时间旁的开关。电源和连接触发不受星期限制。
+
+For separate workday and weekend display setups, open **Settings → Presets → More options**, enable the time trigger and enter a local **HH:mm** time. Turn on **Selected weekdays (experimental)** and choose the days for that named preset. Monday–Friday are initially selected. Configure another preset for Saturday–Sunday if desired.
+
+- **Default OFF, per preset:** existing daily schedules keep their behavior. Enabling the weekday option alone does not enable the time trigger. Choosing no days suspends only that time trigger. Turning the experiment off returns an enabled time trigger to daily operation; use the time switch to stop it entirely.
+- The app must be running. It polls about every 20 seconds and uses the computer's local clock. After sleep or a busy operation, only the latest daily occurrence within the past 24 hours is eligible, and its weekday must be selected. A Friday 23:59 occurrence checked just after midnight still belongs to Friday. Older selected days are never replayed. Starting the app does not catch up earlier events.
+- Existing exact-screen matching and list-order priority still apply: only the first matching preset runs per poll. Connection and power triggers remain independent of the weekday selection. Manual preset application and **Undo last switch** still work normally.
+- This is a local wall-clock schedule, not an exactly-once job service: nonexistent daylight-saving times can catch up after the clock jump; setting the clock backward may allow an occurrence to run again when its time is crossed again.
+
+The saved preset fields are `ExperimentalWeeklySchedule` (default `false`) and `ScheduleDays` (local weekdays, serialized as 0 = Sunday through 6 = Saturday). Use the editor to configure them; duplicating a preset leaves its time trigger and experimental flag off.
+
 设置、托盘、快捷键和命令行共用 0–100% 的亮度刻度。支持背光的屏幕在 20% 达到最低背光，继续向左拖动会用软件调暗。0% 仍能看到画面。没有背光接口的屏幕全程用软件调节。旧预设同时设置了背光和调暗时，调亮会先减弱调暗，调暗会先降低背光。
 
 分组同步使用同一刻度，正偏移表示相对其他屏幕更亮，上下限限定各屏的目标百分比。亮度快捷键默认作用于鼠标所在屏幕，录入快捷键时临时停止全局按键处理。
 
 托盘面板中的“联调亮度”用于临时多选：勾选的屏幕只接受亮度调整，不沿用组成员或相对偏移，仍遵守各屏亮度上下限。未选择屏幕时滑块不可用；退出联调恢复此前的单屏控制，不创建或修改显示器组。关闭面板后，下次默认进入单屏模式。
+
+## 预设导入与导出 / Preset import and export
+
+在“预设”页选择“导入预设”，或展开某个预设的更多选项并选择“导出预设”。每个 JSON 文件保存一个场景，可用于备份或在使用相同屏幕设备 ID 的 LumaDesk 安装之间迁移。
+
+导入会新建预设，同名时自动添加编号，不覆盖现有预设，也不立即应用。快捷键、连接触发、定时和电源触发不会随文件转移；需要时请在导入后重新配置。文件保留屏幕 ID、名称及 ICC 配置文件引用，不包含 ICC 文件本身，不映射到其他屏幕，也不安装驱动或配置文件。分享前可检查 JSON 中的设备名称和配置文件引用。仅支持版本 1 的场景文件，最大 1 MiB；不能直接导入整个 `settings.json`。
+
+In **Settings → Presets**, choose **Import preset…**, or expand a preset's additional options and choose **Export preset…**. Each JSON file contains one scene for backup or transfer between LumaDesk installations using the same display device IDs.
+
+Import creates a separate preset and adds a number if its name is already used. It does not apply display changes. Shortcuts, connection triggers, schedules and power triggers are excluded; configure them again after import if needed. Device IDs, display names and ICC profile references are retained. ICC files are not bundled, displays are not remapped, and nothing is installed. Review the JSON's device names and profile references before sharing. The importer accepts version 1 scene files up to 1 MiB, not a complete `settings.json`. Missing displays or unavailable capabilities are reported by the existing scene apply flow when you choose to apply the preset.
+
+## Experimental idle dimming
+
+**Default: off.** Enable **Settings → Application → Idle dimming (experimental)** and choose 1–60 minutes, initially 5. The persisted settings are `ExperimentalIdleDimming` (boolean) and `IdleDimmingMinutes` (integer); old settings files keep the feature off. Invalid delays leave the experiment inactive.
+
+While enabled, LumaDesk checks keyboard/mouse inactivity in the current Windows session every 500 ms using [GetLastInputInfo](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getlastinputinfo). After the delay, all connected screens get at least 60% software dimming; an existing darker shade stays as it is. Input or disabling the option removes the temporary shade. The brightness sliders, remembered reconnect values and captured presets retain their original values. This is visual dimming, not a backlight or energy-saving control.
+
+Enabling, changing the delay, manual brightness/reset commands, display refresh/reconnection and waking from sleep start a fresh grace period. Dimming pauses during display scans, mode confirmation, scene application and brightness writes. Failed input sampling removes the temporary shade. Quitting closes the overlays. No polling timer runs for this feature when disabled.
+
+There is no video/presentation detection: watching without keyboard/mouse input counts as idle, so turn the option off when needed. This experimental software overlay has the same HDR/full-screen compatibility limits as manual software dimming. It does not lock the session or replace Windows screen-off settings.
+
+空闲调暗为默认关闭的实验性功能。在“设置 → 应用 → 空闲调暗（实验性）”开启，选择 1–60 分钟的等待时间（默认 5 分钟）。仅临时改变软件遮罩，键盘或鼠标活动会恢复原有亮度，不改写显示器背光、预设或重连恢复值。观看视频但不操作也会计入空闲，可按需关闭。
+
+To validate on Windows: run `dotnet run --project tests/LumaDesk.Tests -c Release` for deterministic timing/settings tests and `dotnet run --project tests/LumaDesk.UiTests -- --fixtures` for settings UI tests. Manually enable a one-minute delay, test screens with 0%, 25% and 80% existing software dimming, then verify input, reset, disable, unplug/replug and sleep/wake restore correctly. Native input and actual overlay behavior require a Windows desktop.
+
+## 实验性夜间时段 / Experimental night window
+
+在“设置 → 应用 → 夜间时段（实验性）”中设置本地时间的开始和结束时刻（24 小时制 `HH:mm`），点击“应用时段”，再开启开关。默认关闭，建议时段为 `21:00–07:00`，支持跨午夜；开始和结束不能相同。应用运行期间，每个屏幕的软件调暗至少为 35%，更强的手动调暗会保留。它不改变硬件背光、亮度滑块、预设或记忆亮度。
+
+启动、刷新屏幕后以及约每 20 秒检查当前时段。休眠或系统时间变化后按当前本地时间判断，不补跑错过的时段。结束时恢复当前手动调暗，期间的亮度调整不会被旧快照覆盖。关闭开关立即移除夜间调暗；“重置调暗”（默认 `Ctrl+Alt+0`）会清除调暗并暂停本次时段，直到下次每日时段、修改时段、关闭后重新开启或重启应用。这是按时间触发的临时遮罩，与空闲检测无关，也不会关闭显示器电源。
+
+Enable **Settings → Application → Night window (experimental)** after choosing start/end times and clicking **Apply window**. Defaults off. See the [English usage notes](../README.en.md#experimental-night-window) for suspension and restoration behavior.
 
 ## 命令行
 
@@ -66,6 +193,7 @@ Enable **Daily schedule** under a preset's **More options**, then open the tray 
 ```powershell
 $app = '.\LumaDesk.exe'
 & $app --list --output .\screens.json
+& $app --inventory --output .\inventory.json
 & $app --brightness '1' 60 --output .\brightness-result.json
 & $app --apply-preset '办公' --output .\preset-result.json
 ```
@@ -101,6 +229,29 @@ try {
 The listing waits before reading a fresh result file. To change display settings, explicitly copy the desired ID from the list and pass it to `--apply-preset-id`; do not default to the first entry. Do not reuse the listing's `Start-Process -Wait` for an apply command, which may start the long-lived tray process.
 
 已有应用时，命令通过限定当前 Windows 用户及桌面会话的本地命名管道交给应用执行；不会另建调暗覆盖层。未运行时，查询直接读取，修改命令启动托盘应用后再执行。发送命令后不自动重试，避免超时导致重复写入。管道不对网络开放。
+
+## Diagnostic log export / 诊断日志导出
+
+To collect logs for a support report without probing or changing displays:
+
+```powershell
+$process = Start-Process -FilePath '.\LumaDesk.exe' -ArgumentList '--export-log .\lumadesk-logs.zip' -Wait -PassThru
+$process.ExitCode
+```
+
+`--export-log <archive.zip>` creates a new ZIP from the available `app.log` and `app.previous.log` in `%LOCALAPPDATA%\LumaDesk` (or `LUMADESK_DATA_DIR` when set). It works with the tray app running or closed and does not start or activate it. It rejects log entries that are reparse points, have multiple hard links, or cannot be verified as regular files. Use a trusted log directory and a trusted destination directory. The command does not separately collect settings, presets or recovery files. It copies logs verbatim, so review them for device names, local paths and exception details before sharing. While the app is running, logging and rotation may continue during the export.
+
+The exit code is 0 on success or 1 for invalid arguments, no available logs, an invalid log entry, an existing destination or a read/write failure. The destination's parent directory must exist. The command finishes the ZIP before moving it to the requested name and never overwrites an existing destination. Export failures are not appended to the source logs. Unlike the automation commands above, this command takes no `--output` option and does not return JSON.
+
+此命令将现有的当前和上一份日志导出为新的 ZIP，不探测或更改显示器，也不启动托盘窗口。拒绝重解析点（含符号链接）、有多个硬链接或无法验证为普通文件的日志。请使用可信的日志目录和输出目录。命令不会另外收集设置、预设或恢复文件，但会原样复制日志；分享前请检查其中的设备名称、路径和异常详情。ZIP 写完后才移动到指定位置，不覆盖已有文件。成功返回 0；参数无效、无日志、日志不合规、目标已存在或读写失败时返回 1。
+
+### Connected-display inventory
+
+`--inventory --output inventory.json` exports a fresh, read-only report of active desktop displays, including HDR support/enabled/active state, signal bit depth, and default SDR/HDR ICC profile names alongside identity, adapter, geometry, rotation (degrees), current/preferred pixel sizes, scaling and hardware control readings. Unlike `--list`, it includes color status and always queries locally, even when the tray app is running; it never starts the tray app or applies display settings.
+
+The JSON uses the usual `Success` / `Data` / `Error` envelope. `Data` contains `SchemaVersion` (currently `1`), `CapturedAtUtc` (UTC scan start) and `Displays`. Unknown capability values are `null`, known unsupported/disabled HDR values are `false`, and a readable but unassigned ICC profile is `""`. Optional color-query failures retain the display with an unavailable reason; successful enumeration still exits with `0`. A scan or output-file failure exits with `1`. No active displays produces an empty array.
+
+`HardwareBrightnessPercent` is the queried backlight level, not the combined software-dimming slider. Software dimming and user aliases are not included. Preferred pixel dimensions are `0` when unavailable. Device IDs identify the current connections and may change after moving ports. The report includes device IDs and profile names but excludes registry/WMI paths, settings, logs and ICC file contents. It covers active desktop displays, not disconnected or disabled outputs; mirrored outputs follow Windows monitor enumeration. Capture is sequential, so a hot-plug during capture can leave a display with unavailable color details. Like other JSON commands, the output file is overwritten if it exists.
 
 ## 硬件与性能边界
 
