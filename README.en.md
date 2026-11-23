@@ -2,101 +2,64 @@
 
 [简体中文](README.md) · English
 
-**Every screen, one small tray panel.**
+LumaDesk is an open-source display manager for Windows. Click the system tray icon, pick a monitor by its position on your desk, and adjust its brightness or scaling. Save brightness, resolution and display layout together as a preset to restore the next time you connect those screens.
 
-LumaDesk is an open-source Windows display manager. Adjust brightness, change scaling and switch screen setups without digging through system settings.
+**[Download LumaDesk 0.6.0 Preview](https://github.com/Thweki/LumaDesk/releases/tag/v0.6.0)** · Windows 10 / 11 x64
 
-[Download preview](https://github.com/Thweki/LumaDesk/releases) · [Report an issue](https://github.com/Thweki/LumaDesk/issues) · [Build status](https://github.com/Thweki/LumaDesk/actions/workflows/build.yml)
+![Selecting a monitor by position, then adjusting brightness across several screens](docs/images/quick-demo-en.gif)
 
-## See it in action
+## Which download should I choose?
 
-Select a display by its position and drag the brightness slider. To adjust several displays together, open **⋯** and choose **Link brightness**.
+| If you want to… | Download | How to use it |
+| --- | --- | --- |
+| Run the app without installing it | [Standalone EXE](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/LumaDesk-0.6.0-win-x64.exe) | Double-click to run. The .NET runtime is bundled. |
+| Use the x64 .NET 8 Desktop Runtime already on your PC | [Slim EXE](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/LumaDesk-0.6.0-slim-win-x64.exe) | Choose this for the smallest download. Double-click to run. |
+| Keep the app and its documentation together | [Portable ZIP](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/LumaDesk-0.6.0-portable-win-x64.zip) | Extract the whole folder, then run `LumaDesk.exe`. |
+| Launch from Start or uninstall through Windows Settings | [MSI installer](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/LumaDesk-0.6.0-win-x64.msi) | Run the installer with administrator approval. |
 
-![Selecting displays, opening the actions menu and adjusting their brightness together](docs/images/quick-demo-en.gif)
+All four editions share settings and presets in `%LOCALAPPDATA%\LumaDesk`. If you use the earlier 0.6.0 build, download your edition again to get the automatic updates switch. The release includes [SHA-256 checksums](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/SHA256SUMS.txt) for all four files.
 
-<p>
-  <img src="docs/images/quick-panel-en.png" width="360" alt="LumaDesk quick panel">
-  <img src="docs/images/quick-panel-dark-en.png" width="360" alt="LumaDesk dark quick panel">
-</p>
+## First steps
 
-## What you can do
+1. **Adjust one screen.** Click the tray icon, select the monitor on the display map, and drag the brightness slider. To pick a monitor by name, open **⋯ → Show display list**.
+2. **Adjust several screens together.** Open **⋯ → Link brightness**, select the screens, then drag the slider. Each selected screen takes the same target brightness.
+3. **Save a setup.** Double-click the tray icon to open settings and choose **Presets → Save current settings**. For example, save a daytime setup and an evening setup for the same pair of monitors, then switch between them from the quick panel. [Presets and automation](docs/workflows.md)
 
-- **Get brightness right:** combine backlight control and software dimming, adjust one screen, select several or sync a group.
-- **Control each screen:** scaling, resolution, refresh rate and rotation, plus inputs, volume and contrast where supported. [Windows connection labels](docs/input-connection.md) show recognized connector types even when DDC input detection is unavailable.
-  In the tray panel, select a screen and use **− / +** beside Scaling to move one supported step: **+** makes text larger, **−** makes it smaller. Changes apply immediately; buttons stop at the display's limits and are unavailable with unsupported/custom scaling.
-- **Keep your setup handy:** arrange displays, choose the main screen, extend or mirror, and save setups as one-click presets.
-- **Take back an adjustment:** undo the last applied preset, resolution, refresh rate, rotation or scaling change from the Presets menu.
-- **Go a little further:** HDR, ICC profiles, virtual displays and picture in picture.
-- **Optional experiment:** [overscan and underscan](docs/overscan.md) on monitors that expose scan-mode control; disabled by default.
-- **Make it yours:** keyboard shortcuts, optional startup, light/dark themes, and Simplified Chinese, Traditional Chinese, English, Japanese and Korean.
+By default, `Ctrl+Alt+↑` and `Ctrl+Alt+↓` adjust brightness on the screen under the pointer. `Ctrl+Alt+0` clears software dimming on all screens.
 
-![Full settings window](docs/images/settings-en.png)
+## Startup and automatic updates
 
-## Download and get started
+Under **Settings → Application**, you can enable either option independently.
 
-For **Windows 10 / 11 x64**. A slim EXE is available starting with v0.6.0. Choose a download from [Releases](https://github.com/Thweki/LumaDesk/releases).
+- **Start with Windows** launches LumaDesk in the system tray when the current user signs in.
+- **Automatic updates is off by default.** When enabled, LumaDesk checks GitHub for new releases, including previews, and checks again daily while running. Once the download passes SHA-256 verification, right-click the tray icon and choose **Exit LumaDesk** to install it. Turning the option off before exiting cancels the pending update. MSI upgrades may ask for administrator approval.
 
-| File | Use it to… |
+The same page lets you choose a light or dark theme and switch between English, Simplified Chinese, Traditional Chinese, Japanese and Korean.
+
+## Display controls
+
+| Task | What you can do |
 | --- | --- |
-| `LumaDesk-VERSION-win-x64.exe` | Run directly with the bundled .NET runtime |
-| `LumaDesk-VERSION-slim-win-x64.exe` | Get the smallest download if the x64 .NET 8 Desktop Runtime is already installed |
-| `LumaDesk-VERSION-portable-win-x64.zip` | Get the app with its documentation and licenses; extract and run |
-| `LumaDesk-VERSION-win-x64.msi` | Install to Program Files with a Start menu shortcut (administrator access required) |
-
-1. Run `LumaDesk.exe`. Click the tray icon for the panel; double-click for settings.
-2. Select a display and drag the brightness or scaling slider. Open **⋯** in the upper-right corner to link brightness, locate a display, or move the panel to the selected display.
-   The panel stays on that display until you close it or the display disconnects. Reopening the panel brings it back to the tray display.
-   Under **More → Monitor volume**, use **−5 / +5** to adjust only the selected monitor in five-percentage-point steps (0–100%). These controls appear when Windows exposes monitor volume through DDC/CI; they do not change Windows master volume.
-   Choose **Show display list** for numbered, named screens in your saved panel order. Reorder them under **Settings → Quick panel → More options → Move up / Move down**; this never changes desktop positions. **Show display map** returns to the spatial view. The chosen view is remembered; new profiles start with the map. Both views support **Link brightness**.
-3. Save your setup under **Settings → Presets**. To start LumaDesk in the tray when you sign in to Windows, enable the startup option under **Settings → Application**.
-4. **Automatic updates** under **Settings → Application** is off by default. Enable it to download new GitHub releases, including previews. LumaDesk verifies the SHA-256 digest and installs the update when you quit. Turning the option off cancels a pending update. MSI upgrades may prompt for administrator approval.
-
-After applying a preset, open a screen in **Settings → Displays → Reset to preset** to restore its brightness, scaling, rotation, or all available saved controls. The reset target is the last preset successfully applied to that screen during this session. [Reset behavior and limits](docs/workflows.md#reset-one-display-to-its-preset).
-
-Default shortcuts: `Ctrl+Alt+↑ / ↓` adjusts the screen under the pointer; `Ctrl+Alt+0` removes software dimming.
-
-**Experimental idle dimming (off by default):** enable **Settings → Application → Idle dimming (experimental)** and choose an idle delay of 1–60 minutes (default: 5). LumaDesk temporarily shades all screens after no keyboard or mouse input; activity restores the prior shade on the next check (about half a second). This uses a software overlay, leaves monitor backlights and saved brightness untouched, and preserves screens already dimmed more deeply. See [behavior and limitations](docs/workflows.md#experimental-idle-dimming).
-
-To inspect a preset before switching, enable **Application → Preset comparison (experimental)**, then use **Presets → More options → Compare with current setup**. This read-only comparison defaults off; see [preset comparison](docs/workflows.md#experimental-preset-comparison).
-
-**Experimental brightness easing (default OFF):** launch with `LUMADESK_EXPERIMENTAL_TRANSITIONS=1` for a short ease when manually adjusting brightness. See [usage and validation](docs/brightness-transitions.md).
-
-Optional preview: [keep displays awake while the tray panel is open](docs/keep-awake.md), behind an experimental flag that defaults off.
-
-All editions store settings in `%LOCALAPPDATA%\LumaDesk`. “Portable” means no installation, not settings beside the executable. There is no telemetry. The virtual driver downloads only when you choose to install it. Driver installation and first-time system ICC imports may request administrator approval.
-
-## Before you download
-
-- HiDPI uses Windows per-display scaling, not full-desktop supersampling. Some older apps may still look blurry.
-- DDC/CI, HDR, ICC and input switching depend on your monitor, connection and driver. Acrylic requires Windows 11 22H2 or later.
-- Virtual displays require the separately installed [VirtualDrivers driver](https://github.com/VirtualDrivers/Virtual-Display-Driver).
-- This is still a preview. Hardware compatibility is being tested; include your monitor model and connection when reporting an issue. See the [validation notes](docs/validation.md).
-
-## Build it yourself
-
-Windows and the .NET 8 SDK are required.
-
-```powershell
-.\build.ps1 -Portable  # Single EXE with the .NET runtime bundled and compressed
-.\build.ps1 -Slim      # Small single EXE, requires the x64 .NET 8 Desktop Runtime
-.\test.ps1             # Full suite; requires an interactive desktop
-.\package.ps1          # Both EXEs, portable ZIP, MSI and SHA256SUMS.txt
-```
-
-The portable build goes to `artifacts/LumaDesk-win-x64/`, the slim build to `artifacts/LumaDesk-slim-win-x64/`, and release files to `artifacts/release/`. GitHub Actions runs headless tests, packaging and installation checks for pushes and PRs, and publishes version tags. See [release instructions](docs/releasing.md).
-
-More: [Presets and automation](docs/workflows.md) · [HDR / ICC](docs/color-hdr.md) · [Display layout](docs/display-layout.md) · [Virtual displays](docs/virtual-displays.md) · [Translations](docs/localization.md)
+| Arrange your desktop | Drag screens into place, choose the primary display, and extend or duplicate the desktop. For precise alignment, position one screen relative to another. [Display layout](docs/display-layout.md) |
+| Change picture settings or text size | Set each display’s resolution, refresh rate, rotation and Windows scaling. HDR and ICC controls depend on Windows, your graphics driver and the display. [HDR and color management](docs/color-hdr.md) |
+| Control an external monitor | Adjust backlight brightness, contrast and monitor volume, or switch inputs over DDC/CI. Available controls vary by monitor and connection. [Hardware validation notes](docs/validation.md) |
+| Add virtual displays | Install the optional VirtualDrivers driver from the app, then choose how many virtual screens to create. The initial installation requires administrator approval. [Virtual displays](docs/virtual-displays.md) |
 
 ### Experimental night window
 
-Under **Settings → Application → Night window (experimental)**, set different start/end times in local 24-hour `HH:mm` format, click **Apply window**, then enable the toggle. It defaults **off**, with a suggested window of **21:00–07:00**. While LumaDesk runs, the window applies at least 35% software shading to all connected screens, preserving any stronger manual shading. It does not change hardware brightness, slider values, presets or remembered brightness.
+To dim your screens on a schedule, open **Settings → Application → Night window (experimental)**, enter local start and end times, select **Apply window**, and enable the switch. It starts off and supports overnight schedules. While active, LumaDesk applies at least 35% software shading and preserves any stronger manual shading. Your manual shading level returns when the window ends. Press `Ctrl+Alt+0` to clear shading early and suspend the current window.
 
-The window is checked at startup, after display refresh, and approximately every 20 seconds. Overnight windows are supported; starting or resuming inside a window activates it, and leaving the window restores the current manual shading. **Reset dimming** (`Ctrl+Alt+0` by default) clears shading and suspends the current window. The next daily window, editing the schedule, toggling it off/on, or restarting the app enables it again. Turning the feature off removes its shading immediately. This is clock-based shading, independent of activity or inactivity; it does not schedule monitor power-off.
-Optional experiment: [save and restore per-display gamma ramps in presets](docs/workflows.md#gamma-预设实验性--gamma-presets-experimental), disabled by default (`LUMADESK_EXPERIMENTAL_GAMMA=1`).
-Optional experiment: [inspect fractional refresh timing and Windows DRR status](docs/refresh-timing.md) (disabled by default).
+## Build from source
 
-Optional experiment: [compact tray display picker](docs/tray-compact.md) for large display setups (disabled by default).
+Install the .NET 8 SDK on Windows and run the commands you need from the repository root.
 
-## License
+```powershell
+.\build.ps1 -Portable   # Build a standalone EXE with the runtime bundled
+.\build.ps1 -Slim       # Build the slim EXE
+.\test.ps1 -Headless    # Run the headless test suites
+.\package.ps1           # Write all four packages and checksums to artifacts/release/
+```
 
-Version 0.4.0 onward: [GPL-3.0-only](LICENSE). Versions through 0.3.1 retain their original MIT license. Third-party components keep their own licenses; see [NOTICE](NOTICE).
+When reporting a hardware issue, include the monitor model, how it is connected, what you tried and what happened. [Report an issue](https://github.com/Thweki/LumaDesk/issues) · [Build status](https://github.com/Thweki/LumaDesk/actions/workflows/build.yml) · [Release instructions](docs/releasing.md)
+
+LumaDesk is licensed under GPL-3.0-only from version 0.4.0 onward. Versions through 0.3.1 retain their MIT license. Third-party components have their own licenses. [LICENSE](LICENSE) · [NOTICE](NOTICE)

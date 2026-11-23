@@ -2,80 +2,64 @@
 
 简体中文 · [English](README.en.md)
 
-**在托盘里，管好你的每一块屏幕。**
+LumaDesk 是一款开源的 Windows 多显示器管理工具。单击系统托盘图标，就能按桌面位置选中一块屏幕，调整亮度或缩放。把常用的亮度、分辨率和屏幕排列存成预设，下次接上显示器时就能一起恢复。
 
-LumaDesk 是一个开源 Windows 显示管理工具。调亮度、改缩放、切换屏幕配置，打开一个小面板就够了。
+**[下载 LumaDesk 0.6.0 预览版](https://github.com/Thweki/LumaDesk/releases/tag/v0.6.0)** · Windows 10 / 11 x64
 
-[下载预览版](https://github.com/Thweki/LumaDesk/releases) · [反馈问题](https://github.com/Thweki/LumaDesk/issues) · [构建状态](https://github.com/Thweki/LumaDesk/actions/workflows/build.yml)
+![在快捷面板中按位置选屏，再联调多块屏幕的亮度](docs/images/quick-demo.gif)
 
-## 看看它怎么用
+## 选哪个下载文件？
 
-按桌面位置选屏，拖动滑杆调节亮度。想同时调整几块屏幕，打开右上角的 **⋯**，选择「联调亮度」。
+| 使用场景 | 下载文件 | 打开方式 |
+| --- | --- | --- |
+| 直接运行，免安装 | [独立 EXE](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/LumaDesk-0.6.0-win-x64.exe) | 自带 .NET 运行时，下载后双击 |
+| 电脑已有 x64 .NET 8 桌面运行时 | [轻量 EXE](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/LumaDesk-0.6.0-slim-win-x64.exe) | 下载体积最小，双击运行 |
+| 想把程序和说明文档放在一起 | [便携 ZIP](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/LumaDesk-0.6.0-portable-win-x64.zip) | 解压整个文件夹，运行其中的 `LumaDesk.exe` |
+| 想从开始菜单启动，或通过系统设置卸载 | [MSI 安装包](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/LumaDesk-0.6.0-win-x64.msi) | 运行安装程序，需要管理员权限 |
 
-![选屏、打开操作菜单并联调多屏亮度](docs/images/quick-demo.gif)
+四种版本共用 `%LOCALAPPDATA%\LumaDesk` 中的设置和预设。如果你已在使用早期的 0.6.0，请重新下载对应文件一次，即可获得自动更新开关。发布页提供每个文件的 [SHA-256 校验值](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/SHA256SUMS.txt)。
 
-<p>
-  <img src="docs/images/quick-panel.png" width="360" alt="LumaDesk 快捷面板">
-  <img src="docs/images/quick-panel-dark.png" width="360" alt="LumaDesk 深色快捷面板">
-</p>
+## 第一次使用
 
-## 平时用得上的功能
+1. **调一块屏幕。** 单击托盘图标，在布局图上点选显示器，拖动亮度滑杆。屏幕较多时，可在右上角 **⋯ → 显示屏幕列表** 中按名称选屏。
+2. **一起调几块屏幕。** 打开 **⋯ → 联调亮度**，勾选要调整的屏幕，再拖动滑杆。所选屏幕会设为同一个目标亮度。
+3. **保存桌面配置。** 双击托盘图标打开设置，在 **预设 → 保存当前设置** 中保存。比如给办公桌上的两块屏幕存一套白天配置和一套夜间配置，之后可直接从快捷面板切换。[预设与自动化](docs/workflows.md)
 
-- **亮度顺手调**：背光与软件调暗衔接，支持单屏、多选联调和分组同步。
-- **每块屏幕单独管**：缩放、分辨率、刷新率、旋转，以及设备支持的输入源、音量和对比度。
-- **把桌面摆好**：拖动排列、设置主屏、扩展或复制桌面；保存成预设，下次一键切换。
-- **更多显示工具**：HDR 开关、ICC 配置、虚拟屏幕和画中画。
-- **融入日常使用**：快捷键、可选开机自启、深浅主题，支持简繁中文、英文、日文和韩文。
+默认快捷键跟随鼠标所在的屏幕。`Ctrl+Alt+↑` 和 `Ctrl+Alt+↓` 调整亮度；`Ctrl+Alt+0` 清除所有屏幕的软件调暗。
 
-![完整设置界面](docs/images/settings.png)
+## 开机自启和自动更新
 
-## 下载与上手
+两个开关都在 **设置 → 应用**，可以单独开启。
 
-适用于 **Windows 10 / 11 x64**。从 v0.6.0 起可选轻量 EXE。请到 [Releases](https://github.com/Thweki/LumaDesk/releases) 查看下载选项。
+- **开机自启**会在当前用户登录 Windows 后启动 LumaDesk，并驻留系统托盘。
+- **自动更新默认关闭。** 开启后，LumaDesk 会检查 GitHub 上的新版本（包括预览版），并在运行期间每天复查。下载通过 SHA-256 校验后，右键托盘图标，选择 **退出 LumaDesk** 即可安装。退出前关闭自动更新会取消待安装的更新。MSI 升级时可能需要管理员确认。
 
-| 文件 | 适合你，如果…… |
+界面支持简体中文、繁体中文、英语、日语和韩语。可在同一页切换语言和深浅主题。
+
+## 显示器还能怎么调？
+
+| 任务 | 可用操作 |
 | --- | --- |
-| `LumaDesk-版本-win-x64.exe` | 想直接运行，内含 .NET 运行时 |
-| `LumaDesk-版本-slim-win-x64.exe` | 已安装 x64 .NET 8 桌面运行时，想下载最小的单文件版本 |
-| `LumaDesk-版本-portable-win-x64.zip` | 想保留完整说明和许可文件，解压即用 |
-| `LumaDesk-版本-win-x64.msi` | 想安装到 Program Files，并从开始菜单打开（需要管理员权限） |
+| 调整桌面布局 | 拖动屏幕、设置主屏、扩展或复制桌面。要让两块屏幕精确对齐，可指定参照屏和相对位置。[屏幕排列](docs/display-layout.md) |
+| 调整画面和字号 | 按屏设置分辨率、刷新率、旋转和 Windows 缩放。HDR 和 ICC 配置取决于 Windows、显卡驱动和显示器的支持。[HDR 与色彩管理](docs/color-hdr.md) |
+| 控制外接显示器 | 在支持 DDC/CI 的设备上调节背光、对比度、显示器音量或切换输入源。可用项目随型号和连接方式而异。[硬件验证记录](docs/validation.md) |
+| 添加虚拟屏幕 | 在应用内按需下载并安装 VirtualDrivers 驱动，再选择虚拟屏幕数量。首次安装需要管理员权限。[虚拟屏幕](docs/virtual-displays.md) |
 
-1. 运行 `LumaDesk.exe`，单击托盘图标打开快捷面板，双击打开设置。
-2. 选择屏幕，拖动滑杆调整亮度或缩放。打开右上角的 **⋯** 菜单，可联调多屏亮度、定位屏幕或将面板移到所选屏幕。
-   面板会留在该屏幕上，直到关闭或屏幕断开。重新打开面板时，它会回到托盘所在屏幕。
-   在“更多 → 显示器音量”中，点击 **−5 / +5** 可按 5 个百分点调整所选显示器的音量（0–100%）。仅当 Windows 通过 DDC/CI 提供显示器音量时显示，不会更改 Windows 主音量。
-   点击“显示屏幕列表”可按已保存的面板顺序显示屏幕编号和名称。在“设置 → 快捷面板 → 更多选项”中上移或下移屏幕，不会改变桌面位置。点击“显示屏幕布局图”可返回布局视图。视图选择会保存，新配置默认使用布局图；两种视图都支持联调亮度。
-3. 想保留当前配置，到“设置 → 预设”保存。在“设置 → 应用”开启“开机自启”，登录 Windows 后即可从托盘打开 LumaDesk。
-4. “设置 → 应用”里的“自动更新”默认关闭。开启后会检查并下载 GitHub 发布的新版（含预览版），通过 SHA-256 校验后，在退出 LumaDesk 时安装。关闭开关会取消待安装的更新。MSI 版升级时可能需要管理员确认。
+### 实验性夜间时段
 
-默认快捷键：`Ctrl+Alt+↑ / ↓` 调整鼠标所在屏幕的亮度，`Ctrl+Alt+0` 移除软件调暗。
+如果希望屏幕每天定时变暗，可在 **设置 → 应用 → 夜间时段（实验性）** 填写本地起止时间，点击 **应用时段** 后开启。默认关闭，支持跨午夜。时段内会施加至少 35% 的软件调暗，已有更深的调暗会保留。时段结束时恢复手动调暗水平。`Ctrl+Alt+0` 可以提前清除调暗并暂停本次时段。
 
-可选预览：[托盘面板打开时保持屏幕唤醒](docs/keep-awake.md)，需启用实验性功能标志，默认关闭。
+## 从源码构建
 
-各种下载方式共用 `%LOCALAPPDATA%\LumaDesk` 中的设置。便携版免安装。应用不收集遥测，虚拟驱动只在主动安装时下载。安装驱动或首次导入系统级 ICC 时，可能需要管理员授权。
-
-## 下载前知道这些就够了
-
-- HiDPI 使用 Windows 每屏缩放，不是全桌面超采样；部分旧应用仍可能模糊。
-- DDC/CI、HDR、ICC 和输入源控制取决于显示器、连接方式及驱动；磨砂效果需要 Windows 11 22H2 或更新版本。
-- 虚拟屏幕依赖单独安装的 [VirtualDrivers 驱动](https://github.com/VirtualDrivers/Virtual-Display-Driver)。
-- 目前仍是预览版，硬件兼容性在持续验证。遇到问题欢迎附上显示器型号和连接方式：[验证记录](docs/validation.md)。
-
-## 自己构建
-
-需要 Windows 和 .NET 8 SDK。
+在 Windows 上安装 .NET 8 SDK，然后从仓库根目录运行所需命令。
 
 ```powershell
-.\build.ps1 -Portable  # 单文件 EXE，内含压缩的 .NET 运行时
-.\build.ps1 -Slim      # 小型单文件 EXE，需要已安装 x64 .NET 8 桌面运行时
-.\test.ps1             # 完整测试，需要交互式桌面
-.\package.ps1          # 生成两款 EXE、便携 ZIP、MSI 和 SHA256SUMS.txt
+.\build.ps1 -Portable   # 构建自带运行时的单文件 EXE
+.\build.ps1 -Slim       # 构建轻量 EXE
+.\test.ps1 -Headless    # 运行无头测试
+.\package.ps1           # 在 artifacts/release/ 生成四个发布包和校验清单
 ```
 
-便携版输出在 `artifacts/LumaDesk-win-x64/`，轻量版在 `artifacts/LumaDesk-slim-win-x64/`，发行文件在 `artifacts/release/`。GitHub Actions 对提交和 PR 运行无桌面测试、打包和安装检查；推送版本标签后自动发布。见[发布说明](docs/releasing.md)。
+遇到硬件问题时，请在反馈中注明显示器型号、连接方式，以及在哪一步观察到了什么现象。[反馈问题](https://github.com/Thweki/LumaDesk/issues) · [构建状态](https://github.com/Thweki/LumaDesk/actions/workflows/build.yml) · [发布流程](docs/releasing.md)
 
-进一步了解：[预设与自动化](docs/workflows.md) · [HDR / ICC](docs/color-hdr.md) · [屏幕排列](docs/display-layout.md) · [虚拟屏幕](docs/virtual-displays.md) · [添加翻译](docs/localization.md)
-
-## 开源许可
-
-0.4.0 起使用 [GPL-3.0-only](LICENSE)，0.3.1 及更早版本保留原 MIT 许可。第三方组件按各自许可分发，见 [NOTICE](NOTICE)。
+LumaDesk 从 0.4.0 起使用 GPL-3.0-only 许可，0.3.1 及更早版本沿用 MIT 许可。第三方组件按各自许可分发。[LICENSE](LICENSE) · [NOTICE](NOTICE)
