@@ -106,6 +106,8 @@ public sealed class PresetDisplay
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
     public int? Brightness { get; set; }
+    // Null leaves contrast unchanged (legacy presets or an unreadable DDC control).
+    public int? Contrast { get; set; }
     public double Dimming { get; set; }
     public DisplayMode? Mode { get; set; }
     public uint? Orientation { get; set; }
