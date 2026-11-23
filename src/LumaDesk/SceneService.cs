@@ -21,6 +21,13 @@ internal interface ISceneBackend
     Task Layout(IReadOnlyList<ScreenPlacement> placements);
 }
 
+internal interface ISceneGammaBackend
+{
+    bool GammaEnabled { get; }
+    Task<ushort[]?> ReadGamma(DisplayInfo display);
+    Task RestoreGamma(DisplayInfo display, ushort[] ramp);
+}
+
 internal sealed class SceneResult
 {
     public int Applied { get; set; }
@@ -85,6 +92,7 @@ internal static class SceneService
     private static PresetDisplay CopyDisplay(PresetDisplay d) => new()
     {
         Id = d.Id, Name = d.Name, Brightness = d.Brightness, Contrast = d.Contrast, Dimming = d.Dimming,
+        GammaRamp = d.GammaRamp?.ToArray(),
         Mode = d.Mode, Orientation = d.Orientation, Dpi = d.Dpi, Hdr = d.Hdr,
         UserProfiles = d.UserProfiles, SdrProfile = d.SdrProfile, HdrProfile = d.HdrProfile,
         X = d.X, Y = d.Y, Primary = d.Primary
@@ -99,10 +107,13 @@ internal static class SceneService
         var saved = CopyDisplay(matches[0]);
         saved.X = saved.Y = null; saved.Primary = null;
         return new Preset { Name = source.Name, Displays = new() { saved } };
-    internal static Task<Preset> Capture(ISceneBackend backend, string name) => Capture(backend.Displays, backend.Color, name);
+    }
+
+    internal static Task<Preset> Capture(ISceneBackend backend, string name) =>
+        Capture(backend.Displays, backend.Color, name, backend as ISceneGammaBackend);
 
     internal static async Task<Preset> Capture(IReadOnlyList<DisplayInfo> displays,
-        Func<DisplayInfo, Task<DisplayColorState>> readColor, string name)
+        Func<DisplayInfo, Task<DisplayColorState>> readColor, string name, ISceneGammaBackend? gammaBackend = null)
     {
         var scene = new Preset { Name = name };
         foreach (var d in displays.ToArray())
@@ -121,6 +132,15 @@ internal static class SceneService
                 }
             }
             catch (Exception ex) { Storage.Log("Scene color capture: " + ex.Message); }
+            if (gammaBackend is { GammaEnabled: true })
+            {
+                try
+                {
+                    var ramp = await gammaBackend.ReadGamma(d);
+                    if (ramp != null) { GammaService.Validate(ramp); saved.GammaRamp = ramp.ToArray(); }
+                }
+                catch (Exception ex) { Storage.Log("Scene gamma capture: " + ex.Message); }
+            }
             scene.Displays.Add(saved);
         }
         return scene;
@@ -200,6 +220,33 @@ internal static class SceneService
             {
                 try { await backend.Layout(layout); }
                 catch (Exception ex) { result.Issues.Add(L.T("scene.layout") + ": " + ex.Message); }
+            }
+        }
+        // Mode, HDR, ICC and layout changes can reset gamma. Restore ramps last,
+        // resolving stable identities again after all topology-changing operations.
+        if (!outputOnly && backend is ISceneGammaBackend { GammaEnabled: true } gamma)
+        {
+            ids.Clear();
+            foreach (var saved in scene.Displays)
+            {
+                if (!ids.Add(saved.Id) || saved.GammaRamp == null) continue;
+                var display = backend.Displays.FirstOrDefault(d => string.Equals(d.Id, saved.Id, StringComparison.OrdinalIgnoreCase));
+                if (display == null)
+                {
+                    if (result.SuccessfulDisplayIds.Remove(saved.Id))
+                    { result.Applied--; result.Issues.Add(saved.Name + " · Gamma: " + L.T("scene.disconnected")); }
+                    continue;
+                }
+                try
+                {
+                    GammaService.Validate(saved.GammaRamp);
+                    await gamma.RestoreGamma(display, saved.GammaRamp.ToArray());
+                }
+                catch (Exception ex)
+                {
+                    if (result.SuccessfulDisplayIds.Remove(saved.Id)) result.Applied--;
+                    result.Issues.Add(display.Name + " · Gamma: " + ex.Message);
+                }
             }
         }
         return result;

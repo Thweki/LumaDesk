@@ -109,6 +109,8 @@ public sealed class PresetDisplay
     // Null leaves contrast unchanged (legacy presets or an unreadable DDC control).
     public int? Contrast { get; set; }
     public double Dimming { get; set; }
+    // RGB, 256 unsigned 16-bit entries per channel; null leaves gamma unchanged.
+    public ushort[]? GammaRamp { get; set; }
     public DisplayMode? Mode { get; set; }
     public uint? Orientation { get; set; }
     public int? Dpi { get; set; }

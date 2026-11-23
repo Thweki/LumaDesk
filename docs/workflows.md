@@ -86,6 +86,25 @@ After successfully applying a preset, select a screen under **Settings → Displ
 
 在本次会话中成功应用预设后，打开“设置 → 屏幕”，使用“重置为预设”恢复该屏幕的亮度、缩放、旋转或所有可用项。仅重置所选屏幕；旧预设未保存的项目不可用。基准是上次成功应用的值，编辑或删除预设、撤销切换都不会改变它，退出应用后不保留。部分失败时可将鼠标悬停在状态栏查看详情并重试。
 
+## Gamma 预设（实验性） / Gamma presets (experimental)
+
+默认关闭。退出 LumaDesk 后，以 `LUMADESK_EXPERIMENTAL_GAMMA=1` 启动，即可在保存预设或捕获草稿时记录每个受支持 SDR 屏幕当前的 RGB Gamma 曲线。在预设的“更多选项”或草稿中可查看是否捕获成功。应用预设或“撤销上次切换”会在其他显示设置之后恢复曲线。关闭实验功能后不会读取或写入 Gamma；旧预设和未捕获曲线的屏幕保持 Gamma 不变。
+
+This experiment saves and restores **existing per-display RGB gamma ramps** (three channels of 256 unsigned 16-bit values). It does not generate a new curve or add a brightness, contrast, tint, or scheduling control. To try it, exit the running tray app, then launch from PowerShell:
+
+```powershell
+$env:LUMADESK_EXPERIMENTAL_GAMMA = '1'
+& .\LumaDesk.exe
+```
+
+Prepare the display's gamma using your existing calibration software, then **Presets → Save current settings** or **Capture current setup → Save draft**. Drafts and each preset's **More options** show which screens have saved ramps. Applying a preset restores ramps by stable display identity after mode, HDR, ICC, brightness and layout operations. **Undo last switch** uses the gamma captured before the switch. Duplicating a preset preserves independent copies of its ramps. Gamma capture failure leaves that screen's gamma unspecified and does not prevent saving other settings.
+
+Only uniquely mapped displays with a confirmed SDR color mode are eligible. HDR, unknown color modes, mirrored sources and unsupported drivers are skipped during capture; restoration failures appear in the preset's partial-result details. Ramps are validated before writes, and readback must match exactly; an ignored or unverified write is reported without retries. There is no continuous enforcement, gamma editor, startup restore or brightness-reconnect restore. Older presets with no ramp leave gamma unchanged. With the flag off, saved ramps are ignored; saving or updating a preset while off captures no gamma.
+
+The [Windows gamma API](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-setdevicegammaramp) has driver and color-management limitations: other software and display events can overwrite ramps, and a successful API return can still mean the write was ignored. ICC remains the recommended calibration mechanism. This experiment requires Windows hardware validation, especially for driver precision, color-loader interactions and undo after topology changes. Exit the app and remove the environment variable before relaunching to disable it; disabling does not reset an already applied ramp. Apply **Undo last switch** while still opted in if you want to restore the preceding captured ramp first.
+
+Validation added: workflow tests for flag gating, capture/persistence/copies, apply ordering, undo, malformed ramps, missing screens, HDR/unknown color modes and native failure/readback behavior; UI fixtures for default-off visibility and capture summaries. These C# and WPF tests were **not executed in the implementation environment** because `dotnet` and `pwsh` are unavailable. On Windows, run `./test.ps1 -Headless`, then the UI fixtures with `dotnet run --project tests/LumaDesk.UiTests -c Release -- --fixtures` in an interactive desktop.
+
 ## 可选自动化
 
 预设可设置每天的时间（本机 24 小时制）或接通电源/使用电池触发。应用运行期间约每 20 秒检查一次；休眠错过的最近一次时间可在恢复后触发，不补跑历史任务。同一轮多个预设命中时只应用列表中第一个匹配屏幕集合的预设。

@@ -213,6 +213,7 @@ NextScheduleTests.Run(Check);
 LayoutConfigurationTests.Run(Check);
 await SceneNoteTests.Run(Check);
 SceneSearchTests.Run(Check);
+await SceneGammaTests.Run(Check);
 await ReconnectTests.RunAsync(Check);
 PipBufferTests.Run(Check);
 Console.WriteLine($"{checks} workflow checks passed. No native writes were issued.");
