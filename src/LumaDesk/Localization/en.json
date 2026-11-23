@@ -640,5 +640,9 @@
   "gamma.invalid": "The gamma ramp must contain three increasing channels of 256 values each.",
   "gamma.sdrOnly": "Gamma restore requires a uniquely mapped display with a confirmed SDR color mode.",
   "gamma.unverified": "The display did not confirm the saved gamma ramp. No automatic retry was attempted.",
-  "gamma.unavailable": "The display driver could not read or write the gamma ramp."
+  "gamma.unavailable": "The display driver could not read or write the gamma ramp.",
+  "awake.toggle": "Keep displays awake (experimental)",
+  "awake.help": "Prevent idle display and system sleep while this panel is visible. Turns off when the panel hides or closes. Pin the panel to keep it open.",
+  "awake.error": "Could not keep displays awake: {0}",
+  "awake.reason": "LumaDesk: keep displays awake while the tray panel is open"
 }

@@ -57,6 +57,8 @@ To inspect a preset before switching, enable **Application → Preset comparison
 
 **Experimental brightness easing (default OFF):** launch with `LUMADESK_EXPERIMENTAL_TRANSITIONS=1` for a short ease when manually adjusting brightness. See [usage and validation](docs/brightness-transitions.md).
 
+Optional preview: [keep displays awake while the tray panel is open](docs/keep-awake.md), behind an experimental flag that defaults off.
+
 All editions store settings in `%LOCALAPPDATA%\LumaDesk`. “Portable” means no installation, not settings beside the executable. There is no telemetry. The virtual driver downloads only when you choose to install it. Driver installation and first-time system ICC imports may request administrator approval.
 
 ## Before you download

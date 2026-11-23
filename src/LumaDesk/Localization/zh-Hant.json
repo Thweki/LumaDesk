@@ -640,5 +640,9 @@
   "gamma.invalid": "Gamma 曲線必須包含三個遞增通道，每個通道含 256 個值。",
   "gamma.sdrOnly": "還原 Gamma 需要唯一對應且已確認處於 SDR 色彩模式的顯示器。",
   "gamma.unverified": "顯示器未確認儲存的 Gamma 曲線。未嘗試自動重試。",
-  "gamma.unavailable": "顯示驅動程式無法讀取或寫入 Gamma 曲線。"
+  "gamma.unavailable": "顯示驅動程式無法讀取或寫入 Gamma 曲線。",
+  "awake.toggle": "保持螢幕喚醒（實驗性）",
+  "awake.help": "面板可見時防止螢幕和系統因閒置而休眠。隱藏或關閉面板後自動關閉。可釘選面板以保持開啟。",
+  "awake.error": "無法保持螢幕喚醒：{0}",
+  "awake.reason": "LumaDesk：系統匣面板開啟時保持螢幕喚醒"
 }

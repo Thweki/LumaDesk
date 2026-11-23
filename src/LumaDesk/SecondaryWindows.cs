@@ -42,7 +42,7 @@ internal sealed partial class QuickWindow : Window
     private readonly StackPanel body = new() { Margin = new Thickness(6) };
     private readonly StackPanel picker = new() { Margin = new Thickness(18, 12, 18, 0) };
     private readonly ScrollViewer controlsScroll;
-    public QuickWindow(MainWindow owner, Func<DisplayInfo, int, Window, Task>? applyDpi = null, Func<DisplayInfo, DisplayMode, uint, Window, Task>? applyMode = null, bool dismissOnDeactivate = true, Func<DisplayInfo, int, Task>? applyBrightness = null, Func<IReadOnlyList<string>, int, Task>? applySelectedBrightness = null, Func<DisplayInfo, Task<bool>>? readHdrActive = null)
+    public QuickWindow(MainWindow owner, Func<DisplayInfo, int, Window, Task>? applyDpi = null, Func<DisplayInfo, DisplayMode, uint, Window, Task>? applyMode = null, bool dismissOnDeactivate = true, Func<DisplayInfo, int, Task>? applyBrightness = null, Func<IReadOnlyList<string>, int, Task>? applySelectedBrightness = null, Func<DisplayInfo, Task<bool>>? readHdrActive = null, Func<IDisposable>? acquireWakeRequest = null)
     {
         Ui.ConfigureWindow(this);
         this.owner = owner; this.applyDpi = applyDpi ?? ((display, percent, parent) => owner.ChangeDpiAsync(display, percent, parent));
@@ -52,6 +52,7 @@ internal sealed partial class QuickWindow : Window
         this.readHdrActive = readHdrActive ?? (display => Task.Run(() => AdvancedColorService.ReadHdrActive(display)));
         this.dismissOnDeactivate = dismissOnDeactivate;
         InitializeScheduleStatus();
+        keepAwake = new PanelKeepAwake(PanelKeepAwake.IsEnabled(Environment.GetEnvironmentVariable(PanelKeepAwake.Flag)), acquireWakeRequest ?? DisplayWakeRequest.Acquire);
         Title = AppBrand.Name + L.T("s2c58655791"); Width = 360; Height = 620; MinHeight = 180;
         WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize; AllowsTransparency = false; ShowInTaskbar = false; Topmost = true;
         controlsScroll = new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
@@ -67,7 +68,13 @@ internal sealed partial class QuickWindow : Window
         Activated += (_, _) => { if (!forceDismissRequested) dismissRequested = false; };
         PreviewKeyDown += (_, e) => { if (e.Key == Key.Escape) { dismissRequested = forceDismissRequested = true; e.Handled = true; TryDismiss(); } };
         Closing += (_, e) => { if (dpiBusy || keepOpenCount > 0) { e.Cancel = true; dismissRequested = forceDismissRequested = true; } };
-        Closed += (_, _) => { closed = true; CloseIdentifyWindows(); };
+        IsVisibleChanged += (_, _) =>
+        {
+            if (!keepAwake.Available) return;
+            if (!IsVisible) keepAwake.SetEnabled(false, false);
+            else Render();
+        };
+        Closed += (_, _) => { closed = true; keepAwake.Dispose(); CloseIdentifyWindows(); };
     }
     internal IDisposable KeepOpen()
     {
@@ -180,6 +187,7 @@ internal sealed partial class QuickWindow : Window
             var button = Ui.Button(item.Label, item.Action); button.FontSize = 11; button.Padding = new Thickness(4, 6, 4, 6); button.Margin = new Thickness(2, 0, 2, 0); button.Background = Ui.Brush("#70FFFFFF"); button.BorderBrush = Ui.Brush("#12000000"); footer.Children.Add(button);
         }
         if (!brightnessMultiSelect) body.Children.Add(footer);
+        RenderKeepAwake();
         body.Measure(new System.Windows.Size(Width - 2, double.PositiveInfinity));
         picker.Measure(new System.Windows.Size(Width - 2, double.PositiveInfinity));
         // Native pixel rounding at fractional DPI can otherwise create a scrollbar
