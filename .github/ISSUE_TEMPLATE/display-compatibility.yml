@@ -1,0 +1,21 @@
+name: Display compatibility / 显示器兼容问题
+description: Report a brightness, input, scaling or layout issue with a display. / 反馈亮度、输入源、缩放或排列问题。
+body:
+  - type: input
+    id: versions
+    attributes:
+      label: LumaDesk and Windows versions / 软件与系统版本
+      placeholder: LumaDesk 0.6.0, Windows 11 24H2
+  - type: input
+    id: connection
+    attributes:
+      label: Monitor model and connection / 显示器型号与接法
+      description: Include any dock, adapter or KVM between the PC and the screen. / 请注明中间的扩展坞、转接器或 KVM。
+      placeholder: Dell U2720Q, laptop → USB-C dock → DisplayPort
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What did you try and what happened? / 你做了什么，实际发生了什么？
+      description: Include what you expected and whether another screen or connection behaves differently. / 请说明预期效果，以及换屏或换接法后有何区别。
+    validations:
+      required: true

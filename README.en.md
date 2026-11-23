@@ -1,14 +1,14 @@
-# LumaDesk
+# LumaDesk · Monitor brightness and display layouts for Windows
 
 [简体中文](README.md) · English
 
-LumaDesk is an open-source display manager for Windows. Click the system tray icon, pick a monitor by its position on your desk, and adjust its brightness or scaling. Save brightness, resolution and display layout together as a preset to restore the next time you connect those screens.
-
-**[Download LumaDesk 0.6.0](https://github.com/Thweki/LumaDesk/releases/tag/v0.6.0)** · Windows 10 / 11 x64
+Dim two external monitors together, or brighten just the screen under your pointer. LumaDesk is an open-source utility that puts a brightness slider in the Windows system tray. Save each screen’s brightness, scaling and position in a preset to switch between your work and evening setups.
 
 ![Selecting a monitor by position, then adjusting brightness across several screens](docs/images/quick-demo-en.gif)
 
 ## Which download should I choose?
+
+For Windows 10 / 11 x64. [0.6.0 release notes](https://github.com/Thweki/LumaDesk/releases/tag/v0.6.0)
 
 | If you want to… | Download | How to use it |
 | --- | --- | --- |
@@ -17,19 +17,23 @@ LumaDesk is an open-source display manager for Windows. Click the system tray ic
 | Keep the app and its documentation together | [Portable ZIP](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/LumaDesk-0.6.0-portable-win-x64.zip) | Extract the whole folder, then run `LumaDesk.exe`. |
 | Launch from Start or uninstall through Windows Settings | [MSI installer](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/LumaDesk-0.6.0-win-x64.msi) | Run the installer with administrator approval. |
 
-All four editions share settings and presets in `%LOCALAPPDATA%\LumaDesk`. If you use the earlier 0.6.0 build, download your edition again to get the automatic updates switch. The release includes [SHA-256 checksums](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/SHA256SUMS.txt) for all four files.
+All four editions share settings and presets in `%LOCALAPPDATA%\LumaDesk`. The 0.6.0 EXEs and MSI are unsigned. You can verify your download against the [release SHA-256 checksums](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/SHA256SUMS.txt).
 
 ## First steps
 
-1. **Adjust one screen.** Click the tray icon, select the monitor on the display map, and drag the brightness slider. To pick a monitor by name, open **⋯ → Show display list**.
+1. **Adjust one screen.** The quick panel opens on first launch. Select a monitor on the display map and drag its brightness slider. To reopen the panel, click the LumaDesk icon near the taskbar clock (look under **∧** if it’s hidden). To pick a monitor by name, open **⋯ → Show display list**.
 2. **Adjust several screens together.** Open **⋯ → Link brightness**, select the screens, then drag the slider. Each selected screen takes the same target brightness.
 3. **Save a setup.** Double-click the tray icon to open settings and choose **Presets → Save current settings**. For example, save a daytime setup and an evening setup for the same pair of monitors, then switch between them from the quick panel. [Presets and automation](docs/workflows.md)
 
 By default, `Ctrl+Alt+↑` and `Ctrl+Alt+↓` adjust brightness on the screen under the pointer. `Ctrl+Alt+0` clears software dimming on all screens.
 
+### Why does the picture dim while the monitor’s backlight stays the same?
+
+Try moving the slider from 50% to 80%. Below 20%, the backlight is usually at its minimum and LumaDesk dims the picture further in software. If the backlight stays fixed at higher levels too, open the monitor’s own menu and enable **DDC/CI** if available. If you use a dock, adapter or KVM switch, try connecting the monitor directly to the PC. LumaDesk uses software dimming across the full range when it cannot read a hardware backlight control. [Report a display compatibility issue](https://github.com/Thweki/LumaDesk/issues/new?template=display-compatibility.yml)
+
 ## Startup and automatic updates
 
-Under **Settings → Application**, you can enable either option independently.
+Under **Settings → Application**, you can enable either option independently. If you use the earlier 0.6.0 build, download your edition again to get the automatic updates switch.
 
 - **Start with Windows** launches LumaDesk in the system tray when the current user signs in.
 - **Automatic updates is off by default.** When enabled, LumaDesk checks GitHub for new releases, including previews, and checks again daily while running. Once the download passes SHA-256 verification, right-click the tray icon and choose **Exit LumaDesk** to install it. Turning the option off before exiting cancels the pending update. MSI upgrades may ask for administrator approval.

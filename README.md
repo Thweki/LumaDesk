@@ -1,14 +1,14 @@
-# LumaDesk
+# LumaDesk · Windows 多显示器亮度与布局管理
 
-简体中文 · [English](README.en.md)
+Control external monitor brightness from the Windows system tray. [English guide & downloads](README.en.md)
 
-LumaDesk 是一款开源的 Windows 多显示器管理工具。单击系统托盘图标，就能按桌面位置选中一块屏幕，调整亮度或缩放。把常用的亮度、分辨率和屏幕排列存成预设，下次接上显示器时就能一起恢复。
-
-**[下载 LumaDesk 0.6.0](https://github.com/Thweki/LumaDesk/releases/tag/v0.6.0)** · Windows 10 / 11 x64
+想一起调暗两块外接屏，或只调亮鼠标所在的那一块？LumaDesk 是一款开源工具，把亮度滑杆放进 Windows 系统托盘。你也可以把每块屏幕的亮度、缩放和排列存成预设，在办公和夜间配置之间切换。
 
 ![在快捷面板中按位置选屏，再联调多块屏幕的亮度](docs/images/quick-demo.gif)
 
 ## 选哪个下载文件？
+
+适用于 Windows 10 / 11 x64。[0.6.0 发布说明](https://github.com/Thweki/LumaDesk/releases/tag/v0.6.0)
 
 | 使用场景 | 下载文件 | 打开方式 |
 | --- | --- | --- |
@@ -17,19 +17,23 @@ LumaDesk 是一款开源的 Windows 多显示器管理工具。单击系统托�
 | 想把程序和说明文档放在一起 | [便携 ZIP](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/LumaDesk-0.6.0-portable-win-x64.zip) | 解压整个文件夹，运行其中的 `LumaDesk.exe` |
 | 想从开始菜单启动，或通过系统设置卸载 | [MSI 安装包](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/LumaDesk-0.6.0-win-x64.msi) | 运行安装程序，需要管理员权限 |
 
-四种版本共用 `%LOCALAPPDATA%\LumaDesk` 中的设置和预设。如果你已在使用早期的 0.6.0，请重新下载对应文件一次，即可获得自动更新开关。发布页提供每个文件的 [SHA-256 校验值](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/SHA256SUMS.txt)。
+四种版本共用 `%LOCALAPPDATA%\LumaDesk` 中的设置和预设。0.6.0 的 EXE 和 MSI 均未签名，下载后可用发布页提供的 [SHA-256 校验值](https://github.com/Thweki/LumaDesk/releases/download/v0.6.0/SHA256SUMS.txt) 核对文件。
 
 ## 第一次使用
 
-1. **调一块屏幕。** 单击托盘图标，在布局图上点选显示器，拖动亮度滑杆。屏幕较多时，可在右上角 **⋯ → 显示屏幕列表** 中按名称选屏。
+1. **调一块屏幕。** 首次运行会打开快捷面板。在布局图上点选显示器，拖动亮度滑杆。以后单击任务栏时钟旁的 LumaDesk 图标即可再打开，图标也可能收在 **∧** 里。屏幕较多时，可在 **⋯ → 显示屏幕列表** 中按名称选屏。
 2. **一起调几块屏幕。** 打开 **⋯ → 联调亮度**，勾选要调整的屏幕，再拖动滑杆。所选屏幕会设为同一个目标亮度。
 3. **保存桌面配置。** 双击托盘图标打开设置，在 **预设 → 保存当前设置** 中保存。比如给办公桌上的两块屏幕存一套白天配置和一套夜间配置，之后可直接从快捷面板切换。[预设与自动化](docs/workflows.md)
 
 默认快捷键跟随鼠标所在的屏幕。`Ctrl+Alt+↑` 和 `Ctrl+Alt+↓` 调整亮度；`Ctrl+Alt+0` 清除所有屏幕的软件调暗。
 
+### 外接显示器只变暗，背光没变？
+
+先试试把滑杆从 50% 调到 80%。低于 20% 时，背光通常已经降到最低，LumaDesk 会用软件继续调暗。如果在较高亮度下背光也没变化，用显示器的实体按键打开菜单，确认 **DDC/CI** 已开启（如果有此选项）。接了扩展坞、转接器或 KVM 时，可以直连电脑再试。LumaDesk 在读不到硬件背光接口时会全程使用软件调暗。[反馈显示器兼容问题](https://github.com/Thweki/LumaDesk/issues/new?template=display-compatibility.yml)
+
 ## 开机自启和自动更新
 
-两个开关都在 **设置 → 应用**，可以单独开启。
+两个开关都在 **设置 → 应用**，可以单独开启。如果你使用早期的 0.6.0，重新下载对应文件即可获得自动更新开关。
 
 - **开机自启**会在当前用户登录 Windows 后启动 LumaDesk，并驻留系统托盘。
 - **自动更新默认关闭。** 开启后，LumaDesk 会检查 GitHub 上的新版本（包括预览版），并在运行期间每天复查。下载通过 SHA-256 校验后，右键托盘图标，选择 **退出 LumaDesk** 即可安装。退出前关闭自动更新会取消待安装的更新。MSI 升级时可能需要管理员确认。
