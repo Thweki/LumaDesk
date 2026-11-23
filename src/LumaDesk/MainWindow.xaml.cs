@@ -227,6 +227,7 @@ public partial class MainWindow : Window
         if (CreateRefreshTimingControls(display) is UIElement timing) PageContent.Children.Add(Ui.Card(timing));
         var extras = new StackPanel(); extras.Children.Add(Ui.Row(Ui.Labels(L.T("s850875a753"), Help(L.T("sce70a24e69"))), Ui.Button(L.T("s86227fc6df"), () => OpenPip(display)))); extras.Children.Add(Ui.Line());
         extras.Children.Add(CreateColorControls(display)); extras.Children.Add(Ui.Line());
+        if (CreateScanModeControls(display) is { } scanModes) { extras.Children.Add(scanModes); extras.Children.Add(Ui.Line()); }
         extras.Children.Add(Ui.Row(Ui.Labels(L.T("sed1989d773"), Help(L.T("sb3bd567058"))), Ui.Button(L.T("sab88522dca"), () => ExportEdid(display)))); PageContent.Children.Add(Ui.Card(extras));
         PageContent.Children.Add(Ui.Card(Ui.Labels(L.T("s6c07bb6fd4"), L.F("sed21095eec", display.Adapter, display.Device, display.X, display.Y, display.Id))));
     }

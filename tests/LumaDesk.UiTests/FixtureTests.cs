@@ -77,6 +77,7 @@ internal static partial class Program
                     await TestInputSwitchUiAsync(owner, offscreen: true);
                     await TestInputConnectionUiAsync(owner);
                     TestNightDimmingFixture(owner);
+                    await TestScanModeFixtureAsync(owner);
                     await TestRefreshTimingUiAsync(owner);
                     TestDeferredSettingsRenderingFixture();
                     Check(!owner.IsLoaded && new WindowInteropHelper(owner).Handle == IntPtr.Zero && owner.Displays.Count == 0,

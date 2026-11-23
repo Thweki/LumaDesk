@@ -621,5 +621,17 @@
   "reset.help": "仅恢复此屏幕的亮度、缩放或旋转。“所有可用项”恢复这三项中已保存的设置。",
   "reset.all": "所有可用项",
   "reset.done": "屏幕重置完成。",
-  "reset.partial": "屏幕重置部分完成。将鼠标悬停于此处查看详情。"
+  "reset.partial": "屏幕重置部分完成。将鼠标悬停于此处查看详情。",
+  "scan.title": "过扫描 / 欠扫描（实验性）",
+  "scan.normal": "正常（无过扫描）",
+  "scan.underscan": "欠扫描",
+  "scan.overscan": "过扫描",
+  "scan.widescreen": "宽屏",
+  "scan.unknown": "未知扫描模式",
+  "scan.apply": "应用扫描模式",
+  "scan.help": "选择显示器如何适配画面。欠扫描可显示被裁切的边缘；过扫描可能裁切边缘。仅提供显示器报告支持的模式。若支持，可选择“正常”取消过扫描。",
+  "scan.disabled": "扫描模式控制未启用。",
+  "scan.unavailable": "此显示器未通过 DDC/CI 报告可读取、可选择的扫描模式。",
+  "scan.unverified": "无法验证扫描模式更改。请刷新以读取实际模式；必要时检查显示器菜单。",
+  "scan.confirmed": "显示器已确认扫描模式。"
 }

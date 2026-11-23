@@ -27,6 +27,7 @@ Pick a screen by its position, open more settings, then adjust several screens t
 - **Keep your setup handy:** arrange displays, choose the main screen, extend or mirror, and save setups as one-click presets.
 - **Take back an adjustment:** undo the last applied preset, resolution, refresh rate, rotation or scaling change from the Presets menu.
 - **Go a little further:** HDR, ICC profiles, virtual displays and picture in picture.
+- **Optional experiment:** [overscan and underscan](docs/overscan.md) on monitors that expose scan-mode control; disabled by default.
 - **Make it yours:** keyboard shortcuts, optional startup, light/dark themes, and Simplified Chinese, Traditional Chinese, English, Japanese and Korean.
 
 ![Full settings window](docs/images/settings-en.png)

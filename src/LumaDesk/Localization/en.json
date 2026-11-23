@@ -621,5 +621,17 @@
   "reset.help": "Restore brightness, scaling or rotation on this display only. All available restores these three saved controls.",
   "reset.all": "All available",
   "reset.done": "Display reset completed.",
-  "reset.partial": "Display reset partially completed. Hover here for details."
+  "reset.partial": "Display reset partially completed. Hover here for details.",
+  "scan.title": "Overscan / underscan (experimental)",
+  "scan.normal": "Normal (no overscan)",
+  "scan.underscan": "Underscan",
+  "scan.overscan": "Overscan",
+  "scan.widescreen": "Widescreen",
+  "scan.unknown": "Unknown scan mode",
+  "scan.apply": "Apply scan mode",
+  "scan.help": "Choose how the monitor fits the image. Underscan can reveal clipped edges; overscan can crop them. Only modes reported by this monitor are offered. Use Normal to remove overscan when supported.",
+  "scan.disabled": "Scan mode control is disabled.",
+  "scan.unavailable": "This display does not report readable, selectable scan modes over DDC/CI.",
+  "scan.unverified": "The scan mode change could not be verified. Refresh to read the actual mode; check the monitor menu if needed.",
+  "scan.confirmed": "Scan mode confirmed by the monitor."
 }

@@ -621,5 +621,17 @@
   "reset.help": "僅還原此螢幕的亮度、縮放或旋轉。「所有可用項目」還原這三項中已儲存的設定。",
   "reset.all": "所有可用項目",
   "reset.done": "螢幕重設完成。",
-  "reset.partial": "螢幕重設部分完成。將滑鼠停留於此處查看詳細資訊。"
+  "reset.partial": "螢幕重設部分完成。將滑鼠停留於此處查看詳細資訊。",
+  "scan.title": "過掃描 / 欠掃描（實驗性）",
+  "scan.normal": "正常（無過掃描）",
+  "scan.underscan": "欠掃描",
+  "scan.overscan": "過掃描",
+  "scan.widescreen": "寬螢幕",
+  "scan.unknown": "未知掃描模式",
+  "scan.apply": "套用掃描模式",
+  "scan.help": "選擇顯示器如何調整畫面。欠掃描可顯示被裁切的邊緣；過掃描可能裁切邊緣。僅提供顯示器回報支援的模式。若支援，可選擇「正常」取消過掃描。",
+  "scan.disabled": "掃描模式控制未啟用。",
+  "scan.unavailable": "此顯示器未透過 DDC/CI 回報可讀取、可選擇的掃描模式。",
+  "scan.unverified": "無法驗證掃描模式變更。請重新整理以讀取實際模式；必要時檢查顯示器選單。",
+  "scan.confirmed": "顯示器已確認掃描模式。"
 }
