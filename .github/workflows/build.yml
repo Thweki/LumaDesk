@@ -62,9 +62,9 @@ jobs:
         run: ./test.ps1 -Headless
       - name: Build UI tests (Release)
         run: dotnet build tests/LumaDesk.UiTests/LumaDesk.UiTests.csproj -c Release
-      - name: Build EXE, portable ZIP and MSI
+      - name: Build self-contained EXE, slim EXE, portable ZIP and MSI
         run: ./package.ps1
-      - name: Verify packages and MSI install / launch / uninstall
+      - name: Verify both EXEs, release checksums, ZIP and MSI installation
         run: ./tools/Test-Package.ps1 -Install
       - name: Upload release files
         uses: actions/upload-artifact@v4
@@ -85,7 +85,7 @@ jobs:
           path: artifacts/release/*.log
   release:
     if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
-    needs: build
+    needs: [build, wpf-fixtures]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

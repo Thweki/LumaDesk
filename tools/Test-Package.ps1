@@ -6,6 +6,30 @@ $version = [string]$project.Project.PropertyGroup.Version
 $release = Join-Path $root 'artifacts\release'
 $prefix = "LumaDesk-$version"
 & (Join-Path $PSScriptRoot 'Test-ReleaseChecksums.ps1') -ReleaseDirectory $release -Version $version
+function Test-ExeStartup([string]$Path) {
+    # An out-of-range value exercises the published host and WPF startup, then exits before any display access.
+    $profile = Join-Path $root 'artifacts\package-smoke'
+    [void][IO.Directory]::CreateDirectory($profile)
+    $reply = Join-Path $profile ("result-{0}.json" -f [guid]::NewGuid())
+    $start = [Diagnostics.ProcessStartInfo]::new($Path, "--brightness missing-screen 101 --output `"$reply`"")
+    $start.UseShellExecute = $false
+    $start.CreateNoWindow = $true
+    $start.WindowStyle = 'Hidden'
+    $start.EnvironmentVariables['LUMADESK_DATA_DIR'] = $profile
+    $start.EnvironmentVariables['DOTNET_DISABLE_GUI_ERRORS'] = '1'
+    $process = [Diagnostics.Process]::Start($start)
+    try {
+        if (-not $process.WaitForExit(30000)) { $process.Kill(); throw "Startup timed out: $Path" }
+        if ($process.ExitCode -ne 1) { throw "Unexpected startup exit code $($process.ExitCode): $Path" }
+        $result = Get-Content -LiteralPath $reply -Raw | ConvertFrom-Json
+        if ($result.Success -ne $false -or $result.Error -ne 'Invalid display command.') { throw "Unexpected CLI reply: $Path" }
+    } finally { $process.Dispose() }
+}
+$standalone = Get-Item -LiteralPath (Join-Path $release "$prefix-win-x64.exe")
+$slim = Get-Item -LiteralPath (Join-Path $release "$prefix-slim-win-x64.exe")
+if ($slim.Length -ge $standalone.Length) { throw 'The slim EXE must be smaller than the self-contained EXE.' }
+Test-ExeStartup $standalone.FullName
+Test-ExeStartup $slim.FullName
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [IO.Compression.ZipFile]::OpenRead((Join-Path $release "$prefix-portable-win-x64.zip"))
 try {
@@ -38,18 +62,12 @@ if ($Install) {
         if ((Get-FileHash $installed).Hash -ne (Get-FileHash (Join-Path $release "$prefix-win-x64.exe")).Hash) { throw 'Installed binary differs.' }
         $shortcut = Join-Path ([Environment]::GetFolderPath('CommonPrograms')) 'LumaDesk.lnk'
         if (-not (Test-Path $shortcut)) { throw 'Start menu shortcut missing.' }
-        # Invalid input is rejected before hardware access; verifies the installed runtime starts.
-        $env:LUMADESK_DATA_DIR = Join-Path $release 'smoke-profile'
-        $reply = Join-Path $release 'cli-smoke.json'
-        $process = Start-Process $installed -ArgumentList @('--brightness', 'missing-screen', '101', '--output', "`"$reply`"") -WindowStyle Hidden -Wait -PassThru
-        if ($process.ExitCode -ne 1) { throw "Installed CLI smoke failed: $($process.ExitCode)" }
-        if ((Get-Content $reply -Raw | ConvertFrom-Json).Success -ne $false) { throw 'Invalid brightness was not rejected.' }
+        Test-ExeStartup $installed
     } finally {
         if ($installAttempted) {
             $process = Start-Process msiexec.exe -ArgumentList @('/x', $productCode, '/qn', '/norestart', '/l*v', "`"$release\uninstall.log`"") -WindowStyle Hidden -Wait -PassThru
             if ($process.ExitCode -notin @(0, 3010, 1605)) { throw "MSI uninstall failed: $($process.ExitCode)" }
         }
-        Remove-Item Env:\LUMADESK_DATA_DIR -ErrorAction SilentlyContinue
     }
     if (Test-Path (Join-Path $target 'LumaDesk.exe')) { throw 'Uninstall left the application behind.' }
     if (Test-Path $shortcut) { throw 'Uninstall left the shortcut behind.' }

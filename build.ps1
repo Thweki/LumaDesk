@@ -1,4 +1,9 @@
-param([switch]$Portable, [string]$OutputDirectory)
+[CmdletBinding(DefaultParameterSetName = 'Default')]
+param(
+    [Parameter(ParameterSetName = 'Portable')][switch]$Portable,
+    [Parameter(ParameterSetName = 'Slim')][switch]$Slim,
+    [string]$OutputDirectory
+)
 $ErrorActionPreference = 'Stop'
 $sdk = Join-Path $PSScriptRoot '.tools\dotnet\dotnet.exe'
 if (-not (Test-Path $sdk)) { $sdk = 'dotnet' }
@@ -6,11 +11,15 @@ $project = Join-Path $PSScriptRoot 'src\LumaDesk\LumaDesk.csproj'
 $destination = if ($OutputDirectory) {
     if ([System.IO.Path]::IsPathRooted($OutputDirectory)) { [System.IO.Path]::GetFullPath($OutputDirectory) }
     else { [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot $OutputDirectory)) }
+} elseif ($Slim) {
+    Join-Path $PSScriptRoot 'artifacts\LumaDesk-slim-win-x64'
 } else { Join-Path $PSScriptRoot 'artifacts\LumaDesk-win-x64' }
 & $sdk run --project (Join-Path $PSScriptRoot 'tools\IconBuilder') -c Release -- (Join-Path $PSScriptRoot 'src\LumaDesk\Assets\app.ico')
 if ($LASTEXITCODE -ne 0) { throw 'Icon generation failed.' }
 if ($Portable) {
-    & $sdk publish $project -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o $destination
+    & $sdk publish $project -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o $destination
+} elseif ($Slim) {
+    & $sdk publish $project -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o $destination
 } else {
     & $sdk publish $project -c Release --self-contained false -o $destination
 }

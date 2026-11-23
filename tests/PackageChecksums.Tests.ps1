@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 $check = Join-Path (Split-Path $PSScriptRoot) 'tools/Test-ReleaseChecksums.ps1'
 $directory = Join-Path ([IO.Path]::GetTempPath()) "LumaDesk-checksums-$([Guid]::NewGuid())"
 $version = '0.5.0'
-$names = @("LumaDesk-$version-win-x64.exe", "LumaDesk-$version-portable-win-x64.zip", "LumaDesk-$version-win-x64.msi")
+$names = @("LumaDesk-$version-win-x64.exe", "LumaDesk-$version-slim-win-x64.exe", "LumaDesk-$version-portable-win-x64.zip", "LumaDesk-$version-win-x64.msi")
 
 function Assert-Rejected([string]$Scenario, [string[]]$Lines, [string]$ExpectedError) {
     [IO.File]::WriteAllLines((Join-Path $directory 'SHA256SUMS.txt'), $Lines)
@@ -28,7 +28,8 @@ try {
     Write-Host 'PASS: complete release manifest'
 
     # Ordering and hash letter case do not affect validity.
-    $reordered = @($valid[2], $valid[0], $valid[1])
+    $reordered = $valid.Clone()
+    [array]::Reverse($reordered)
     $reordered = @($reordered | ForEach-Object { $_.Substring(0, 64).ToUpperInvariant() + $_.Substring(64) })
     [IO.File]::WriteAllLines((Join-Path $directory 'SHA256SUMS.txt'), $reordered)
     & $check -ReleaseDirectory $directory -Version $version
@@ -39,14 +40,15 @@ try {
         $incomplete = @($valid | Where-Object { $_ -ne $valid[$i] })
         Assert-Rejected "missing $($names[$i])" $incomplete 'Checksum manifest must contain exactly*'
     }
-    Assert-Rejected 'duplicate replaces required file' @($valid[0], $valid[0], $valid[2]) 'Unexpected or duplicate checksum entry:*'
-    Assert-Rejected 'extra entry' @($valid[0], $valid[1], $valid[2], $valid[0]) 'Checksum manifest must contain exactly*'
-    Assert-Rejected 'blank entry' @($valid[0], '', $valid[2]) 'Invalid checksum manifest entry.'
-    Assert-Rejected 'short hash' @($valid[0].Substring(1), $valid[1], $valid[2]) 'Invalid checksum manifest entry.'
-    Assert-Rejected 'non-hex hash' @(('z' + $valid[0].Substring(1)), $valid[1], $valid[2]) 'Invalid checksum manifest entry.'
-    Assert-Rejected 'malformed separator' @($valid[0].Replace('  ', ' '), $valid[1], $valid[2]) 'Invalid checksum manifest entry.'
+    $tail = @($valid | Select-Object -Skip 1)
+    Assert-Rejected 'duplicate replaces required file' (@($valid[1]) + $tail) 'Unexpected or duplicate checksum entry:*'
+    Assert-Rejected 'extra entry' ($valid + $valid[0]) 'Checksum manifest must contain exactly*'
+    Assert-Rejected 'blank entry' (@('') + $tail) 'Invalid checksum manifest entry.'
+    Assert-Rejected 'short hash' (@($valid[0].Substring(1)) + $tail) 'Invalid checksum manifest entry.'
+    Assert-Rejected 'non-hex hash' (@('z' + $valid[0].Substring(1)) + $tail) 'Invalid checksum manifest entry.'
+    Assert-Rejected 'malformed separator' (@($valid[0].Replace('  ', ' ')) + $tail) 'Invalid checksum manifest entry.'
     foreach ($invalidName in @('unexpected.exe', 'LumaDesk-0.4.0-win-x64.exe', "../$($names[0])", "..\$($names[0])", (Join-Path $directory $names[0]))) {
-        Assert-Rejected "unexpected name $invalidName" @(($valid[0].Substring(0, 66) + $invalidName), $valid[1], $valid[2]) 'Unexpected or duplicate checksum entry:*'
+        Assert-Rejected "unexpected name $invalidName" (@($valid[0].Substring(0, 66) + $invalidName) + $tail) 'Unexpected or duplicate checksum entry:*'
     }
 
     # Corruption of each artifact must fail, including the standalone EXE.

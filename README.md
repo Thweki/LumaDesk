@@ -10,9 +10,9 @@ LumaDesk 是一个开源 Windows 显示管理工具。调亮度、改缩放、�
 
 ## 看看它怎么用
 
-按屏幕的位置点选，展开更多设置，再把几块屏幕的亮度一起调好。
+按桌面位置选屏，拖动滑杆调节亮度。想同时调整几块屏幕，打开右上角的 **⋯**，选择「联调亮度」。
 
-![选屏、展开设置与多屏亮度联调演示](docs/images/quick-demo.gif)
+![选屏、打开操作菜单并联调多屏亮度](docs/images/quick-demo.gif)
 
 <p>
   <img src="docs/images/quick-panel.png" width="360" alt="LumaDesk 快捷面板">
@@ -31,11 +31,12 @@ LumaDesk 是一个开源 Windows 显示管理工具。调亮度、改缩放、�
 
 ## 下载与上手
 
-适用于 **Windows 10 / 11 x64**，自带 .NET 运行时。到 [Releases](https://github.com/Thweki/LumaDesk/releases) 选择一种下载：
+适用于 **Windows 10 / 11 x64**。轻量 EXE 从 v0.5.0 之后的版本开始提供。请到 [Releases](https://github.com/Thweki/LumaDesk/releases) 查看下载选项。
 
 | 文件 | 适合你，如果…… |
 | --- | --- |
-| `LumaDesk-版本-win-x64.exe` | 想直接运行，免安装 |
+| `LumaDesk-版本-win-x64.exe` | 想直接运行，内含 .NET 运行时 |
+| `LumaDesk-版本-slim-win-x64.exe` | 已安装 x64 .NET 8 桌面运行时，想下载最小的单文件版本 |
 | `LumaDesk-版本-portable-win-x64.zip` | 想保留完整说明和许可文件，解压即用 |
 | `LumaDesk-版本-win-x64.msi` | 想安装到 Program Files，并从开始菜单打开（需要管理员权限） |
 
@@ -46,7 +47,7 @@ LumaDesk 是一个开源 Windows 显示管理工具。调亮度、改缩放、�
 
 默认快捷键：`Ctrl+Alt+↑ / ↓` 调整鼠标所在屏幕的亮度，`Ctrl+Alt+0` 移除软件调暗。
 
-三个版本都把设置保存在 `%LOCALAPPDATA%\LumaDesk`；“便携版”指免安装，不会把设置写在程序旁。应用不收集遥测，虚拟驱动只在主动安装时下载。安装驱动或首次导入系统级 ICC 时，可能需要管理员授权。
+各种下载方式共用 `%LOCALAPPDATA%\LumaDesk` 中的设置。便携版免安装。应用不收集遥测，虚拟驱动只在主动安装时下载。安装驱动或首次导入系统级 ICC 时，可能需要管理员授权。
 
 ## 下载前知道这些就够了
 
@@ -60,12 +61,13 @@ LumaDesk 是一个开源 Windows 显示管理工具。调亮度、改缩放、�
 需要 Windows 和 .NET 8 SDK。
 
 ```powershell
-.\build.ps1 -Portable  # 构建自包含 EXE
+.\build.ps1 -Portable  # 单文件 EXE，内含压缩的 .NET 运行时
+.\build.ps1 -Slim      # 小型单文件 EXE，需要已安装 x64 .NET 8 桌面运行时
 .\test.ps1             # 完整测试，需要交互式桌面
-.\package.ps1          # 生成 EXE、便携 ZIP、MSI 和 SHA256SUMS.txt
+.\package.ps1          # 生成两款 EXE、便携 ZIP、MSI 和 SHA256SUMS.txt
 ```
 
-构建输出在 `artifacts/LumaDesk-win-x64/`，发行文件在 `artifacts/release/`。GitHub Actions 对提交和 PR 运行无桌面测试、打包和安装检查；推送版本标签后自动发布。见[发布说明](docs/releasing.md)。
+便携版输出在 `artifacts/LumaDesk-win-x64/`，轻量版在 `artifacts/LumaDesk-slim-win-x64/`，发行文件在 `artifacts/release/`。GitHub Actions 对提交和 PR 运行无桌面测试、打包和安装检查；推送版本标签后自动发布。见[发布说明](docs/releasing.md)。
 
 进一步了解：[预设与自动化](docs/workflows.md) · [HDR / ICC](docs/color-hdr.md) · [屏幕排列](docs/display-layout.md) · [虚拟屏幕](docs/virtual-displays.md) · [添加翻译](docs/localization.md)
 

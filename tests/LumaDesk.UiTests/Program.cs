@@ -29,6 +29,7 @@ internal static partial class Program
         string language = args.Length > 1 ? args[1] : "zh-Hans";
         Storage.Save(new Preferences { Language = language, Theme = "light", Hotkeys = false, CloseToTray = false });
         var app = new App { IntegrationTest = true }; app.InitializeComponent();
+        if (args.Contains("--demo")) return RunReadmeDemo(app);
         var window = new MainWindow();
         window.Loaded += async (_, _) =>
         {
@@ -39,11 +40,6 @@ internal static partial class Program
                 await Task.Delay(200);
                 Check(window.Displays.Count > 0, "Actual display scan populates overview");
                 TestDeferredSettingsRendering(window);
-                if (args.Contains("--demo"))
-                {
-                    await CaptureReadmeDemoAsync(window);
-                    return;
-                }
                 if (language != "zh-Hans")
                 {
                     await TestLocalizedUiAsync(window, language);
@@ -549,9 +545,13 @@ internal static partial class Program
             foreach (var sub in Descendants<T>(child)) yield return sub;
         }
     }
-    private static void Snapshot(FrameworkElement window, string name)
+    private static RenderTargetBitmap Capture(FrameworkElement window)
     {
         window.UpdateLayout(); var bitmap = new RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, PixelFormats.Pbgra32); bitmap.Render(window);
-        var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); using var file = File.Create(Path.Combine(output, name)); encoder.Save(file);
+        return bitmap;
+    }
+    private static void Snapshot(FrameworkElement window, string name)
+    {
+        var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(Capture(window))); using var file = File.Create(Path.Combine(output, name)); encoder.Save(file);
     }
 }

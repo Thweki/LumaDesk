@@ -101,12 +101,6 @@ internal static partial class Program
         owner.Preferences.QuickSelectedDisplayId = primary.Id;
         owner.Preferences.QuickMoreDisplayId = null;
         owner.RefreshView(); owner.StatusLabel.Text = L.F("sd1362bfd3f", 2, DateTime.Now);
-        static FrameworkElement ArrangeContent(Window window, double width, double height)
-        {
-            var surface = (FrameworkElement)window.Content;
-            surface.Measure(new Size(width, height)); surface.Arrange(new Rect(0, 0, width, height)); surface.UpdateLayout();
-            return surface;
-        }
         Snapshot(ArrangeContent(owner, 960, 700), "settings-overview.png");
         var displayRow = Descendants<Button>(owner.PageContent).Single(b =>
             System.Windows.Automation.AutomationProperties.GetName(b) == L.T("s84041df0ce") + primary.Name);

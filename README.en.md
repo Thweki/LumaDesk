@@ -10,9 +10,9 @@ LumaDesk is an open-source Windows display manager. Adjust brightness, change sc
 
 ## See it in action
 
-Pick a screen by its position, open more settings, then adjust several screens together.
+Select a display by its position and drag the brightness slider. To adjust several displays together, open **⋯** and choose **Link brightness**.
 
-![Screen selection, more settings and linked brightness](docs/images/quick-demo-en.gif)
+![Selecting displays, opening the actions menu and adjusting their brightness together](docs/images/quick-demo-en.gif)
 
 <p>
   <img src="docs/images/quick-panel-en.png" width="360" alt="LumaDesk quick panel">
@@ -31,11 +31,12 @@ Pick a screen by its position, open more settings, then adjust several screens t
 
 ## Download and get started
 
-For **Windows 10 / 11 x64**. The .NET runtime is included. Choose a file from [Releases](https://github.com/Thweki/LumaDesk/releases):
+For **Windows 10 / 11 x64**. Releases after v0.5.0 also offer a slim EXE. Choose a download from [Releases](https://github.com/Thweki/LumaDesk/releases).
 
 | File | Use it to… |
 | --- | --- |
-| `LumaDesk-VERSION-win-x64.exe` | Run directly, without installing |
+| `LumaDesk-VERSION-win-x64.exe` | Run directly with the bundled .NET runtime |
+| `LumaDesk-VERSION-slim-win-x64.exe` | Get the smallest download if the x64 .NET 8 Desktop Runtime is already installed |
 | `LumaDesk-VERSION-portable-win-x64.zip` | Get the app with its documentation and licenses; extract and run |
 | `LumaDesk-VERSION-win-x64.msi` | Install to Program Files with a Start menu shortcut (administrator access required) |
 
@@ -60,12 +61,13 @@ All editions store settings in `%LOCALAPPDATA%\LumaDesk`. “Portable” means n
 Windows and the .NET 8 SDK are required.
 
 ```powershell
-.\build.ps1 -Portable  # Self-contained EXE
+.\build.ps1 -Portable  # Single EXE with the .NET runtime bundled and compressed
+.\build.ps1 -Slim      # Small single EXE, requires the x64 .NET 8 Desktop Runtime
 .\test.ps1             # Full suite; requires an interactive desktop
-.\package.ps1          # EXE, portable ZIP, MSI and SHA256SUMS.txt
+.\package.ps1          # Both EXEs, portable ZIP, MSI and SHA256SUMS.txt
 ```
 
-App output: `artifacts/LumaDesk-win-x64/`. Release files: `artifacts/release/`. GitHub Actions runs headless tests, packaging and installation checks for pushes and PRs, and publishes version tags. See [release instructions](docs/releasing.md).
+The portable build goes to `artifacts/LumaDesk-win-x64/`, the slim build to `artifacts/LumaDesk-slim-win-x64/`, and release files to `artifacts/release/`. GitHub Actions runs headless tests, packaging and installation checks for pushes and PRs, and publishes version tags. See [release instructions](docs/releasing.md).
 
 More: [Presets and automation](docs/workflows.md) · [HDR / ICC](docs/color-hdr.md) · [Display layout](docs/display-layout.md) · [Virtual displays](docs/virtual-displays.md) · [Translations](docs/localization.md)
 
