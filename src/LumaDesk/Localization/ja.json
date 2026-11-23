@@ -491,7 +491,8 @@
   "scene.duplicate": "プリセットを複製",
   "scene.duplicateHelp": "保存済みのディスプレイ設定を適用せずに複製します。自動実行とショートカットは無効で開始します。",
   "scene.duplicateName": "新しいプリセット名",
-  "scene.duplicateNameRequired": "新しいプリセット名を1～40文字で入力してください。",  "scene.update": "現在の設定で更新",
+  "scene.duplicateNameRequired": "新しいプリセット名を1～40文字で入力してください。",
+  "scene.update": "現在の設定で更新",
   "shortcut.conflict": "ショートカットが使用中または重複しています：",
   "shortcut.description": "既定ではマウスポインターのある画面を調整し、明るさを表示します。",
   "shortcut.modifier": "Ctrl、Alt、Winのいずれかを組み合わせてください。",
@@ -548,5 +549,7 @@
   "timing.on": "Windows 動的リフレッシュレート（DRR）: 有効",
   "timing.off": "Windows 動的リフレッシュレート（DRR）: 無効",
   "timing.unknown": "Windows 動的リフレッシュレート（DRR）: 報告なし",
-  "timing.help": "設定されたレートの読み取り専用スナップショットです。リアルタイム FPS ではありません。DRR はデスクトップのリフレッシュレートを自動的に引き上げます。ゲーム用 VRR / Adaptive-Sync の対応状況や動作状況は表示しません。DRR が無効でも VRR 非対応とは限りません。"
+  "timing.help": "設定されたレートの読み取り専用スナップショットです。リアルタイム FPS ではありません。DRR はデスクトップのリフレッシュレートを自動的に引き上げます。ゲーム用 VRR / Adaptive-Sync の対応状況や動作状況は表示しません。DRR が無効でも VRR 非対応とは限りません。",
+  "layout.undo": "プレビューを元に戻す (Ctrl+Z)",
+  "layout.redo": "プレビューをやり直す (Ctrl+Y)"
 }

@@ -491,7 +491,8 @@
   "scene.duplicate": "프리셋 복제",
   "scene.duplicateHelp": "저장된 디스플레이 설정을 적용하지 않고 복제합니다. 자동 실행과 단축키는 꺼진 상태로 시작합니다.",
   "scene.duplicateName": "새 프리셋 이름",
-  "scene.duplicateNameRequired": "새 프리셋 이름을 1~40자로 입력하세요.",  "scene.update": "현재 설정으로 업데이트",
+  "scene.duplicateNameRequired": "새 프리셋 이름을 1~40자로 입력하세요.",
+  "scene.update": "현재 설정으로 업데이트",
   "shortcut.conflict": "단축키가 사용 중이거나 중복됩니다: ",
   "shortcut.description": "기본적으로 마우스가 있는 화면을 조정하고 밝기를 표시합니다.",
   "shortcut.modifier": "Ctrl, Alt 또는 Win 키를 함께 누르세요.",
@@ -548,5 +549,7 @@
   "timing.on": "Windows 동적 주사율(DRR): 활성화",
   "timing.off": "Windows 동적 주사율(DRR): 비활성화",
   "timing.unknown": "Windows 동적 주사율(DRR): 보고되지 않음",
-  "timing.help": "설정된 주사율의 읽기 전용 스냅샷이며 실시간 FPS가 아닙니다. DRR은 데스크톱 주사율을 자동으로 높입니다. 이 검사기는 게임용 VRR / Adaptive-Sync 지원 여부나 작동 상태를 보고하지 않습니다. DRR 비활성화가 VRR 미지원을 의미하지는 않습니다."
+  "timing.help": "설정된 주사율의 읽기 전용 스냅샷이며 실시간 FPS가 아닙니다. DRR은 데스크톱 주사율을 자동으로 높입니다. 이 검사기는 게임용 VRR / Adaptive-Sync 지원 여부나 작동 상태를 보고하지 않습니다. DRR 비활성화가 VRR 미지원을 의미하지는 않습니다.",
+  "layout.undo": "미리 보기 실행 취소 (Ctrl+Z)",
+  "layout.redo": "미리 보기 다시 실행 (Ctrl+Y)"
 }

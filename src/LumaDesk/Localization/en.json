@@ -491,7 +491,8 @@
   "scene.duplicate": "Duplicate preset",
   "scene.duplicateHelp": "Copies saved display settings without applying them. Automatic triggers and the shortcut start off.",
   "scene.duplicateName": "New preset name",
-  "scene.duplicateNameRequired": "Enter a new preset name of 1–40 characters.",  "scene.update": "Update from current setup",
+  "scene.duplicateNameRequired": "Enter a new preset name of 1–40 characters.",
+  "scene.update": "Update from current setup",
   "shortcut.conflict": "Shortcut unavailable or duplicated: ",
   "shortcut.description": "Adjusts the screen under your pointer by default, with a brightness indicator.",
   "shortcut.modifier": "Include Ctrl, Alt or Win.",
@@ -548,5 +549,7 @@
   "timing.on": "Windows Dynamic Refresh Rate (DRR): enabled",
   "timing.off": "Windows Dynamic Refresh Rate (DRR): disabled",
   "timing.unknown": "Windows Dynamic Refresh Rate (DRR): not reported",
-  "timing.help": "Read-only snapshot of configured rates, not live FPS. DRR automatically boosts desktop refresh rate. Gaming VRR / Adaptive-Sync support and activity are not reported by this inspector; DRR disabled does not mean VRR is unsupported."
+  "timing.help": "Read-only snapshot of configured rates, not live FPS. DRR automatically boosts desktop refresh rate. Gaming VRR / Adaptive-Sync support and activity are not reported by this inspector; DRR disabled does not mean VRR is unsupported.",
+  "layout.undo": "Undo preview (Ctrl+Z)",
+  "layout.redo": "Redo preview (Ctrl+Y)"
 }

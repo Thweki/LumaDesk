@@ -491,7 +491,8 @@
   "scene.duplicate": "复制预设",
   "scene.duplicateHelp": "复制已保存的显示设置，不会应用设置。自动触发和快捷键默认关闭。",
   "scene.duplicateName": "新预设名称",
-  "scene.duplicateNameRequired": "请输入 1–40 个字符的新预设名称。",  "scene.update": "用当前设置更新",
+  "scene.duplicateNameRequired": "请输入 1–40 个字符的新预设名称。",
+  "scene.update": "用当前设置更新",
   "shortcut.conflict": "快捷键被占用或重复：",
   "shortcut.description": "默认调整鼠标所在屏幕，按键时显示亮度。",
   "shortcut.modifier": "请同时按住 Ctrl、Alt 或 Win。",
@@ -548,5 +549,7 @@
   "timing.on": "Windows 动态刷新率（DRR）：已启用",
   "timing.off": "Windows 动态刷新率（DRR）：已禁用",
   "timing.unknown": "Windows 动态刷新率（DRR）：未报告",
-  "timing.help": "只读查看配置的刷新率，并非实时帧率。DRR 会自动提升桌面刷新率。此检查器不报告游戏 VRR / Adaptive-Sync 的支持情况或活动状态；DRR 已禁用不代表不支持 VRR。"
+  "timing.help": "只读查看配置的刷新率，并非实时帧率。DRR 会自动提升桌面刷新率。此检查器不报告游戏 VRR / Adaptive-Sync 的支持情况或活动状态；DRR 已禁用不代表不支持 VRR。",
+  "layout.undo": "撤销预览 (Ctrl+Z)",
+  "layout.redo": "重做预览 (Ctrl+Y)"
 }
