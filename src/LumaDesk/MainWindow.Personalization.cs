@@ -30,14 +30,19 @@ public partial class MainWindow
     private void RenderDisplayGroups()
     {
         Heading(L.T("s563a1990f3"), L.T("group.description"));
-        PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Labels(L.T("s48aa89296c"), L.T("group.allHelp")), Toggle(Preferences.SyncBrightness, value => { Preferences.SyncBrightness = value; Save(); Render(); }))));
+        PageContent.Children.Add(Ui.Card(Ui.Setting(L.T("s48aa89296c"), L.T("group.allHelp"), Toggle(Preferences.SyncBrightness, value => { Preferences.SyncBrightness = value; Save(); Render(); }))));
         var name = new TextBox { Text = L.T("group.default"), MaxLength = 40 };
-        PageContent.Children.Add(Ui.Card(Ui.Row(name, Ui.Button(L.T("group.add"), () =>
+        var add = Ui.Button(L.T("group.add"), () =>
         {
             string label = name.Text.Trim();
             if (label.Length == 0 || Preferences.Groups.Any(g => g.Name.Equals(label, StringComparison.OrdinalIgnoreCase))) return;
             Preferences.Groups.Add(new() { Name = label }); Save(); Render();
-        }))));
+        });
+        void ValidateName() => add.IsEnabled = !string.IsNullOrWhiteSpace(name.Text) &&
+            !Preferences.Groups.Any(g => g.Name.Equals(name.Text.Trim(), StringComparison.OrdinalIgnoreCase));
+        name.TextChanged += (_, _) => ValidateName();
+        ValidateName();
+        PageContent.Children.Add(Ui.Card(Ui.Row(name, add)));
         foreach (var group in Preferences.Groups.ToArray())
         {
             var content = new StackPanel { IsEnabled = !Preferences.SyncBrightness };
@@ -54,11 +59,10 @@ public partial class MainWindow
             PageContent.Children.Add(Ui.Card(content));
         }
         var tuning = new StackPanel();
-        tuning.Children.Add(Ui.Text(L.T("group.tuningHelp"), 12));
         foreach (var d in Displays)
         {
-            var options = Options(d); tuning.Children.Add(Ui.Line()); tuning.Children.Add(Ui.Text(d.Name, 13, bold: true));
-            var fields = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
+            var options = Options(d); if (tuning.Children.Count > 0) tuning.Children.Add(Ui.Line()); tuning.Children.Add(Ui.Text(d.Name, 13, bold: true));
+            var fields = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
             TextBox Field(string label, int value)
             {
                 var panel = new StackPanel { Margin = new Thickness(0, 0, 12, 0) }; panel.Children.Add(Ui.Text(label, 11));
@@ -73,14 +77,17 @@ public partial class MainWindow
             });
             fields.Children.Add(save); tuning.Children.Add(fields);
         }
-        PageContent.Children.Add(Ui.Card(new Expander { Header = L.T("group.tuning"), Content = tuning }));
+        if (Displays.Count > 0) PageContent.Children.Add(Ui.Card(Ui.Hint(new Expander { Header = L.T("group.tuning"), Content = tuning }, L.T("group.tuningHelp"))));
     }
 
     private void RenderPanelPreferences()
     {
         Heading(L.T("s770544f702"), L.T("panel.description"));
-        PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("saf91a997fb")), Ui.Button(L.T("s57fc4bf70b"), ShowQuick, true))));
-        foreach (var display in OrderedDisplays().ToArray())
+        var launch = Ui.Button(L.T("saf91a997fb"), ShowQuick);
+        launch.HorizontalAlignment = HorizontalAlignment.Left; launch.Margin = new Thickness(0, 0, 0, 10);
+        PageContent.Children.Add(launch);
+        var screens = OrderedDisplays().ToArray();
+        foreach (var display in screens)
         {
             var options = Options(display); var stack = new StackPanel();
             var alias = new TextBox { Text = display.Name, MaxLength = 40 };
@@ -91,13 +98,15 @@ public partial class MainWindow
             var order = new StackPanel { Orientation = Orientation.Horizontal };
             void Move(int delta)
             {
-                var screens = OrderedDisplays().ToList(); int index = screens.IndexOf(display), target = index + delta;
-                if (target < 0 || target >= screens.Count) return;
+                int index = Array.IndexOf(screens, display), target = index + delta;
+                if (target < 0 || target >= screens.Length) return;
                 (screens[index], screens[target]) = (screens[target], screens[index]);
-                for (int i = 0; i < screens.Count; i++) Options(screens[i]).Order = i;
+                for (int i = 0; i < screens.Length; i++) Options(screens[i]).Order = i;
                 Save(); Render(); quick?.Render();
             }
-            order.Children.Add(Ui.Button(L.T("panel.up"), () => Move(-1))); order.Children.Add(Ui.Button(L.T("panel.down"), () => Move(1)));
+            var up = Ui.Button(L.T("panel.up"), () => Move(-1)); up.IsEnabled = display != screens[0];
+            var down = Ui.Button(L.T("panel.down"), () => Move(1)); down.IsEnabled = display != screens[^1];
+            down.Margin = new Thickness(6, 0, 0, 0); order.Children.Add(up); order.Children.Add(down);
             extra.Children.Add(Ui.Line()); extra.Children.Add(order);
             stack.Children.Add(new Expander { Header = L.T("scene.more"), Content = extra, Margin = new Thickness(0, 10, 0, 0) });
             PageContent.Children.Add(Ui.Card(stack));

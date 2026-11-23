@@ -200,8 +200,15 @@ public partial class MainWindow
         string defaultName = L.T("s3cbfca23b6"); int suffix = 2;
         while (Preferences.Presets.Any(p => p.Name == defaultName)) defaultName = L.T("s3cbfca23b6") + " " + suffix++;
         var name = new TextBox { Text = defaultName, MaxLength = SceneService.MaxNameLength, MinWidth = 180 };
-        PageContent.Children.Add(Ui.Card(Ui.Row(name, Ui.Button(L.T("sce211a5a47"), () => _ = RunAsync(() => SaveSceneAsync(name.Text)), true))));
-        PageContent.Children.Add(Ui.Card(CreateSceneCaptureButton()));
+        var capture = CreateSceneCaptureButton();
+        capture.HorizontalAlignment = HorizontalAlignment.Left; capture.Margin = new Thickness(0, 8, 0, 0);
+        var create = new StackPanel();
+        var nameLabel = new Label { Content = L.T("scene.duplicateName"), Target = name, Padding = new Thickness(0, 0, 0, 5) };
+        System.Windows.Automation.AutomationProperties.SetLabeledBy(name, nameLabel);
+        create.Children.Add(nameLabel);
+        create.Children.Add(Ui.Row(name, Ui.Button(L.T("sce211a5a47"), () => _ = RunAsync(() => SaveSceneAsync(name.Text)), true)));
+        create.Children.Add(capture);
+        PageContent.Children.Add(Ui.Card(create));
         if (sceneDraft != null) PageContent.Children.Add(Ui.Card(CreateSceneDraftEditor(sceneDraft)));
         if (undoScene != null) PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Text(L.T("scene.previous")), Ui.Button(L.T("scene.undo"), () => _ = RunAsync(async () => { if (undoScene != null) await ApplySceneAsync(undoScene, true); })))));
         if (!string.IsNullOrEmpty(sceneReport)) PageContent.Children.Add(Ui.Card(new Expander { Header = L.T("scene.details"), Content = Ui.Text(sceneReport, 12) }));
@@ -214,7 +221,9 @@ public partial class MainWindow
         searchPanel.Children.Add(new Label { Content = L.T("scene.search"), Target = search });
         searchPanel.Children.Add(Ui.Row(search, clear));
         searchPanel.Children.Add(count);
-        PageContent.Children.Add(Ui.Card(searchPanel));
+        var searchCard = Ui.Card(searchPanel);
+        searchCard.Visibility = Preferences.Presets.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        PageContent.Children.Add(searchCard);
         var emptyMessage = Ui.Text(L.T("scene.noSearchResults"));
         emptyMessage.TextWrapping = TextWrapping.Wrap;
         var noMatches = Ui.Card(emptyMessage);
@@ -224,7 +233,7 @@ public partial class MainWindow
         foreach (var scene in Preferences.Presets.ToArray())
         {
             var card = new StackPanel();
-            card.Children.Add(Ui.Row(Ui.Labels(scene.Name, L.F("sb91b8e2562", scene.Displays.Count)), Ui.Button(L.T("s63c73c4730"), () => _ = RunAsync(async () => await ApplySceneAsync(scene)), true)));
+            card.Children.Add(Ui.Row(Ui.Labels(scene.Name, L.F("sb91b8e2562", scene.Displays.Count)), Ui.Button(L.T("scene.apply"), () => _ = RunAsync(async () => await ApplySceneAsync(scene)), true)));
             if (!string.IsNullOrWhiteSpace(scene.Note))
             {
                 var note = Ui.Text(scene.Note, 12, "#617681");
@@ -248,7 +257,7 @@ public partial class MainWindow
             details.Children.Add(Ui.Line());
             details.Children.Add(CreateSceneDuplicateEditor(scene));
             details.Children.Add(Ui.Line());
-            details.Children.Add(Ui.Row(Ui.Labels(L.T("scene.onConnect"), L.T("scene.onConnectHelp")), Toggle(scene.OnConnect, v =>
+            details.Children.Add(Ui.Setting(L.T("scene.onConnect"), L.T("scene.onConnectHelp"), Toggle(scene.OnConnect, v =>
             {
                 if (v) foreach (var other in Preferences.Presets.Where(p => SceneService.SameScreens(p, scene.Displays.Select(s => new DisplayInfo { Id = s.Id })))) other.OnConnect = false;
                 scene.OnConnect = v; Save(); Render();

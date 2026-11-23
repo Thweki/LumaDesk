@@ -17,6 +17,8 @@ namespace LumaDesk;
 internal sealed partial class QuickWindow
 {
     private string? selectedDisplayId;
+    private ContextMenu? activeDisplayMenu;
+    private bool refreshAfterMenu;
     private readonly List<DisplayIdentifyWindow> identifyWindows = new();
     private bool brightnessMultiSelect;
     private readonly HashSet<string> multiSelection = new(StringComparer.OrdinalIgnoreCase);
@@ -24,7 +26,7 @@ internal sealed partial class QuickWindow
     internal bool IsBrightnessMultiSelect => brightnessMultiSelect;
     internal IReadOnlyCollection<string> SelectedBrightnessIds => multiSelection.ToArray();
     internal string? SelectedDisplayId => selectedDisplayId;
-    private bool CanRebuild => !closed && !dpiBusy && !dpiDragging && keepOpenCount == 0 &&
+    private bool CanRebuild => activeDisplayMenu == null && !closed && !dpiBusy && !dpiDragging && keepOpenCount == 0 &&
         !body.IsMouseCaptureWithin && activeDpiSlider?.IsKeyboardFocusWithin != true &&
         !(Keyboard.FocusedElement is Slider slider && body.IsAncestorOf(slider));
 
@@ -74,42 +76,73 @@ internal sealed partial class QuickWindow
 
     private void RenderDisplayPicker(DisplayInfo? selected)
     {
-        var mode = Ui.Button(L.T(brightnessMultiSelect ? "quick.multiDone" : "quick.multiStart"), () =>
+        void ToggleMultiSelect()
         {
             if (!CanRebuild) return;
             CloseIdentifyWindows(); brightnessMultiSelect = !brightnessMultiSelect; multiSelection.Clear(); multiBrightnessError = null;
             if (brightnessMultiSelect && selectedDisplayId != null) multiSelection.Add(selectedDisplayId);
             Render(); controlsScroll.ScrollToTop();
-        });
-        mode.FontSize = 11; mode.Padding = new Thickness(8, 4, 8, 4);
-        mode.IsEnabled = selected != null || brightnessMultiSelect;
-        mode.Background = Ui.Brush(brightnessMultiSelect ? "#E6F2F4" : "#FFFFFF");
-        AutomationProperties.SetAutomationId(mode, "quick-multi-toggle");
-        var heading = Ui.Row(Ui.Text(AppBrand.Name, 13, "#303846", true), mode);
-        heading.Margin = new Thickness(0, 0, 0, 12); picker.Children.Add(heading);
-        if (selected == null) return;
-
-        var identify = Ui.Button(L.T("quick.identify"), () => IdentifySelectedDisplay());
-        identify.FontSize = 11; identify.Padding = new Thickness(8, 4, 8, 4);
-        identify.IsEnabled = !brightnessMultiSelect || multiSelection.Count > 0;
-        AutomationProperties.SetAutomationId(identify, "quick-identify");
+        }
         var actions = new StackPanel { Orientation = Orientation.Horizontal };
+        var title = brightnessMultiSelect ? L.F("quick.multiCount", multiSelection.Count) : L.T(selected == null ? "s770544f702" : "quick.choose");
+        picker.Children.Add(Ui.Row(Ui.Text(title, brightnessMultiSelect ? 13 : 16, "#303846", true), actions, 6));
         if (brightnessMultiSelect)
         {
-            var all = Ui.Button(L.T(multiSelection.Count == owner.Displays.Count ? "quick.multiNone" : "quick.multiAll"), () =>
+            var done = Ui.Button(L.T("quick.multiDone"), ToggleMultiSelect);
+            done.Padding = new Thickness(8, 3, 8, 3);
+            AutomationProperties.SetAutomationId(done, "quick-multi-toggle"); actions.Children.Add(done);
+        }
+        if (selected == null) return;
+
+        var menu = new ContextMenu { Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+        var tools = Ui.IconButton("\uE712", L.T("scene.more"), () => { if (CanRebuild) menu.IsOpen = true; });
+        tools.Background = Brushes.Transparent; tools.BorderThickness = new Thickness(0);
+        AutomationProperties.SetAutomationId(tools, "quick-display-actions");
+        tools.ContextMenu = menu; menu.PlacementTarget = tools; actions.Children.Add(tools);
+        menu.Opened += (_, _) => activeDisplayMenu = menu;
+        menu.Closed += (_, _) =>
+        {
+            if (activeDisplayMenu == menu) activeDisplayMenu = null;
+            if (refreshAfterMenu)
             {
-                if (!CanRebuild) return;
+                refreshAfterMenu = false;
+                Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(Render));
+            }
+            ScheduleDismiss();
+        };
+        void AddAction(string key, string id, Action action, bool enabled = true)
+        {
+            var item = new MenuItem { Header = L.T(key), IsEnabled = enabled };
+            AutomationProperties.SetAutomationId(item, id);
+            item.Click += (_, _) =>
+            {
+                menu.IsOpen = false;
+                if (activeDisplayMenu == menu) activeDisplayMenu = null;
+                if (CanRebuild) action();
+            };
+            menu.Items.Add(item);
+        }
+        if (brightnessMultiSelect)
+        {
+            AddAction(multiSelection.Count == owner.Displays.Count ? "quick.multiNone" : "quick.multiAll", "quick-multi-all", () =>
+            {
                 CloseIdentifyWindows();
                 if (multiSelection.Count == owner.Displays.Count) multiSelection.Clear();
                 else multiSelection.UnionWith(owner.Displays.Select(d => d.Id));
                 multiBrightnessError = null; Render();
             });
-            all.FontSize = 11; all.Padding = new Thickness(5, 4, 5, 4); all.Margin = new Thickness(0, 0, 4, 0);
-            AutomationProperties.SetAutomationId(all, "quick-multi-all"); actions.Children.Add(all);
         }
-        actions.Children.Add(identify);
-        picker.Children.Add(Ui.Row(Ui.Text(brightnessMultiSelect ? L.F("quick.multiCount", multiSelection.Count) : L.T("quick.choose"), 12, "#616161"), actions, 6));
-        var canvas = new Canvas { Height = owner.Displays.Count == 1 ? 90 : 116, Margin = new Thickness(0, 8, 0, 8) };
+        else AddAction("quick.multiStart", "quick-multi-toggle", ToggleMultiSelect);
+        AddAction("quick.identify", "quick-identify", IdentifySelectedDisplay, !brightnessMultiSelect || multiSelection.Count > 0);
+        if (!brightnessMultiSelect)
+        {
+            AddAction("quick.movePanel", "quick-move-panel", () =>
+            {
+                var display = owner.Displays.FirstOrDefault(d => d.Id == selectedDisplayId);
+                if (display != null) placement.MoveToMonitor(display.Device);
+            });
+        }
+        var canvas = new Canvas { Height = owner.Displays.Count == 1 ? 64 : 100, Margin = new Thickness(0, 6, 0, 4) };
         AutomationProperties.SetAutomationId(canvas, "quick-display-map");
         AutomationProperties.SetName(canvas, L.T("quick.choose"));
         var displays = owner.Displays.OrderBy(d => d.X).ThenBy(d => d.Y).ThenBy(d => d.Id, StringComparer.OrdinalIgnoreCase).ToArray();
@@ -169,26 +202,12 @@ internal sealed partial class QuickWindow
         }
         canvas.SizeChanged += (_, _) => Draw(); Draw(); picker.Children.Add(canvas);
         ObserveHdrBadges(canvas, displays, hdrStates, hdrUpdates);
-        if (!brightnessMultiSelect)
-        {
-            var move = Ui.Button(L.T("quick.movePanel"), () =>
-            {
-                if (!CanRebuild || brightnessMultiSelect) return;
-                var display = owner.Displays.FirstOrDefault(d => d.Id == selectedDisplayId);
-                if (display != null) placement.MoveToMonitor(display.Device);
-            });
-            move.FontSize = 11; move.Padding = new Thickness(8, 4, 8, 4);
-            move.Margin = new Thickness(0, 0, 0, 6);
-            AutomationProperties.SetAutomationId(move, "quick-move-panel");
-            picker.Children.Add(move);
-        }
         if (!brightnessMultiSelect && targets.Count > 1)
         {
             var note = Ui.Text(L.F("quick.syncCount", targets.Count), 11, "#617681");
             note.TextWrapping = TextWrapping.Wrap; note.Margin = new Thickness(0, 0, 0, 8);
             AutomationProperties.SetAutomationId(note, "quick-brightness-scope"); picker.Children.Add(note);
         }
-        picker.Children.Add(CompactLine());
     }
 
     private void IdentifySelectedDisplay()

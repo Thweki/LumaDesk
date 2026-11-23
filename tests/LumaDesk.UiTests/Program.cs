@@ -125,7 +125,7 @@ internal static partial class Program
                 TestNextScheduleFixture(window);
                 await TestHdrBadgesAsync(window);
                 await TestMultiBrightnessAsync(window);
-                await TestBrightnessStepsFixtureAsync(window);
+                await TestCompactBrightnessFixtureAsync(window);
                 await TestInputSwitchUiAsync(window);
                 await TestInputConnectionUiAsync(window);
                 await TestRefreshTimingUiAsync(window);
@@ -177,7 +177,7 @@ internal static partial class Program
         quick.Close(); options.ShowScaling = oldScaling;
         var other = new Window { Width = 100, Height = 100, ShowInTaskbar = false };
         quick = new QuickWindow(window); quick.Render(); quick.Show(); quick.Activate(); quick.UpdateLayout();
-        Click(Descendants<Button>(quick).Single(b => b.Content as string == L.T("panel.pin")));
+        Click(Descendants<Button>(quick).Single(b => System.Windows.Automation.AutomationProperties.GetName(b) == L.T("panel.pin")));
         other.Show(); other.Activate(); await Task.Delay(120);
         Check(quick.IsVisible, "Pinned quick panel remains open after losing focus");
         quick.Close(); other.Close();
@@ -229,7 +229,7 @@ internal static partial class Program
             var more = Descendants<Button>(quick).First(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b).StartsWith("quick-more-toggle-"));
             Click(more); quick.UpdateLayout(); Snapshot(quick, "quick-more.png");
             Check(Descendants<Button>(quick).Any(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b).StartsWith("quick-color-toggle-")), "Localized advanced controls available");
-            Click(Descendants<Button>(quick).Single(b => System.Windows.Automation.AutomationProperties.GetAutomationId(b) == "quick-multi-toggle")); quick.UpdateLayout();
+            PressQuickAction(quick, "quick-multi-toggle"); quick.UpdateLayout();
             Check(quick.IsBrightnessMultiSelect && Descendants<Slider>(quick).Count() == 1 && Descendants<TextBlock>(quick).Any(t => t.Text == L.F("quick.multiCount", 1)), "Localized multi-select exposes brightness only");
             Snapshot(quick, "quick-multi.png");
         }
@@ -441,7 +441,7 @@ internal static partial class Program
             var slider = FindDpi(2); BeginDrag(slider); slider.Value = 0; await Task.Delay(150);
             Check(calls == 1 && !window.IsVisible, "DPI is applied while dragging, before pointer release");
             var scaleLabels = Descendants<TextBlock>((StackPanel)slider.Parent).Select(t => t.Text).ToArray();
-            Check(scaleLabels.Contains("缩放 150%") && !scaleLabels.Any(t => t.Contains("2560 × 1440")), "Quick DPI slider updates its percentage without a logical resolution caption");
+            Check(scaleLabels.Contains(L.T("scene.scale")) && scaleLabels.Contains("150%") && !scaleLabels.Any(t => t.Contains("2560 × 1440")), "Quick DPI slider updates its percentage without a logical resolution caption");
             Check(calls == 1 && ReferenceEquals(requestedDisplay, second) && requestedPercent == 150 && ReferenceEquals(requestedOwner, quick), "Live change applies exact display and supported percentage in quick window context");
             quick.Render(); quick.UpdateLayout();
             Check(ReferenceEquals(slider, FindDpi(2)) && slider.IsEnabled, "Pending live DPI retains an enabled stable drag control");

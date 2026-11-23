@@ -24,7 +24,6 @@ public partial class MainWindow
             stack.Children.Add(Ui.Labels(L.T("s9d962e68b5"), info.UnavailableReason));
             PageContent.Children.Add(Ui.Card(stack)); return;
         }
-        stack.Children.Add(Ui.Row(Ui.Text(L.T("s645f1dc4c0"), 11, "#8790A0"), Ui.Text(L.T("s1b4cf95f58"), 11, "#8790A0")));
         int selected = info.CurrentPercent;
         var choices = new WrapPanel { Margin = new Thickness(0, 12, 0, 8) };
         var buttons = new Dictionary<int, Button>();
@@ -35,8 +34,9 @@ public partial class MainWindow
             selected = percent;
             foreach (var item in buttons)
             {
-                item.Value.Background = Ui.Brush(item.Key == percent ? "#E8F0FF" : "#FFFFFF");
-                item.Value.BorderBrush = Ui.Brush(item.Key == percent ? "#3179F6" : "#DDE3ED");
+                item.Value.Background = Ui.Brush(item.Key == percent ? "#E4F2F3" : "#FFFFFF");
+                item.Value.BorderBrush = Ui.Brush(item.Key == percent ? "#007A8A" : "#D9D9D9");
+                System.Windows.Automation.AutomationProperties.SetItemStatus(item.Value, item.Key == percent ? L.T("quick.selected") : "");
             }
             preview.Text = L.F("seb1a7976a2", DpiRules.LooksLike(display.Current, percent), percent);
             apply.IsEnabled = selected != info.CurrentPercent;
@@ -45,16 +45,17 @@ public partial class MainWindow
         {
             int value = percentage;
             var content = new StackPanel();
-            var sample = Ui.Text("Aa", Math.Min(30, 14 + value * 0.055), "#466DA7", true); sample.Height = 37; sample.HorizontalAlignment = HorizontalAlignment.Center; content.Children.Add(sample);
+            var sample = Ui.Text("Aa", Math.Min(30, 14 + value * 0.055), "#006A78", true); sample.Height = 37; sample.HorizontalAlignment = HorizontalAlignment.Center; content.Children.Add(sample);
             var label = Ui.Text($"{value}%", 12, "#45546A", true); label.HorizontalAlignment = HorizontalAlignment.Center; content.Children.Add(label);
-            var size = Ui.Text(DpiRules.LooksLike(display.Current, value), 10, "#8692A4"); size.HorizontalAlignment = HorizontalAlignment.Center; size.Margin = new Thickness(0, 5, 0, 0); content.Children.Add(size);
             var button = Ui.Button("", () => Select(value)); button.Content = content; button.Width = 108; button.Margin = new Thickness(0, 0, 8, 8); button.Padding = new Thickness(6, 8, 6, 8);
-            button.ToolTip = value == info.RecommendedPercent ? L.T("sb3f9480f4b") : L.F("s5015239d4d", display.Current.Resolution);
+            Ui.Hint(button, DpiRules.LooksLike(display.Current, value) + "\n" + (value == info.RecommendedPercent ? L.T("sb3f9480f4b") : L.F("s5015239d4d", display.Current.Resolution)));
             System.Windows.Automation.AutomationProperties.SetName(button, L.F("s018e0d7c32", value));
             buttons[value] = button; choices.Children.Add(button);
         }
-        stack.Children.Add(choices); stack.Children.Add(preview); Select(selected);
-        stack.Children.Add(Ui.Row(Ui.Labels(L.T("s56cca15c6e") + display.Current.Resolution + $" · {display.Current.Frequency} Hz", Help(L.T("s5f4e417692"))), apply));
+        stack.Children.Add(choices); Select(selected);
+        var output = L.T("s56cca15c6e") + display.Current.Resolution + $" · {display.Current.Frequency} Hz";
+        Ui.Hint(apply, Preferences.ShowHelp ? output + "\n" + L.T("s5f4e417692") : output);
+        stack.Children.Add(Ui.Row(preview, apply));
         if (display.PreferredWidth > 0 && (display.Current.Width != display.PreferredWidth || display.Current.Height != display.PreferredHeight))
         {
             stack.Children.Add(Ui.Line());

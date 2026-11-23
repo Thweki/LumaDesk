@@ -44,8 +44,7 @@ internal static partial class Program
                 }
                 if (fail) throw new InvalidOperationException("Fixture: one selected screen rejected brightness");
             });
-        Button Find(string id) => Descendants<Button>(quick).Single(b => AutomationProperties.GetAutomationId(b) == id);
-        void Press(string id) { Click(Find(id)); quick.UpdateLayout(); }
+        void Press(string id) { PressQuickAction(quick, id); quick.UpdateLayout(); }
         Slider Slider() => Descendants<Slider>(quick).Single(s => AutomationProperties.GetAutomationId(s) == "quick-multi-brightness");
         string Amount() => Descendants<TextBlock>(quick).Single(t => AutomationProperties.GetAutomationId(t) == "quick-multi-amount").Text;
         try

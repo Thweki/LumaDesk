@@ -4,6 +4,8 @@
 using LumaDesk;
 using System;
 using System.Linq;
+using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Interop;
 
@@ -14,8 +16,8 @@ internal static partial class Program
         Check(window.PageContent.Children.Count == 0 && window.DisplayTabs.Children.Count == 0,
             "Tray startup scans displays without building settings controls");
         window.ShowSettings();
-        Check(window.PageContent.Children.Count > 0 && window.DisplayTabs.Children.Count == window.Displays.Count + 1,
-            "Opening settings builds the overview and current display tabs");
+        Check(window.PageContent.Children.Count > 0 && window.TabStrip.Visibility == Visibility.Collapsed,
+            "Opening settings builds the overview without duplicating the display picker");
 
         var navigation = window.Navigation.Children.OfType<Button>().ToArray();
         var overview = window.PageContent.Children[0];
@@ -37,7 +39,7 @@ internal static partial class Program
             Check(ReferenceEquals(overview, window.PageContent.Children[0]),
                 "Background view refresh leaves hidden settings controls untouched");
             window.ShowSettings();
-            Check(Descendants<TextBlock>(window.DisplayTabs).Any(t => t.Text == display.Name),
+            Check(Descendants<Button>(window.PageContent).Any(b => AutomationProperties.GetName(b) == L.T("s84041df0ce") + display.Name),
                 "Reopening settings renders the latest display data");
             Click(navigation[6]);
             Check(window.Breadcrumb.Text.EndsWith((string)navigation[6].Tag),
@@ -71,8 +73,12 @@ internal static partial class Program
         var about = navigation[^1];
 
         owner.RefreshView();
-        Check(owner.PageContent.Children.Count > 0 && owner.DisplayTabs.Children.Count == 2,
-            "Visible settings build the overview and its current display tab");
+        Button DisplayRow() => Descendants<Button>(owner.PageContent).Single(b => AutomationProperties.GetName(b) == L.T("s84041df0ce") + display.Name);
+        Check(owner.PageContent.Children.Count > 0 && owner.TabStrip.Visibility == Visibility.Collapsed,
+            "Overview lists displays once");
+        Click(DisplayRow());
+        Check(owner.TabStrip.Visibility == Visibility.Visible && owner.DisplayTabs.Children.Count == 2,
+            "Opening a display reveals navigation back to the overview and between screens");
         var originalPage = owner.PageContent.Children[0];
         var originalTab = (Button)owner.DisplayTabs.Children[1];
         Check(Equals(originalTab.ToolTip, "Fixture Alpha"), "Visible settings render the current display name");
@@ -89,9 +95,12 @@ internal static partial class Program
         visible = true;
         owner.RefreshView();
         Check(!ReferenceEquals(originalPage, owner.PageContent.Children[0])
-            && Equals(((Button)owner.DisplayTabs.Children[1]).ToolTip, "Fixture Beta")
+            && owner.DisplayTabs.Children.Count == 0 && owner.TabStrip.Visibility == Visibility.Collapsed
             && owner.Breadcrumb.Text.EndsWith((string)about.Tag),
             "Visible rendering uses refreshed data and navigation selected while hidden");
+        Click(navigation[0]);
+        Click(DisplayRow());
+        Check(Equals(((Button)owner.DisplayTabs.Children[1]).ToolTip, "Fixture Beta"), "Reopening the display uses its new name");
         Check(new[] { hiddenOwner, owner }.All(w => !w.IsLoaded && new WindowInteropHelper(w).Handle == IntPtr.Zero),
             "Deferred-render owners stay detached and never load a desktop window");
     }

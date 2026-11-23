@@ -13,6 +13,21 @@ using System.Windows.Interop;
 
 internal static partial class Program
 {
+    private static MenuItem? QuickMenuAction(QuickWindow quick, string id)
+    {
+        var trigger = Descendants<Button>((DependencyObject)quick.Content).SingleOrDefault(b => AutomationProperties.GetAutomationId(b) == "quick-display-actions");
+        return trigger?.ContextMenu?.Items.OfType<MenuItem>().SingleOrDefault(item => AutomationProperties.GetAutomationId(item) == id);
+    }
+
+    private static void PressQuickAction(QuickWindow quick, string id)
+    {
+        if (Descendants<Button>((DependencyObject)quick.Content).SingleOrDefault(b => AutomationProperties.GetAutomationId(b) == id) is { } button)
+            Click(button);
+        else if (QuickMenuAction(quick, id) is { IsEnabled: true } item)
+            item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent, item));
+        else throw new InvalidOperationException("Quick action unavailable: " + id);
+    }
+
     private static void SelectQuick(QuickWindow quick, int number)
     {
         Click(Descendants<Button>(quick).Single(b => AutomationProperties.GetAutomationId(b) == "quick-display-select-" + number));
@@ -55,17 +70,16 @@ internal static partial class Program
             Check(!Descendants<TextBlock>(quick).Any(t => displays.Any(d => t.Text == d.Name) || new[] { "左侧", "中间", "右侧", "1", "2", "3" }.Contains(t.Text)), "Picker omits visible names, numbers and positional text");
             Check(AutomationProperties.GetItemStatus(Find("quick-display-select-2")) == L.T("quick.selected"), "Selected screen is exposed to accessibility tools");
             pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            int stepValue = window.GetCombinedBrightness(second) - 5;
-            var stepDown = Find("quick-brightness-down"); stepDown.Focus(); Click(stepDown); await Task.Delay(100);
+            Slider Brightness() => Descendants<Slider>(quick).Single(s => AutomationProperties.GetName(s) == L.T("s8e2f643ad1"));
+            int requestedLevel = window.GetCombinedBrightness(second) - 5;
+            Brightness().Value = requestedLevel; await Task.Delay(100);
             SelectQuick(quick, 1);
-            Check(ReferenceEquals(requested, second) && requestedValue == stepValue && quick.SelectedDisplayId == second.Id && !window.IsVisible,
-                "Quick step targets the selected screen with settings closed and blocks switching during its write");
+            Check(ReferenceEquals(requested, second) && requestedValue == requestedLevel && quick.SelectedDisplayId == second.Id && !window.IsVisible,
+                "Pending slider write targets the selected screen and holds selection");
             pending.SetResult(true); pending = null; await Task.Delay(100);
-            Check(ReferenceEquals(stepDown, Find("quick-brightness-down")) && stepDown.IsKeyboardFocusWithin,
-                "Completing a step preserves the focused button for keyboard and repeated adjustments");
-            SelectQuick(quick, 1); Click(Find("quick-brightness-up")); await Task.Delay(100);
-            Check(ReferenceEquals(requested, first) && requestedValue == 77 && second.Brightness == stepValue && third.Brightness == 45,
-                "Step buttons follow a new selection without adjusting unselected screens");
+            SelectQuick(quick, 1); Brightness().Value = 77; await Task.Delay(100);
+            Check(ReferenceEquals(requested, first) && requestedValue == 77 && second.Brightness == requestedLevel && third.Brightness == 45,
+                "Brightness slider follows the newly selected screen");
             SelectQuick(quick, 2);
             Snapshot(quick, "quick-picker-three-screens.png");
             Click(Find("quick-more-toggle-2")); quick.UpdateLayout();
@@ -119,7 +133,7 @@ internal static partial class Program
             quick.Close(); window.Displays = real; window.Preferences.QuickSelectedDisplayId = real[0].Id;
             window.Preferences.QuickMoreDisplayId = null;
             quick = Create(); quick.Render(); quick.Show(); quick.Activate(); quick.UpdateLayout();
-            Click(Find("quick-identify")); await Task.Delay(100);
+            PressQuickAction(quick, "quick-identify"); await Task.Delay(100);
             var overlay = Application.Current.Windows.OfType<DisplayIdentifyWindow>().Single();
             var handle = new WindowInteropHelper(overlay).Handle;
             Native.GetWindowRect(handle, out var overlayBounds);
@@ -130,7 +144,7 @@ internal static partial class Program
                 "Locate overlay passes clicks through and never activates");
             await Task.Delay(1400);
             Check(!Application.Current.Windows.OfType<DisplayIdentifyWindow>().Any() && quick.IsVisible, "Locate overlay expires without closing the panel");
-            Click(Find("quick-identify")); await Task.Delay(50); quick.Close();
+            PressQuickAction(quick, "quick-identify"); await Task.Delay(50); quick.Close();
             Check(!Application.Current.Windows.OfType<DisplayIdentifyWindow>().Any(), "Closing panel also closes its locate overlay");
         }
         finally

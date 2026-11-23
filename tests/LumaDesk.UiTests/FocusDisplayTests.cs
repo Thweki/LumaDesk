@@ -53,10 +53,10 @@ internal static partial class Program
                 var selected = quick.SelectedDisplayId;
                 using (quick.KeepOpen())
                 {
-                    Click(Find("quick-move-panel"));
+                    PressQuickAction(quick, "quick-move-panel");
                     Check(PanelMonitor(quick).Device == anchor.Device, "A busy panel stays on its current monitor");
                 }
-                Click(Find("quick-move-panel")); await Task.Delay(150);
+                PressQuickAction(quick, "quick-move-panel"); await Task.Delay(150);
                 anchor = PanelMonitor(quick);
                 Check(anchor.Device == display.Device && quick.SelectedDisplayId == selected && quick.IsVisible && !window.IsVisible,
                     "Move panel here targets the selected display without changing selection or opening settings");
@@ -66,16 +66,16 @@ internal static partial class Program
                 Click(Find("quick-more-toggle-" + display.Number)); await Task.Delay(80);
             }
 
-            Click(Find("quick-multi-toggle")); quick.UpdateLayout();
-            Check(!Descendants<Button>(quick).Any(b => AutomationProperties.GetAutomationId(b) == "quick-move-panel"),
+            PressQuickAction(quick, "quick-multi-toggle"); quick.UpdateLayout();
+            Check(QuickMenuAction(quick, "quick-move-panel") == null,
                 "Multi-display brightness mode has no ambiguous move target");
-            Click(Find("quick-multi-toggle")); quick.UpdateLayout();
-            var staleMove = Find("quick-move-panel");
+            PressQuickAction(quick, "quick-multi-toggle"); quick.UpdateLayout();
+            var staleMove = QuickMenuAction(quick, "quick-move-panel")!;
             window.Displays = new List<DisplayInfo>();
-            Click(staleMove);
+            staleMove.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent, staleMove));
             Check(PanelMonitor(quick).Device == anchor.Device, "A stale display action leaves the panel in place");
             quick.Render(); quick.UpdateLayout();
-            Check(!Descendants<Button>(quick).Any(b => AutomationProperties.GetAutomationId(b) == "quick-move-panel"),
+            Check(QuickMenuAction(quick, "quick-move-panel") == null,
                 "An empty display scan removes the move action");
 
             quick.Close(); window.Displays = real;

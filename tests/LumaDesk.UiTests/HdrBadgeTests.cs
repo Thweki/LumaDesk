@@ -61,7 +61,7 @@ internal static partial class Program
             SelectQuick(quick, 2); await WaitFor(() => Active(1));
             Check(Badge(1).IsVisible && AutomationProperties.GetItemStatus(Tile(1)).Contains(L.T("quick.linked")),
                 "Unselected linked display retains its HDR badge and linked status");
-            Click(Descendants<Button>(quick).Single(b => AutomationProperties.GetAutomationId(b) == "quick-multi-toggle"));
+            PressQuickAction(quick, "quick-multi-toggle");
             await WaitFor(() => Active(1));
             Check(Badge(1).IsVisible && Descendants<TextBlock>(Tile(1)).Any(t => t.Text.EndsWith("%")),
                 "HDR badge coexists with multi-display brightness levels");

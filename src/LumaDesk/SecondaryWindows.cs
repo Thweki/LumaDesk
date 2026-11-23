@@ -42,6 +42,7 @@ internal sealed partial class QuickWindow : Window
     private readonly StackPanel body = new() { Margin = new Thickness(6) };
     private readonly StackPanel picker = new() { Margin = new Thickness(18, 12, 18, 0) };
     private readonly ScrollViewer controlsScroll;
+    private readonly UniformGrid footer = new() { Columns = 4, Margin = new Thickness(10, 4, 10, 10) };
     public QuickWindow(MainWindow owner, Func<DisplayInfo, int, Window, Task>? applyDpi = null, Func<DisplayInfo, DisplayMode, uint, Window, Task>? applyMode = null, bool dismissOnDeactivate = true, Func<DisplayInfo, int, Task>? applyBrightness = null, Func<IReadOnlyList<string>, int, Task>? applySelectedBrightness = null, Func<DisplayInfo, Task<bool>>? readHdrActive = null)
     {
         Ui.ConfigureWindow(this);
@@ -58,7 +59,10 @@ internal sealed partial class QuickWindow : Window
         var layout = new Grid();
         layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         layout.RowDefinitions.Add(new RowDefinition());
+        layout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         layout.Children.Add(picker); Grid.SetRow(controlsScroll, 1); layout.Children.Add(controlsScroll);
+        BuildFooter();
+        Grid.SetRow(footer, 2); layout.Children.Add(footer);
         var surface = new Border { CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(1), BorderBrush = Ui.Brush("#24000000"), Background = Ui.Brush("#F3F3F3"), Child = layout };
         surface.SizeChanged += (_, _) => surface.Clip = new RectangleGeometry(new Rect(0, 0, surface.ActualWidth, surface.ActualHeight), 12, 12);
         Content = surface; WindowEffects.ConfigurePopup(this, surface, active => IsBackdropActive = active);
@@ -88,11 +92,12 @@ internal sealed partial class QuickWindow : Window
     private void ScheduleDismiss() => Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() => TryDismiss()));
     private void TryDismiss()
     {
-        if (!closed && dismissRequested && !dpiBusy && keepOpenCount == 0 && (forceDismissRequested || (!pinned && !IsActive))) Close();
+        if (!closed && activeDisplayMenu == null && dismissRequested && !dpiBusy && keepOpenCount == 0 && (forceDismissRequested || (!pinned && !IsActive))) Close();
     }
     public void PositionNearTray() => placement.Position();
     public void Render()
     {
+        if (activeDisplayMenu != null) { refreshAfterMenu = true; return; }
         // The transaction refreshes display discovery before its task completes. Keep
         // the active controls stable until its owner can render success or failure.
         if (!CanRebuild) return;
@@ -154,7 +159,7 @@ internal sealed partial class QuickWindow : Window
                 }, compact: true));
                 more.Children.Add(CompactLine());
                 bool colorExpanded = colorSections.Contains(d.Id);
-                var colorButton = Ui.Button("", () => { if (!colorSections.Remove(d.Id)) colorSections.Add(d.Id); Render(); });
+                var colorButton = Ui.Button(L.T("s58169370ac"), () => { if (!colorSections.Remove(d.Id)) colorSections.Add(d.Id); Render(); });
                 colorButton.Content = Ui.Row(Ui.Text(L.T("s58169370ac"), 12), Ui.Text(colorExpanded ? "⌃" : "›", 11, "#7A8699"));
                 colorButton.HorizontalContentAlignment = HorizontalAlignment.Stretch; colorButton.Padding = new Thickness(0, 5, 0, 5); colorButton.Background = System.Windows.Media.Brushes.Transparent; colorButton.BorderThickness = new Thickness(0);
                 System.Windows.Automation.AutomationProperties.SetAutomationId(colorButton, "quick-color-toggle-" + d.Number);
@@ -165,28 +170,44 @@ internal sealed partial class QuickWindow : Window
                     System.Windows.Automation.AutomationProperties.SetAutomationId(colorContent, "quick-color-content-" + d.Number);
                     more.Children.Add(colorContent);
                 }
-                var pip = Ui.Button("", () => owner.OpenPip(d)); pip.Content = Ui.Row(Ui.Text(L.T("s850875a753"), 12), Ui.Text(L.T("s44429022e6"), 11, "#7A8699")); pip.HorizontalContentAlignment = HorizontalAlignment.Stretch; pip.Padding = new Thickness(0, 5, 0, 5); pip.Background = System.Windows.Media.Brushes.Transparent; pip.BorderThickness = new Thickness(0); more.Children.Add(pip);
+                var pip = Ui.Button(L.T("s850875a753"), () => owner.OpenPip(d)); pip.Content = Ui.Row(Ui.Text(L.T("s850875a753"), 12), Ui.Icon("\uE8A7", 13)); pip.HorizontalContentAlignment = HorizontalAlignment.Stretch; pip.Padding = new Thickness(0, 5, 0, 5); pip.Background = System.Windows.Media.Brushes.Transparent; pip.BorderThickness = new Thickness(0); more.Children.Add(pip);
                 stack.Children.Add(more);
             }
-            var card = new Border { Child = stack, Padding = new Thickness(12, 7, 12, 7), BorderThickness = new Thickness(0, 0, 0, 1), BorderBrush = Ui.Brush("#16000000") }; body.Children.Add(card);
+            body.Children.Add(Ui.Card(stack, new Thickness(12, 8, 12, 4)));
         }
         if (!brightnessMultiSelect && owner.Displays.Count == 0) body.Children.Add(Ui.Card(Ui.Text(L.T("s7d06b98afa"), 12, "#8B93A2")));
         if (!brightnessMultiSelect && owner.Preferences.Presets.Count > 0) { var scenes = owner.SceneMenuButton(); scenes.Margin = new Thickness(8, 6, 8, 0); body.Children.Add(scenes); }
         RefreshScheduleStatus(DateTime.Now);
         body.Children.Add(scheduleStatus);
-        var footer = new UniformGrid { Columns = 4, Margin = new Thickness(4, 8, 4, 4) };
-        foreach (var item in new (string Label, Action Action)[] { (L.T("sdf3d58c7d8"), owner.ShowSettings), (L.T("s70473d8ed9"), owner.ShowLayout), (L.T("quick.virtual"), owner.ShowVirtualDisplays), (pinned ? L.T("panel.unpin") : L.T("panel.pin"), () => { pinned = !pinned; Render(); }) })
-        {
-            var button = Ui.Button(item.Label, item.Action); button.FontSize = 11; button.Padding = new Thickness(4, 6, 4, 6); button.Margin = new Thickness(2, 0, 2, 0); button.Background = Ui.Brush("#70FFFFFF"); button.BorderBrush = Ui.Brush("#12000000"); footer.Children.Add(button);
-        }
-        if (!brightnessMultiSelect) body.Children.Add(footer);
+        footer.Visibility = brightnessMultiSelect ? Visibility.Collapsed : Visibility.Visible;
+        footer.Measure(new System.Windows.Size(Width - 2, double.PositiveInfinity));
         body.Measure(new System.Windows.Size(Width - 2, double.PositiveInfinity));
         picker.Measure(new System.Windows.Size(Width - 2, double.PositiveInfinity));
         // Native pixel rounding at fractional DPI can otherwise create a scrollbar
         // for a fraction of one DIP even when all the controls fit.
-        preferredHeight = Math.Clamp(Math.Ceiling(body.DesiredSize.Height + picker.DesiredSize.Height + 2) + 1, 180, 620);
+        preferredHeight = Math.Clamp(Math.Ceiling(body.DesiredSize.Height + picker.DesiredSize.Height + footer.DesiredSize.Height + 2) + 1, 180, 620);
         Height = preferredHeight;
         if (IsVisible) PositionNearTray();
+    }
+    private void BuildFooter()
+    {
+        foreach (var item in new (string Icon, string Label, Action Action)[] {
+            ("\uE713", L.T("s3e86e94e26"), owner.ShowSettings), ("\uE8A9", L.T("sa6d9aa75a3"), owner.ShowLayout),
+            ("\uE7F8", L.T("s1b4f0e57f8"), owner.ShowVirtualDisplays) })
+        {
+            var button = Ui.IconButton(item.Icon, item.Label, item.Action);
+            button.Background = System.Windows.Media.Brushes.Transparent; button.BorderThickness = new Thickness(0); footer.Children.Add(button);
+        }
+        var pin = new Button { MinWidth = 32, MinHeight = 30, Padding = new Thickness(6), BorderThickness = new Thickness(0) };
+        void UpdatePin()
+        {
+            var label = L.T(pinned ? "panel.unpin" : "panel.pin");
+            pin.Content = Ui.Icon(pinned ? "\uE77A" : "\uE718", 16, "#354155");
+            pin.Background = pinned ? Ui.Brush("#E4F2F3") : System.Windows.Media.Brushes.Transparent;
+            Ui.Hint(pin, label); System.Windows.Automation.AutomationProperties.SetName(pin, label);
+        }
+        pin.Click += (_, _) => { pinned = !pinned; UpdatePin(); };
+        UpdatePin(); footer.Children.Add(pin);
     }
     private static Border CompactLine() { var line = Ui.Line(); line.Margin = new Thickness(0, 4, 0, 4); return line; }
     private UIElement CreateRotationControl(DisplayInfo display)
@@ -262,7 +283,7 @@ internal sealed partial class QuickWindow : Window
                 row.Children.Add(pick); row.Children.Add(remove); stack.Children.Add(row);
             }
         }
-        var help = Ui.Text(refreshOnly ? L.T("s82f9d30470") : L.T("s29dce845a6"), 10, "#8790A0"); help.Margin = new Thickness(0, 6, 0, 7); stack.Children.Add(help);
+        Ui.Hint(list, refreshOnly ? L.T("s82f9d30470") : L.T("s29dce845a6"));
         return stack;
     }
     private async Task ChangeDisplayAsync(DisplayInfo display, Func<Task> operation)
@@ -279,10 +300,10 @@ internal sealed partial class QuickWindow : Window
     }
     private UIElement CreateDpiControls(DisplayInfo display)
     {
-        var section = new StackPanel();
+        var section = new StackPanel { Margin = new Thickness(0, 6, 0, 0) };
         System.Windows.Automation.AutomationProperties.SetAutomationId(section, "quick-dpi-" + display.Number);
         var info = display.DpiScale;
-        var amount = Ui.Text(info.CanSet ? L.F("sdaee699fa0", info.CurrentPercent) : L.T("sf36cac9622"), 11, "#7A8699");
+        var amount = Ui.Text(info.CanSet ? info.CurrentPercent + "%" : L.T("sf36cac9622"), 12, "#626B78");
         section.Children.Add(Ui.Row(Ui.Text(L.T("scene.scale"), 12), amount));
         if (!info.CanSet)
         {
@@ -304,7 +325,7 @@ internal sealed partial class QuickWindow : Window
         void UpdateScaleLabel()
         {
             int percent = SelectedPercent();
-            amount.Text = L.F("sdaee699fa0", percent);
+            amount.Text = percent + "%";
             slider.ToolTip = $"{percent}% · {DpiRules.LooksLike(display.Current, percent)}";
         }
         var writer = new LatestValueWriter(async percent =>
@@ -407,16 +428,35 @@ internal sealed class PipWindow : Window
     {
         Ui.ConfigureWindow(this);
         this.display = display; Title = display.Name + L.T("s20bd7e7897"); Width = 560; Height = 380; MinWidth = 360; MinHeight = 180; Topmost = true;
-        var grid = new Grid(); grid.RowDefinitions.Add(new RowDefinition()); grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(46) });
+        var grid = new Grid(); grid.RowDefinitions.Add(new RowDefinition()); grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         var view = new Grid { Background = System.Windows.Media.Brushes.Transparent }; view.Children.Add(preview); selectionLayer.Children.Add(selection); view.Children.Add(selectionLayer); grid.Children.Add(view);
-        var pause = Ui.Button(L.T("s6b0fa0abdc"), () => { paused = !paused; status.Text = paused ? L.T("seb0c326b60") : L.T("s9f277b6ebd"); });
-        var region = Ui.Button(L.T("pip.region"), () => { selecting = !selecting; view.Cursor = selecting ? Cursors.Cross : Cursors.Arrow; status.Text = L.T("pip.drag"); });
-        var reset = Ui.Button(L.T("pip.full"), () => { crop = null; selecting = false; view.Cursor = Cursors.Arrow; });
+        var pause = new Button();
+        var region = new Button();
+        var reset = new Button();
+        void SetAction(Button action, string glyph, string label)
+        {
+            action.Content = Ui.Icon(glyph, 16, "#354155"); Ui.Hint(action, label);
+            System.Windows.Automation.AutomationProperties.SetName(action, label);
+        }
+        SetAction(reset, "\uE740", L.T("pip.full"));
+        void UpdateControls()
+        {
+            SetAction(pause, paused ? "\uE768" : "\uE769", L.T(paused ? "pip.resume" : "pip.pause"));
+            SetAction(region, selecting ? "\uE711" : "\uE7A8", L.T(selecting ? "pip.cancelRegion" : "pip.region"));
+            reset.IsEnabled = crop.HasValue;
+            view.Cursor = selecting ? Cursors.Cross : Cursors.Arrow;
+            status.Text = selecting ? L.T("pip.drag") : paused ? L.T("seb0c326b60") : L.T(preview.Source == null ? "sa10706fb30" : "pip.live");
+        }
+        pause.Click += (_, _) => { paused = !paused; UpdateControls(); };
+        region.Click += (_, _) => { selecting = !selecting; UpdateControls(); };
+        reset.Click += (_, _) => { crop = null; selecting = false; UpdateControls(); };
+        UpdateControls();
         var fps = new ComboBox { ItemsSource = new[] { "6 FPS", "15 FPS", "30 FPS" }, SelectedIndex = 0, MinWidth = 75, FontSize = 11 };
         fps.SelectionChanged += (_, _) => timer.Interval = TimeSpan.FromMilliseconds(fps.SelectedIndex == 2 ? 33 : fps.SelectedIndex == 1 ? 67 : 150);
-        var footer = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(8, 4, 8, 4) };
-        foreach (var button in new[] { pause, region, reset }) { button.FontSize = 11; button.Padding = new Thickness(8, 5, 8, 5); footer.Children.Add(button); }
-        footer.Children.Add(fps); status.Margin = new Thickness(8, 0, 0, 0); status.MaxWidth = 120; status.TextTrimming = TextTrimming.CharacterEllipsis; status.TextWrapping = TextWrapping.NoWrap; footer.Children.Add(status);
+        var footer = new WrapPanel { Margin = new Thickness(10, 6, 10, 6) };
+        foreach (var button in new[] { pause, region, reset }) { button.Padding = new Thickness(8, 5, 8, 5); button.Margin = new Thickness(0, 2, 4, 2); footer.Children.Add(button); }
+        System.Windows.Automation.AutomationProperties.SetName(fps, L.T("pip.frameRate"));
+        footer.Children.Add(fps); status.Margin = new Thickness(8, 2, 0, 2); footer.Children.Add(status);
         Grid.SetRow(footer, 1); grid.Children.Add(footer); Content = grid;
         view.MouseLeftButtonDown += (_, e) =>
         {
@@ -441,7 +481,7 @@ internal sealed class PipWindow : Window
             int right = (int)Math.Clamp((Math.Max(start.X, end.X) - left) / scale, 0, area.Width);
             int bottom = (int)Math.Clamp((Math.Max(start.Y, end.Y) - top) / scale, 0, area.Height);
             if (right - x >= 16 && bottom - y >= 16) crop = new Drawing.Rectangle(area.X + x, area.Y + y, right - x, bottom - y);
-            selecting = false; view.Cursor = Cursors.Arrow;
+            selecting = false; UpdateControls();
         };
         SourceInitialized += (_, _) => Native.SetWindowDisplayAffinity(new WindowInteropHelper(this).Handle, 0x11);
         timer.Tick += async (_, _) => await CaptureAsync(); Loaded += (_, _) => timer.Start();
@@ -482,7 +522,7 @@ internal sealed class PipWindow : Window
                 try { var source = Imaging.CreateBitmapSourceFromHBitmap(handle, IntPtr.Zero, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions()); source.Freeze(); return (Source: source, Area: area); }
                 finally { Native.DeleteObject(handle); }
             });
-            if (!closed) { preview.Source = frame.Source; lastArea = frame.Area; if (!selecting) status.Text = L.T("s1bbc67943d"); }
+            if (!closed) { preview.Source = frame.Source; lastArea = frame.Area; if (!selecting && !paused) status.Text = L.T("pip.live"); status.ToolTip = null; }
         }
         catch (Exception ex) { if (!closed) { status.Text = L.T("se2c5e0ec0d"); status.ToolTip = ex.Message; } }
         finally { capturing = false; if (closed) DisposeBuffers(); }

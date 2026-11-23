@@ -47,7 +47,7 @@ internal static partial class Program
             string name = $"frame-{frame++:D3}.png";
             Snapshot(quick, name); timeline.WriteLine($"{name}\t{duration}\t{stage}");
         }
-        void Press(string id) => Click(Descendants<Button>(quick).Single(b => AutomationProperties.GetAutomationId(b) == id));
+        void Press(string id) => PressQuickAction(quick, id);
         try
         {
             window.Hide(); quick.Render(); quick.Show();

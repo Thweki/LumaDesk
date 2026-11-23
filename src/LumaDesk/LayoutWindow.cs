@@ -17,7 +17,7 @@ internal sealed class LayoutWindow : Window
     private readonly Func<IReadOnlyList<ScreenPlacement>, Task> apply;
     private readonly Canvas canvas = new() { Height = 260, ClipToBounds = true, Background = Ui.Brush("#E8EDF5"), Margin = new Thickness(0, 14, 0, 14) };
     private readonly StackPanel body = new() { Margin = new Thickness(22) };
-    private readonly TextBlock feedback = Ui.Text(L.T("s41463881b8"), 12, "#64748B");
+    private readonly TextBlock feedback = Ui.Text("", 12, "#515B6A");
     private readonly TextBox xBox = new() { Width = 95 }, yBox = new() { Width = 95 };
     private readonly ComboBox selected = new() { DisplayMemberPath = "Name", Width = 185 };
     private readonly ComboBox primary = new() { DisplayMemberPath = "Name", Width = 185 };
@@ -33,24 +33,29 @@ internal sealed class LayoutWindow : Window
         Title = L.T("sc91a2a81a1"); Width = 760; Height = 650; MinWidth = 580; MinHeight = 530; WindowStartupLocation = WindowStartupLocation.CenterScreen;
         Content = new ScrollViewer { Content = body };
         body.Children.Add(Ui.Text(L.T("s307f94d8e9"), 22, "#26364A", true));
-        body.Children.Add(canvas);
-        var coordinates = new StackPanel { Orientation = Orientation.Horizontal };
+        body.Children.Add(Ui.Hint(canvas, L.T("s41463881b8"))); Ui.Hint(selected, L.T("s41463881b8"));
+        var settings = new StackPanel();
+        var coordinates = new WrapPanel();
+        System.Windows.Automation.AutomationProperties.SetName(selected, L.T("quick.choose"));
+        System.Windows.Automation.AutomationProperties.SetName(xBox, "X");
+        System.Windows.Automation.AutomationProperties.SetName(yBox, "Y");
         coordinates.Children.Add(selected); coordinates.Children.Add(Ui.Text("  X  ", 12)); coordinates.Children.Add(xBox); coordinates.Children.Add(Ui.Text("  Y  ", 12)); coordinates.Children.Add(yBox);
-        var update = Ui.Button(L.T("s4a05c9ce76"), UpdateCoordinates); update.Margin = new Thickness(8, 0, 0, 0); coordinates.Children.Add(update); body.Children.Add(coordinates);
-        var primaryRow = Ui.Row(Ui.Text(L.T("s93ff5822ca"), 13), primary); primaryRow.Margin = new Thickness(0, 14, 0, 14); body.Children.Add(primaryRow);
-        var arrange = new StackPanel { Orientation = Orientation.Horizontal };
+        var update = Ui.Button(L.T("s4a05c9ce76"), UpdateCoordinates); update.Margin = new Thickness(8, 0, 0, 0); coordinates.Children.Add(update); settings.Children.Add(coordinates);
+        settings.Children.Add(Ui.Line()); settings.Children.Add(Ui.Row(Ui.Text(L.T("s93ff5822ca"), 13), primary));
+        settings.Children.Add(Ui.Line());
+        var arrange = new WrapPanel();
         arrange.Children.Add(Ui.Button(L.T("se25efd6551"), () => Arrange(false))); var vertical = Ui.Button(L.T("s86d5bec31e"), () => Arrange(true)); vertical.Margin = new Thickness(8, 0, 8, 0); arrange.Children.Add(vertical);
         arrange.Children.Add(Ui.Button(L.T("sdf7392cc96"), () => _ = ExecuteAsync(async () => { await owner.RefreshAsync(); Reload(); })));
-        body.Children.Add(arrange);
-        var topology = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 12) };
-        topology.Children.Add(Ui.Button(L.T("sa60416dbac"), () => _ = TopologyAsync(true))); var clone = Ui.Button(L.T("s99c94fd883"), () => _ = TopologyAsync(false)); clone.Margin = new Thickness(8, 0, 0, 0); topology.Children.Add(clone); body.Children.Add(topology);
-        feedback.Margin = new Thickness(0, 7, 0, 14); body.Children.Add(feedback);
         var applyButton = Ui.Button(L.T("seb82fd9848"), () => _ = ExecuteAsync(async () =>
         {
             var normalized = LayoutRules.Normalize(placements); await this.apply(normalized); Reload(); feedback.Text = L.T("s2128b7d275");
         }), true);
         System.Windows.Automation.AutomationProperties.SetAutomationId(applyButton, "layout-apply");
-        body.Children.Add(Ui.Row(Ui.Text(L.T("s67773de970"), 11, "#718096"), applyButton));
+        settings.Children.Add(Ui.Row(arrange, Ui.Hint(applyButton, L.T("s67773de970"))));
+        body.Children.Add(Ui.Card(settings));
+        var topology = new WrapPanel();
+        topology.Children.Add(Ui.Button(L.T("sa60416dbac"), () => _ = TopologyAsync(true))); var clone = Ui.Button(L.T("s99c94fd883"), () => _ = TopologyAsync(false)); clone.Margin = new Thickness(8, 0, 0, 0); topology.Children.Add(clone); body.Children.Add(topology);
+        feedback.Margin = new Thickness(0, 6, 0, 0); body.Children.Add(feedback);
         selected.SelectionChanged += (_, _) => UpdateFields();
         primary.SelectionChanged += (_, _) =>
         {

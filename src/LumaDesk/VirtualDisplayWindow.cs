@@ -28,17 +28,21 @@ internal sealed class VirtualDisplayWindow : Window
     }
     private async Task RefreshAsync(string? message = null)
     {
-        body.Children.Clear(); body.Children.Add(Ui.Text(L.T("s1b4f0e57f8"), 21, "#28364A", true));
-        var description = Ui.Text(L.T("s88ff52ede0"), 12, "#7A8595"); description.Margin = new Thickness(0, 9, 0, 16); body.Children.Add(description);
+        body.Children.Clear();
+        var heading = Ui.Hint(Ui.Text(L.T("s1b4f0e57f8"), 24, "#28364A", true), L.T("s88ff52ede0"));
+        heading.Margin = new Thickness(0, 0, 0, 14); body.Children.Add(heading);
+        feedback.Text = L.T("s1bafd2539d"); body.Children.Add(feedback);
         try
         {
             VirtualDisplayState state = await service.ReadAsync();
+            body.Children.Remove(feedback);
             var panel = new StackPanel();
             panel.Children.Add(Ui.Row(Ui.Labels("Virtual Display Driver", state.Message), Ui.Badge(state.Connected ? L.T("s5be0323e8a") : state.Installed ? L.T("s4afcbf8b01") : L.T("s156219e305"))));
             panel.Children.Add(Ui.Line());
-            panel.Children.Add(Ui.Labels(L.T("s6e13d9980c"), state.ActiveCount + L.T("sdb5ed74bd6") + (state.ConfiguredCount.HasValue ? L.F("s2eb9fe8ee3", state.ConfiguredCount) : "")));
+            var counts = Ui.Labels(L.T("s6e13d9980c"), state.ActiveCount + L.T("sdb5ed74bd6") + (state.ConfiguredCount.HasValue ? L.F("s2eb9fe8ee3", state.ConfiguredCount) : ""));
             if (!state.Installed)
             {
+                panel.Children.Add(counts);
                 var install = Ui.Button(L.T("s5e743b731e"), () => _ = InstallAsync(), true); install.Margin = new Thickness(0, 15, 0, 0);
                 System.Windows.Automation.AutomationProperties.SetAutomationId(install, "virtual-driver-install");
                 panel.Children.Add(install);
@@ -50,17 +54,25 @@ internal sealed class VirtualDisplayWindow : Window
                 System.Windows.Automation.AutomationProperties.SetAutomationId(count, "virtual-display-count");
                 var set = Ui.Button(L.T("s1d4b09076c"), () => _ = SetCountAsync((int)count.SelectedItem), true);
                 System.Windows.Automation.AutomationProperties.SetAutomationId(set, "virtual-display-apply-count");
-                var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0), IsEnabled = state.Connected || state.Disabled };
-                row.Children.Add(count); set.Margin = new Thickness(10, 0, 0, 0); row.Children.Add(set); panel.Children.Add(row);
+                var actionsRow = new StackPanel { Orientation = Orientation.Horizontal };
+                actionsRow.Children.Add(count); set.Margin = new Thickness(8, 0, 0, 0); actionsRow.Children.Add(set);
+                System.Windows.Automation.AutomationProperties.SetName(count, L.T("s6e13d9980c"));
+                actionsRow.IsEnabled = state.Connected || state.Disabled;
+                panel.Children.Add(Ui.Row(counts, actionsRow));
                 var note = Ui.Text(L.T("s664e61e05e"), 11, "#7A8595"); note.Margin = new Thickness(0, 9, 0, 0); panel.Children.Add(note);
                 panel.Children.Add(Ui.Line());
                 var actions = Ui.Row(Ui.Button(L.T("sa1babf9ee8"), owner.ShowLayout), Ui.Button(L.T("sa13550662f"), () => _ = RefreshAsync())); panel.Children.Add(actions);
             }
             body.Children.Add(Ui.Card(panel));
-            var limit = Ui.Text(L.T("s151dd3bdaf"), 11, "#7A8595"); body.Children.Add(limit);
-            feedback.Text = message ?? (state.Installed ? "" : L.T("s96da487660")); feedback.Margin = new Thickness(0, 15, 0, 0); body.Children.Add(feedback);
+            body.Children.Add(new Expander { Header = L.T("scene.details"), Content = Ui.Text(L.T("s151dd3bdaf"), 12, "#626B78") });
+            feedback.Text = message ?? ""; feedback.Margin = new Thickness(0, 12, 0, 0); body.Children.Add(feedback);
         }
-        catch (Exception ex) { feedback.Text = ex.Message; if (!body.Children.Contains(feedback)) body.Children.Add(feedback); }
+        catch (Exception ex)
+        {
+            feedback.Text = ex.Message; if (!body.Children.Contains(feedback)) body.Children.Add(feedback);
+            var retry = Ui.Button(L.T("sa13550662f"), () => _ = RefreshAsync()); retry.HorizontalAlignment = HorizontalAlignment.Left;
+            retry.Margin = new Thickness(0, 8, 0, 0); body.Children.Add(retry);
+        }
     }
     private async Task InstallAsync()
     {

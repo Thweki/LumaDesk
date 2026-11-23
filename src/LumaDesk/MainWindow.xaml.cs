@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     internal List<DisplayInfo> Displays = new();
     private readonly Dictionary<string, DimWindow> dimWindows = new();
     private readonly Dictionary<string, Button> navButtons = new();
+    private bool compactNavigation;
     private readonly List<PipWindow> pipWindows = new();
     private readonly DispatcherTimer hotplugTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private Forms.NotifyIcon? tray;
@@ -47,10 +48,9 @@ public partial class MainWindow : Window
         ThemeService.Apply(Preferences.Theme);
         InitializeComponent();
         Ui.ConfigureWindow(this);
-        HelpSwitch.IsChecked = Preferences.ShowHelp;
         DpiChanged += (_, _) => Dispatcher.BeginInvoke(FitToMonitor);
         AddNavigation("displays", L.T("s1a13ea5910"), "\uE7F4"); AddNavigation("groups", L.T("s563a1990f3"), "\uE8A9"); AddNavigation("application", L.T("s63c73c4730"), "\uE713"); AddNavigation("quick", L.T("s770544f702"), "\uE8A5"); AddNavigation("keyboard", L.T("s864200bbb2"), "\uE765"); AddNavigation("presets", L.T("sf1de1e2621"), "\uE734"); AddNavigation("about", L.T("s52d25a9e30"), "\uE946");
-        LanguageLabel.Text = L.NativeName(L.Language);
+        ShellSurface.SizeChanged += (_, e) => UpdateSidebar(e.NewSize.Width < 800);
         hotplugTimer.Tick += async (_, _) => { hotplugTimer.Stop(); await RestoreAfterConnectionAsync(); };
         Loaded += async (_, _) => { FitToMonitor(); SetupTray(); await RefreshAsync(); StartAutomation(); StartCommands(); };
         SourceInitialized += (_, _) =>
@@ -69,8 +69,31 @@ public partial class MainWindow : Window
     }
     private void AddNavigation(string key, string name, string icon)
     {
-        var button = Ui.Button("", () => { page = key; selectedId = null; Render(); });
-        button.Style = (Style)FindResource("Nav"); button.Content = Ui.IconLabel(icon, name); button.Tag = name; navButtons[key] = button; Navigation.Children.Add(button);
+        var button = Ui.Button(name, () => Navigate(key));
+        button.Style = (Style)FindResource("Nav"); button.Content = Ui.IconLabel(icon, name); button.ToolTip = name; button.Tag = name; navButtons[key] = button; Navigation.Children.Add(button);
+    }
+    private void UpdateSidebar(bool compact)
+    {
+        if (compact == compactNavigation) return;
+        compactNavigation = compact;
+        SidebarColumn.Width = new GridLength(compact ? 68 : 196);
+        BrandName.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        Breadcrumb.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
+        Brand.Margin = new Thickness(compact ? 19 : 22, 0, 0, 0);
+        QuickLauncher.Content = compact ? Ui.Icon("\uE8A5", 16) : L.T("saf91a997fb");
+        foreach (var button in navButtons.Values)
+        {
+            var content = (Grid)button.Content;
+            content.Children[1].Visibility = BrandName.Visibility;
+            button.Padding = new Thickness(compact ? 7 : 12, 11, compact ? 7 : 12, 11);
+        }
+    }
+    private void Navigate(string destination, string? displayId = null)
+    {
+        page = destination;
+        selectedId = displayId;
+        Render();
+        ContentScroll.ScrollToTop();
     }
     private void FitToMonitor()
     {
@@ -78,7 +101,7 @@ public partial class MainWindow : Window
         var work = Forms.Screen.FromHandle(hwnd).WorkingArea;
         var dpi = VisualTreeHelper.GetDpi(this);
         double availableWidth = Math.Max(320, work.Width / dpi.DpiScaleX - 16), availableHeight = Math.Max(280, work.Height / dpi.DpiScaleY - 16);
-        MinWidth = Math.Min(860, availableWidth); MinHeight = Math.Min(650, availableHeight);
+        MinWidth = Math.Min(680, availableWidth); MinHeight = Math.Min(540, availableHeight);
         Width = Math.Min(Width, availableWidth); Height = Math.Min(Height, availableHeight);
     }
     internal void Status(string message, bool error = false) { StatusLabel.ToolTip = message; StatusLabel.Text = message; StatusLabel.Foreground = ThemeService.Brush(error ? "#B45136" : "#777F8E", true); Storage.Log(message); }
@@ -119,10 +142,18 @@ public partial class MainWindow : Window
     {
         // Tray startup and background refreshes only need the display model, not the settings UI.
         if (!(fixtureSettingsVisible?.Invoke() ?? IsVisible)) return;
-        foreach (var pair in navButtons) pair.Value.Background = Ui.Brush(pair.Key == page ? "#E5E5E5" : "#00FFFFFF");
+        if (selectedId != null && !Displays.Any(d => d.Id == selectedId)) selectedId = null;
+        foreach (var pair in navButtons)
+        {
+            bool current = pair.Key == page;
+            pair.Value.Background = Ui.Brush(current ? "#E4F2F3" : "#00FFFFFF");
+            pair.Value.FontWeight = current ? FontWeights.SemiBold : FontWeights.Normal;
+            System.Windows.Automation.AutomationProperties.SetItemStatus(pair.Value, current ? L.T("quick.selected") : "");
+        }
         Breadcrumb.Text = L.T("s424b6d3b48") + (navButtons.TryGetValue(page, out var navigation) ? (string)navigation.Tag : page);
         PageContent.Children.Clear(); DisplayTabs.Children.Clear();
-        BuildTabs();
+        TabStrip.Visibility = page == "displays" && selectedId != null ? Visibility.Visible : Visibility.Collapsed;
+        if (TabStrip.Visibility == Visibility.Visible) BuildTabs();
         switch (page)
         {
             case "displays": if (selectedId != null && Selected != null) RenderDisplay(Selected); else RenderOverview(); break;
@@ -137,29 +168,37 @@ public partial class MainWindow : Window
     internal void RefreshView() => Render();
     private void BuildTabs()
     {
-        AddTab(L.T("sfea405f9b0"), "\uE8FD", L.T("s129454c4b3"), selectedId == null, () => { page = "displays"; selectedId = null; Render(); });
+        AddTab(L.T("sfea405f9b0"), "\uE72B", false, () => Navigate("displays"));
         foreach (var display in Displays)
         {
-            var d = display; AddTab(d.Name, "\uE7F4", d.Primary ? L.T("s93ff5822ca") : L.T("sc63fb70157"), selectedId == d.Id, () => { page = "displays"; selectedId = d.Id; Render(); });
+            AddTab(display.Name, "\uE7F4", selectedId == display.Id, () => Navigate("displays", display.Id));
         }
     }
-    private void AddTab(string title, string icon, string subtitle, bool active, Action action)
+    private void AddTab(string title, string icon, bool active, Action action)
     {
-        var stack = new StackPanel { Width = 130 };
-        var name = Ui.Text(title, 12, active ? "#27344A" : "#606977", active); name.TextTrimming = TextTrimming.CharacterEllipsis; name.TextWrapping = TextWrapping.NoWrap; name.HorizontalAlignment = HorizontalAlignment.Center; stack.Children.Add(name);
-        var sub = Ui.Text(subtitle, 10, "#6C737A"); sub.HorizontalAlignment = HorizontalAlignment.Center; sub.Margin = new Thickness(0, 3, 0, 0); stack.Children.Add(sub);
-        var button = Ui.Button("", action); button.Content = stack; button.ToolTip = title; button.Padding = new Thickness(9, 7, 9, 7); button.Margin = new Thickness(0, 0, 8, 0); button.Background = Ui.Brush(active ? "#E6F2F4" : "#FFFFFF"); button.BorderBrush = Ui.Brush(active ? "#007A8A" : "#E0E0E0"); DisplayTabs.Children.Add(button);
+        var button = Ui.Button(title, action);
+        var name = Ui.Text(title, 12, active ? "#005C68" : "#515B6A", active);
+        name.MaxWidth = 144; name.TextWrapping = TextWrapping.NoWrap; name.TextTrimming = TextTrimming.CharacterEllipsis;
+        button.Content = Ui.Row(Ui.Icon(icon, 14), name, 6);
+        button.ToolTip = title; button.Margin = new Thickness(0, 0, 6, 0);
+        button.Background = Ui.Brush(active ? "#E4F2F3" : "#FFFFFF");
+        button.BorderBrush = Ui.Brush(active ? "#007A8A" : "#D9D9D9");
+        if (active) button.Loaded += (_, _) => button.BringIntoView();
+        DisplayTabs.Children.Add(button);
     }
-    private void Heading(string title, string? description = null)
+    private void Heading(string title, string? hint = null, string? detail = null)
     {
-        var heading = Ui.Text(title, 22, "#242A35", true); heading.Margin = new Thickness(0, 0, 0, 7); PageContent.Children.Add(heading);
-        if (description != null) { var sub = Ui.Text(description, 12, "#858C99"); sub.Margin = new Thickness(0, 0, 0, 22); PageContent.Children.Add(sub); }
+        var heading = Ui.Hint(Ui.Text(title, 26, "#242A35", true), hint);
+        if (hint != null && navButtons.TryGetValue(page, out var nav)) Ui.Hint(nav, nav.Tag + "\n" + hint);
+        heading.Margin = new Thickness(0, 0, 0, detail == null ? 16 : 4);
+        PageContent.Children.Add(heading);
+        if (detail != null) { var sub = Ui.Text(detail, 13, "#606977"); sub.Margin = new Thickness(0, 0, 0, 18); PageContent.Children.Add(sub); }
     }
     private string? Help(string text) => Preferences.ShowHelp ? text : null;
     private void RenderOverview()
     {
-        Heading(L.T("s20ccee3b80"), L.T("sf47552dbd8"));
-        var head = Ui.Row(Ui.Text(L.T("sd6ff49aa98"), 13, "#626B7A", true), Ui.Button(L.T("s85db69cad5"), () => _ = RefreshAsync())); head.Margin = new Thickness(0, 0, 0, 12); PageContent.Children.Add(head);
+        var head = Ui.Row(Ui.Text(L.T("s20ccee3b80"), 26, bold: true), Ui.IconButton("\uE72C", L.T("sa13550662f"), () => _ = RefreshAsync()));
+        head.Margin = new Thickness(0, 0, 0, 16); PageContent.Children.Add(head);
         if (Displays.Count == 0) PageContent.Children.Add(Ui.Card(Ui.Labels(L.T("sdc39a81d49"), L.T("sfd1e46671c"))));
         else
         {
@@ -170,62 +209,82 @@ public partial class MainWindow : Window
                 var left = new Grid(); left.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(52) }); left.ColumnDefinitions.Add(new ColumnDefinition());
                 var icon = new Border { Child = Ui.Icon("\uE7F4", 25, "#FFFFFF"), Background = Ui.Brush("#007A8A"), CornerRadius = new CornerRadius(10), Width = 38, Height = 38, HorizontalAlignment = HorizontalAlignment.Left }; left.Children.Add(icon);
                 var labels = Ui.Labels(d.Name, d.Subtitle); Grid.SetColumn(labels, 1); left.Children.Add(labels);
-                var actions = new StackPanel { Orientation = Orientation.Horizontal }; actions.Children.Add(Ui.Badge(d.Primary ? L.T("s93ff5822ca") : L.T("s5be0323e8a"), d.Primary ? "#007A8A" : "#38886F", d.Primary ? "#E6F2F4" : "#E6F2EC"));
-                var open = Ui.Button("›", () => { selectedId = d.Id; Render(); }); open.FontSize = 22; open.Background = Brushes.Transparent; open.BorderThickness = new Thickness(0); open.Margin = new Thickness(10, 0, 0, 0); open.ToolTip = L.T("s84041df0ce") + d.Name; actions.Children.Add(open);
-                list.Children.Add(Ui.Row(left, actions));
+                var actions = new StackPanel { Orientation = Orientation.Horizontal };
+                if (d.Primary) actions.Children.Add(Ui.Badge(L.T("s93ff5822ca")));
+                var arrow = Ui.Icon("\uE76C", 12, "#616161"); arrow.Margin = new Thickness(14, 0, 0, 0); actions.Children.Add(arrow);
+                var open = Ui.Button(L.T("s84041df0ce") + d.Name, () => Navigate("displays", d.Id));
+                open.Content = Ui.Row(left, actions); open.HorizontalContentAlignment = HorizontalAlignment.Stretch;
+                open.Padding = new Thickness(8); open.Background = Brushes.Transparent; open.BorderThickness = new Thickness(0);
+                list.Children.Add(open);
             }
             PageContent.Children.Add(Ui.Card(list));
-            var layout = new StackPanel(); layout.Children.Add(Ui.Row(Ui.Text(L.T("sa6d9aa75a3"), 13, "#515B6A", true), Ui.Text(L.T("see4036c516"), 10, "#949BA8")));
+            var layout = new StackPanel(); layout.Children.Add(Ui.Row(Ui.IconLabel("\uE8A9", L.T("sa6d9aa75a3")), Ui.IconButton("\uE70F", L.T("s7c7d6a8555"), ShowLayout)));
             var canvas = new Canvas { Height = 132, Margin = new Thickness(0, 12, 0, 2), ClipToBounds = true };
             canvas.SizeChanged += (_, _) => DrawArrangement(canvas); layout.Children.Add(canvas);
-            layout.Children.Add(Ui.Row(Ui.Text(L.T("s10e4ac7bce"), 11, "#8C94A0"), Ui.Button(L.T("s7c7d6a8555"), ShowLayout))); PageContent.Children.Add(Ui.Card(layout));
+            PageContent.Children.Add(Ui.Card(layout));
         }
-        var virtualContent = new StackPanel(); virtualContent.Children.Add(Ui.Row(Ui.IconLabel("\uE7F8", L.T("s1b4f0e57f8")), Ui.Button(L.T("sf3b6083958"), ShowVirtualDisplays)));
-        var desc = Ui.Text(L.T("s4d57c168c5"), 12, "#858C99"); desc.Margin = new Thickness(0, 12, 0, 0); virtualContent.Children.Add(desc); PageContent.Children.Add(Ui.Card(virtualContent));
-        var bottom = Ui.Row(Ui.Labels(L.T("sc8847b16c8"), Help(L.T("s0bd80eb2d9"))), Ui.Button(L.T("saf91a997fb"), ShowQuick)); PageContent.Children.Add(Ui.Card(bottom));
+        var manage = Ui.Button(L.T("sf3b6083958"), ShowVirtualDisplays);
+        manage.Content = Ui.Row(Ui.IconLabel("\uE7F8", L.T("s1b4f0e57f8")), Ui.Icon("\uE76C", 12));
+        manage.HorizontalContentAlignment = HorizontalAlignment.Stretch; manage.Padding = new Thickness(16);
+        manage.Margin = new Thickness(0, 0, 0, 8);
+        PageContent.Children.Add(Ui.Hint(manage, L.T("s4d57c168c5")));
     }
     private void DrawArrangement(Canvas canvas)
     {
         canvas.Children.Clear(); if (Displays.Count == 0 || canvas.ActualWidth <= 0) return;
-        double minX = Displays.Min(d => d.X), minY = Displays.Min(d => d.Y);
-        double totalW = Displays.Max(d => d.X + d.Current.Width) - minX, totalH = Displays.Max(d => d.Y + d.Current.Height) - minY;
-        double scale = Math.Min((canvas.ActualWidth - 42) / totalW, 108 / totalH);
-        foreach (var d in Displays)
+        foreach (var tile in QuickDisplayMap.Project(Displays, canvas.ActualWidth, canvas.Height))
         {
-            bool compact = d.Current.Height * scale < 50;
-            var inner = new StackPanel { VerticalAlignment = VerticalAlignment.Center }; var number = Ui.Text(d.Number.ToString(), compact ? 18 : 24, d.Primary ? "#3F74D2" : "#717F98", true); number.HorizontalAlignment = HorizontalAlignment.Center; inner.Children.Add(number);
-            var label = Ui.Text(d.Name, 10, "#7C8DA7"); label.TextTrimming = TextTrimming.CharacterEllipsis; label.TextWrapping = TextWrapping.NoWrap; label.HorizontalAlignment = HorizontalAlignment.Center; if (!compact) inner.Children.Add(label);
-            var screen = Ui.Button("", () => { selectedId = d.Id; Render(); }); screen.Content = inner; screen.Width = Math.Max(32, d.Current.Width * scale - 4); screen.Height = Math.Max(26, d.Current.Height * scale - 4); screen.Padding = new Thickness(4); screen.Background = new LinearGradientBrush(Ui.Brush("#D6E5FB").Color, Ui.Brush("#EDF0FA").Color, 65); screen.BorderBrush = Ui.Brush(d.Primary ? "#84ABEC" : "#BBC9DF"); screen.ToolTip = L.F("s6e3563d6e6", d.Name, d.Subtitle, d.X, d.Y);
-            Canvas.SetLeft(screen, (canvas.ActualWidth - totalW * scale) / 2 + (d.X - minX) * scale); Canvas.SetTop(screen, 10 + (d.Y - minY) * scale); canvas.Children.Add(screen);
+            var d = tile.Display;
+            bool compact = tile.Bounds.Height < 50;
+            var inner = new StackPanel { VerticalAlignment = VerticalAlignment.Center }; var number = Ui.Text(d.Number.ToString(), compact ? 18 : 24, d.Primary ? "#006A78" : "#515B6A", true); number.HorizontalAlignment = HorizontalAlignment.Center; inner.Children.Add(number);
+            var label = Ui.Text(d.Name, 11, "#576774"); label.TextTrimming = TextTrimming.CharacterEllipsis; label.TextWrapping = TextWrapping.NoWrap; label.HorizontalAlignment = HorizontalAlignment.Center; if (!compact) inner.Children.Add(label);
+            var screen = Ui.Button(d.Name, () => Navigate("displays", d.Id));
+            screen.Content = inner; screen.Width = tile.Bounds.Width; screen.Height = tile.Bounds.Height;
+            screen.Padding = new Thickness(2); screen.Background = Ui.Brush(d.Primary ? "#E4F2F3" : "#F3F3F3");
+            screen.BorderBrush = Ui.Brush(d.Primary ? "#007A8A" : "#B8B8B8"); screen.ToolTip = L.F("s6e3563d6e6", d.Name, d.Subtitle, d.X, d.Y);
+            Canvas.SetLeft(screen, tile.Bounds.Left); Canvas.SetTop(screen, tile.Bounds.Top); canvas.Children.Add(screen);
         }
     }
     private void RenderDisplay(DisplayInfo display)
     {
-        Heading(display.Name, display.Subtitle + (display.Primary ? L.T("s28102bcda6") : ""));
-        RenderDpiScaling(display);
-        var light = new StackPanel(); light.Children.Add(Ui.Row(Ui.IconLabel("\uE706", L.T("s437926dd65")), Ui.Badge(display.HasDdc ? L.T("s77e64220a2") : display.HasWmi ? L.T("s16cc598b36") : L.T("sa81ff06ccd"))));
-        light.Children.Add(Ui.Line());
+        Heading(display.Name, detail: display.Subtitle + (display.Primary ? L.T("s28102bcda6") : ""));
+        var method = display.HasDdc ? L.T("s77e64220a2") : display.HasWmi ? L.T("s16cc598b36") : L.T("sa81ff06ccd");
+        var light = Ui.Hint(new StackPanel(), method);
+        if (display.Contrast.HasValue || display.Volume.HasValue)
+        {
+            light.Children.Add(Ui.Row(Ui.IconLabel("\uE706", L.T("s437926dd65")), Ui.Badge(method)));
+            light.Children.Add(Ui.Line());
+        }
         light.Children.Add(CreateBrightnessSlider(display, ChangeCombinedBrightness));
         if (display.Contrast.HasValue) { light.Children.Add(Ui.Line()); light.Children.Add(CreateSlider(L.T("s4cbc753240"), display.Contrast, 100, async value => { await Service.SetPercentAsync(display, 0x12, value); display.Contrast = value; Status(L.T("s1083ba917f")); })); }
         if (display.Volume.HasValue) { light.Children.Add(Ui.Line()); light.Children.Add(CreateSlider(L.T("s716ddda53d"), display.Volume, 100, async value => { await Service.SetPercentAsync(display, 0x62, value); display.Volume = value; Status(L.T("sd3fbc328d7")); })); }
         PageContent.Children.Add(Ui.Card(light));
+        RenderDpiScaling(display);
         var mode = new StackPanel(); mode.Children.Add(Ui.IconLabel("\uE7F4", L.T("sdfc8b14cad"))); mode.Children.Add(Ui.Line());
         var resolutions = display.Modes.Select(m => m.Resolution).Distinct().ToList();
         var resolution = new ComboBox { ItemsSource = resolutions, SelectedItem = display.Current.Resolution, Width = 185 };
         var refresh = new ComboBox { Width = 185 }; var orientation = new ComboBox { ItemsSource = new[] { L.T("s35294d7f91"), L.T("se6121d2fdf"), L.T("sbc911c8ebe"), L.T("sf6f2dc11c9") }, SelectedIndex = (int)display.Orientation, Width = 185 };
         void UpdateRates() { var rates = display.Modes.Where(m => m.Resolution == (string?)resolution.SelectedItem).Select(m => m.Frequency).Distinct().ToList(); refresh.ItemsSource = rates; refresh.SelectedItem = rates.Contains(display.Current.Frequency) ? display.Current.Frequency : rates.FirstOrDefault(); }
         UpdateRates(); resolution.SelectionChanged += (_, _) => UpdateRates();
-        mode.Children.Add(Ui.Row(Ui.Labels(L.T("s248a33b7b3"), Help(L.T("s2b8ac41596"))), resolution)); mode.Children.Add(Ui.Line()); mode.Children.Add(Ui.Row(Ui.Labels(L.T("sf48164ea8a"), "Hz"), refresh)); mode.Children.Add(Ui.Line()); mode.Children.Add(Ui.Row(Ui.Text(L.T("s60cc99cc00")), orientation)); mode.Children.Add(Ui.Line());
-        mode.Children.Add(Ui.Row(Ui.Text(L.T("sb965922475"), 11, "#8B929E"), Ui.Button(L.T("s8a3a58dbb8"), () => _ = RunAsync(async () =>
+        mode.Children.Add(Ui.Setting(L.T("s248a33b7b3"), Help(L.T("s2b8ac41596")), resolution)); mode.Children.Add(Ui.Line()); refresh.ItemStringFormat = "{0} Hz"; mode.Children.Add(Ui.Row(Ui.Text(L.T("sf48164ea8a")), refresh)); mode.Children.Add(Ui.Line()); mode.Children.Add(Ui.Row(Ui.Text(L.T("s60cc99cc00")), orientation)); mode.Children.Add(Ui.Line());
+        var apply = Ui.Button(L.T("s8a3a58dbb8"), () => _ = RunAsync(async () =>
         {
             var selected = display.Modes.First(m => m.Resolution == (string?)resolution.SelectedItem && m.Frequency == (uint)refresh.SelectedItem);
             await ChangeModeAsync(display, selected, (uint)orientation.SelectedIndex);
-        }), true))); PageContent.Children.Add(Ui.Card(mode));
+        }), true);
+        void UpdateApply() => apply.IsEnabled = refresh.SelectedItem is uint hz && orientation.SelectedIndex >= 0 &&
+            ((string?)resolution.SelectedItem != display.Current.Resolution || hz != display.Current.Frequency || (uint)orientation.SelectedIndex != display.Orientation);
+        resolution.SelectionChanged += (_, _) => UpdateApply();
+        refresh.SelectionChanged += (_, _) => UpdateApply();
+        orientation.SelectionChanged += (_, _) => UpdateApply();
+        UpdateApply();
+        apply.HorizontalAlignment = HorizontalAlignment.Right;
+        mode.Children.Add(Ui.Hint(apply, L.T("sb965922475"))); PageContent.Children.Add(Ui.Card(mode));
         if (CreateRefreshTimingControls(display) is UIElement timing) PageContent.Children.Add(Ui.Card(timing));
-        var extras = new StackPanel(); extras.Children.Add(Ui.Row(Ui.Labels(L.T("s850875a753"), Help(L.T("sce70a24e69"))), Ui.Button(L.T("s86227fc6df"), () => OpenPip(display)))); extras.Children.Add(Ui.Line());
+        var extras = new StackPanel(); extras.Children.Add(Ui.Setting(L.T("s850875a753"), Help(L.T("sce70a24e69")), Ui.Button(L.T("s86227fc6df"), () => OpenPip(display)))); extras.Children.Add(Ui.Line());
         extras.Children.Add(CreateColorControls(display)); extras.Children.Add(Ui.Line());
-        extras.Children.Add(Ui.Row(Ui.Labels(L.T("sed1989d773"), Help(L.T("sb3bd567058"))), Ui.Button(L.T("sab88522dca"), () => ExportEdid(display)))); PageContent.Children.Add(Ui.Card(extras));
-        PageContent.Children.Add(Ui.Card(Ui.Labels(L.T("s6c07bb6fd4"), L.F("sed21095eec", display.Adapter, display.Device, display.X, display.Y, display.Id))));
+        extras.Children.Add(Ui.Setting(L.T("sed1989d773"), Help(L.T("sb3bd567058")), Ui.Button(L.T("sab88522dca"), () => ExportEdid(display)))); PageContent.Children.Add(Ui.Card(extras));
+        PageContent.Children.Add(Ui.Card(new Expander { Header = L.T("s6c07bb6fd4"), Content = Ui.Text(L.F("sed21095eec", display.Adapter, display.Device, display.X, display.Y, display.Id), 12) }));
     }
     internal UIElement CreateBrightnessSlider(DisplayInfo display, Func<DisplayInfo, int, Task> changed, bool compact = false)
     {
@@ -235,8 +294,9 @@ public partial class MainWindow : Window
 
     internal UIElement CreateSlider(string label, int? value, int maximum, Func<int, Task> changed, string? help = null, bool compact = false, DisplayInfo? brightnessDisplay = null)
     {
-        var stack = new StackPanel(); var amount = Ui.Text(value.HasValue ? value + "%" : L.T("s7c53786065"), 12, "#7C8594"); stack.Children.Add(Ui.Row(Ui.Labels(label, help), amount));
+        var stack = new StackPanel(); var amount = Ui.Text(value.HasValue ? value + "%" : L.T("s7c53786065"), 12, "#626B78"); stack.Children.Add(Ui.Row(Ui.Hint(Ui.Text(label), help), amount));
         var slider = new Slider { Value = value ?? 0, Maximum = maximum, IsEnabled = value.HasValue, Margin = new Thickness(0, compact ? 1 : 8, 0, 0), Height = compact ? 22 : 28 }; System.Windows.Automation.AutomationProperties.SetName(slider, label);
+        Ui.Hint(slider, help);
         int confirmed = value ?? 0; bool updating = false, failed = false, dragging = false; IDisposable? keepOpen = null;
         void HoldPopup() => keepOpen ??= (Window.GetWindow(slider) as QuickWindow)?.KeepOpen();
         void ReleasePopup() { keepOpen?.Dispose(); keepOpen = null; }
@@ -293,40 +353,8 @@ public partial class MainWindow : Window
             RefreshPopup();
         }));
         stack.LostKeyboardFocus += (_, _) => Dispatcher.BeginInvoke(new Action(RefreshPopup));
-        if (compact && brightnessDisplay != null)
-        {
-            int StepValue(int delta)
-            {
-                var options = Options(brightnessDisplay);
-                return GroupRules.Target((int)Math.Round(slider.Value) + delta, options, options);
-            }
-            Button StepButton(string text, string key, int delta, string id)
-            {
-                var button = Ui.Button(text, () =>
-                {
-                    int next = StepValue(delta);
-                    // Use the thumb's pending value so rapid clicks accumulate in
-                    // the same serialized queue as dragging, even on slow DDC displays.
-                    if (delta < 0 ? next < slider.Value : next > slider.Value) slider.Value = next;
-                });
-                button.Padding = new Thickness(6, 2, 6, 2); button.MinWidth = 36;
-                button.ToolTip = L.T(key);
-                System.Windows.Automation.AutomationProperties.SetName(button, L.T(key));
-                System.Windows.Automation.AutomationProperties.SetAutomationId(button, id);
-                void UpdateEnabled() => button.IsEnabled = delta < 0 ? StepValue(delta) < slider.Value : StepValue(delta) > slider.Value;
-                slider.ValueChanged += (_, _) => UpdateEnabled();
-                UpdateEnabled();
-                return button;
-            }
-            var controls = new DockPanel();
-            var down = StepButton("−5", "s970eb36fb3", -5, "quick-brightness-down");
-            var up = StepButton("+5", "s768e8a9c2a", 5, "quick-brightness-up");
-            DockPanel.SetDock(down, Dock.Left); controls.Children.Add(down);
-            DockPanel.SetDock(up, Dock.Right); controls.Children.Add(up);
-            slider.Margin = new Thickness(8, 1, 8, 0); controls.Children.Add(slider);
-            stack.Children.Add(controls);
-        }
-        else stack.Children.Add(slider);
+        if (compact && brightnessDisplay != null) slider.LargeChange = 5;
+        stack.Children.Add(slider);
         return stack;
     }
     private void SetDimming(DisplayInfo display, double value)
@@ -377,12 +405,15 @@ public partial class MainWindow : Window
         var language = new ComboBox { ItemsSource = languages.Select(code => code == "auto" ? L.T("sf70df2348c") : L.NativeName(code)).ToArray(), SelectedIndex = Math.Max(0, Array.IndexOf(languages, Preferences.Language)), MinWidth = 220 };
         System.Windows.Automation.AutomationProperties.SetAutomationId(language, "application-language");
         language.SelectionChanged += (_, _) => { if (language.SelectedIndex < 0) return; Preferences.Language = languages[language.SelectedIndex]; Save(); Status(L.T("sb1a5e85793")); };
-        PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Labels(L.T("s3d13868593"), L.T("sc2c1c7da26")), language)));
-        var content = new StackPanel(); content.Children.Add(Ui.Row(Ui.Labels(L.T("s78d94f90d2"), Help(L.T("s95e8d6a9f6"))), Toggle(Preferences.CloseToTray, v => { Preferences.CloseToTray = v; Save(); })));
-        content.Children.Add(Ui.Line()); content.Children.Add(Ui.Row(Ui.Labels(L.T("sde38b92ad2"), Help(L.T("sea9af1c6cc"))), Toggle(IsStartupEnabled(), SetStartup)));
-        content.Children.Add(Ui.Line()); content.Children.Add(Ui.Row(Ui.Labels(L.T("s6b753d5905"), L.T("sab00c1067a")), Toggle(Preferences.ShowHelp, v => { Preferences.ShowHelp = v; HelpSwitch.IsChecked = v; Save(); Render(); }))); PageContent.Children.Add(Ui.Card(content));
-        AddApplicationOptions();
-        PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Labels(L.T("s9167ee8b67"), Help(L.T("s22b00c690a"))), Ui.Button(L.T("s2cbe04030d"), ExportDiagnostics))));
+        var appearance = new StackPanel();
+        appearance.Children.Add(Ui.Setting(L.T("s3d13868593"), L.T("sc2c1c7da26"), language));
+        appearance.Children.Add(Ui.Line()); appearance.Children.Add(CreateThemeOption());
+        PageContent.Children.Add(Ui.Card(appearance));
+        var content = new StackPanel(); content.Children.Add(Ui.Setting(L.T("s78d94f90d2"), Help(L.T("s95e8d6a9f6")), Toggle(Preferences.CloseToTray, v => { Preferences.CloseToTray = v; Save(); })));
+        content.Children.Add(Ui.Line()); content.Children.Add(Ui.Setting(L.T("sde38b92ad2"), Help(L.T("sea9af1c6cc")), Toggle(IsStartupEnabled(), SetStartup)));
+        content.Children.Add(Ui.Line()); content.Children.Add(Ui.Setting(L.T("s6b753d5905"), L.T("sab00c1067a"), Toggle(Preferences.ShowHelp, v => { Preferences.ShowHelp = v; Save(); Render(); }))); PageContent.Children.Add(Ui.Card(content));
+        content.Children.Add(Ui.Line()); content.Children.Add(Ui.Setting(L.T("automation.restore"), Help(L.T("automation.restoreHelp")), Toggle(Preferences.RestoreBrightness, value => { Preferences.RestoreBrightness = value; Save(); })));
+        PageContent.Children.Add(Ui.Card(Ui.Setting(L.T("s9167ee8b67"), Help(L.T("s22b00c690a")), Ui.Button(L.T("s2cbe04030d"), ExportDiagnostics))));
         PageContent.Children.Add(Ui.Card(Ui.Row(Ui.Labels(L.T("s320388530e"), L.T("sde4f02c8c4")), Ui.Button(L.T("se90c12bb08"), ResetDimming))));
     }
     private static bool IsStartupEnabled() { using var key = Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Run"); return key?.GetValue("LumaDesk") != null; }
@@ -396,11 +427,14 @@ public partial class MainWindow : Window
     private void RenderPresets() => RenderScenes();
     private void RenderAbout()
     {
-        Heading("LumaDesk for Windows", L.F("s50a0683450", AppBrand.Version));
-        PageContent.Children.Add(Ui.Card(Ui.Labels(L.T("s64a3850bbb"), L.T("sf82e0234a5"))));
-        PageContent.Children.Add(Ui.Card(Ui.Labels(L.T("s3aecd80a6e"), L.T("s910d13c018"))));
-        PageContent.Children.Add(Ui.Card(Ui.Labels(L.T("s9dcc68b7b6"), L.T("sf72355f7b3"))));
-        PageContent.Children.Add(Ui.Card(Ui.Labels(L.T("s038ad816c5"), L.T("sa9ad97fbe4"))));
+        Heading("LumaDesk for Windows", detail: L.F("s50a0683450", AppBrand.Version));
+        var details = new StackPanel();
+        foreach (var (title, description) in new[] { ("s64a3850bbb", "sf82e0234a5"), ("s3aecd80a6e", "s910d13c018"), ("s9dcc68b7b6", "sf72355f7b3"), ("s038ad816c5", "sa9ad97fbe4") })
+        {
+            if (details.Children.Count > 0) details.Children.Add(Ui.Line());
+            details.Children.Add(new Expander { Header = L.T(title), Content = Ui.Text(L.T(description), 12, "#626B78") });
+        }
+        PageContent.Children.Add(Ui.Card(details));
     }
     private void SetupTray()
     {
@@ -417,7 +451,7 @@ public partial class MainWindow : Window
         if (!wasVisible) Render();
         WindowState = WindowState.Normal; Activate();
     }
-    internal void ShowDisplay(DisplayInfo display) { selectedId = display.Id; page = "displays"; Render(); ShowSettings(); }
+    internal void ShowDisplay(DisplayInfo display) { Navigate("displays", display.Id); ShowSettings(); }
     internal void ShowQuick()
     {
         if (sceneBusy) return;
@@ -465,5 +499,4 @@ public partial class MainWindow : Window
     private void MaximizeWindow(object sender, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     private void CloseWindow(object sender, RoutedEventArgs e) => Close();
     private void OpenQuick(object sender, RoutedEventArgs e) => ShowQuick();
-    private void HelpChanged(object sender, RoutedEventArgs e) { Preferences.ShowHelp = HelpSwitch.IsChecked == true; Save(); Render(); }
 }

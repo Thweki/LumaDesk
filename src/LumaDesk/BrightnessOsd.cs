@@ -12,6 +12,7 @@ namespace LumaDesk;
 internal sealed class BrightnessOsd : Window
 {
     private readonly TextBlock label = Ui.Text("", 13, "#FFFFFF");
+    private readonly TextBlock amount = Ui.Text("", 15, "#FFFFFF", true);
     private readonly ProgressBar progress = new() { Minimum = 0, Maximum = 100, Height = 4, Margin = new Thickness(0, 10, 0, 0) };
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(1300) };
     internal BrightnessOsd()
@@ -19,7 +20,9 @@ internal sealed class BrightnessOsd : Window
         Ui.ConfigureWindow(this); Width = 240; Height = 76; WindowStyle = WindowStyle.None;
         AllowsTransparency = true; Background = System.Windows.Media.Brushes.Transparent; ShowActivated = false;
         ShowInTaskbar = false; Topmost = true; ResizeMode = ResizeMode.NoResize;
-        var stack = new StackPanel(); stack.Children.Add(label); stack.Children.Add(progress);
+        label.TextTrimming = TextTrimming.CharacterEllipsis; label.TextWrapping = TextWrapping.NoWrap;
+        progress.Foreground = Ui.Brush("#007A8A");
+        var stack = new StackPanel(); stack.Children.Add(Ui.Row(label, amount)); stack.Children.Add(progress);
         Content = new Border { Background = Ui.Brush("#EE252525"), CornerRadius = new CornerRadius(12), Padding = new Thickness(18), Child = stack };
         SourceInitialized += (_, _) => { var h = new WindowInteropHelper(this).Handle; Native.SetWindowLong(h, -20, Native.GetWindowLong(h, -20) | 0x20 | 0x8000000 | 0x80); };
         timer.Tick += (_, _) => { timer.Stop(); Hide(); };
@@ -27,7 +30,7 @@ internal sealed class BrightnessOsd : Window
     }
     internal void ShowLevel(DisplayInfo display, int value)
     {
-        label.Text = display.Name + "  " + value + "%"; label.TextTrimming = TextTrimming.CharacterEllipsis; label.TextWrapping = TextWrapping.NoWrap;
+        label.Text = display.Name; amount.Text = value + "%";
         progress.Value = value; Show();
         var screen = System.Windows.Forms.Screen.AllScreens;
         var work = Array.Find(screen, s => s.DeviceName == display.Device)?.WorkingArea ?? System.Windows.Forms.Screen.PrimaryScreen!.WorkingArea;
