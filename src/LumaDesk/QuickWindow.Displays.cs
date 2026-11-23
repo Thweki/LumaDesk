@@ -17,6 +17,7 @@ namespace LumaDesk;
 internal sealed partial class QuickWindow
 {
     private string? selectedDisplayId;
+    private Panel? displayPicker;
     private readonly List<DisplayIdentifyWindow> identifyWindows = new();
     private bool brightnessMultiSelect;
     private readonly HashSet<string> multiSelection = new(StringComparer.OrdinalIgnoreCase);
@@ -68,12 +69,13 @@ internal sealed partial class QuickWindow
         }
         Render(); controlsScroll.ScrollToTop();
         // Rebuilding the controls must not strand keyboard focus on a removed tile.
-        if (picker.Children.OfType<Canvas>().FirstOrDefault() is { } canvas)
-            canvas.Children.OfType<Button>().FirstOrDefault(b => b.Tag as string == id)?.Focus();
+        var button = displayPicker?.Children.OfType<Button>().FirstOrDefault(b => b.Tag as string == id);
+        button?.Focus(); button?.BringIntoView();
     }
 
     private void RenderDisplayPicker(DisplayInfo? selected)
     {
+        displayPicker = null;
         var mode = Ui.Button(L.T(brightnessMultiSelect ? "quick.multiDone" : "quick.multiStart"), () =>
         {
             if (!CanRebuild) return;
@@ -109,10 +111,22 @@ internal sealed partial class QuickWindow
         }
         actions.Children.Add(identify);
         picker.Children.Add(Ui.Row(Ui.Text(brightnessMultiSelect ? L.F("quick.multiCount", multiSelection.Count) : L.T("quick.choose"), 12, "#616161"), actions, 6));
-        var canvas = new Canvas { Height = owner.Displays.Count == 1 ? 90 : 116, Margin = new Thickness(0, 8, 0, 8) };
-        AutomationProperties.SetAutomationId(canvas, "quick-display-map");
+        bool listView = owner.Preferences.QuickDisplayList;
+        var view = Ui.Button(L.T(listView ? "quick.showMap" : "quick.showList"), () =>
+        {
+            if (!CanRebuild) return;
+            owner.Preferences.QuickDisplayList = !owner.Preferences.QuickDisplayList;
+            owner.SavePreferences(); Render();
+            picker.Children.OfType<Button>().FirstOrDefault(b => AutomationProperties.GetAutomationId(b) == "quick-display-view")?.Focus();
+        });
+        view.FontSize = 11; view.Padding = new Thickness(8, 4, 8, 4);
+        AutomationProperties.SetAutomationId(view, "quick-display-view"); picker.Children.Add(view);
+        Panel canvas = listView ? new StackPanel() : new Canvas { Height = owner.Displays.Count == 1 ? 90 : 116 };
+        displayPicker = canvas;
+        canvas.Margin = new Thickness(0, 8, 0, 8);
+        AutomationProperties.SetAutomationId(canvas, listView ? "quick-display-list" : "quick-display-map");
         AutomationProperties.SetName(canvas, L.T("quick.choose"));
-        var displays = owner.Displays.OrderBy(d => d.X).ThenBy(d => d.Y).ThenBy(d => d.Id, StringComparer.OrdinalIgnoreCase).ToArray();
+        var displays = listView ? owner.OrderedDisplays().ToArray() : owner.Displays.OrderBy(d => d.X).ThenBy(d => d.Y).ThenBy(d => d.Id, StringComparer.OrdinalIgnoreCase).ToArray();
         var targets = brightnessMultiSelect ? owner.Displays.Where(d => multiSelection.Contains(d.Id)).ToList() : owner.BrightnessTargets(selected);
         var linked = targets.Count > 1 ? targets.Select(d => d.Id).ToHashSet(StringComparer.OrdinalIgnoreCase) : new HashSet<string>();
         var hdrStates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -121,17 +135,28 @@ internal sealed partial class QuickWindow
         {
             string? focusedId = canvas.IsKeyboardFocusWithin ? (Keyboard.FocusedElement as Button)?.Tag as string : null;
             canvas.Children.Clear(); multiLevelLabels.Clear(); hdrUpdates.Clear();
-            foreach (var tile in QuickDisplayMap.Project(displays, canvas.ActualWidth > 0 ? canvas.ActualWidth : Math.Max(40, Width - 38), canvas.Height))
+            var tiles = listView ? displays.Select(d => new QuickDisplayTile(d, Rect.Empty)) : QuickDisplayMap.Project(displays, canvas.ActualWidth > 0 ? canvas.ActualWidth : Math.Max(40, Width - 38), canvas.Height);
+            foreach (var tile in tiles)
             {
                 var display = tile.Display; bool active = brightnessMultiSelect ? multiSelection.Contains(display.Id) : display.Id == selected.Id;
                 var button = Ui.Button("", () => SelectDisplay(display.Id));
                 button.Tag = display.Id; button.ToolTip = display.Name;
-                button.Width = tile.Bounds.Width; button.Height = tile.Bounds.Height;
+                if (!listView) { button.Width = tile.Bounds.Width; button.Height = tile.Bounds.Height; }
                 button.Padding = new Thickness(0);
                 button.Background = Ui.Brush(active ? "#E6F2F4" : "#FFFFFF");
                 button.BorderBrush = Ui.Brush(active ? "#007A8A" : "#D1D1D1");
                 button.BorderThickness = new Thickness(active ? 2 : 1);
-                if (brightnessMultiSelect)
+                if (listView)
+                {
+                    var name = Ui.Text(display.Number + " · " + display.Name, 12);
+                    name.TextTrimming = TextTrimming.CharacterEllipsis;
+                    var status = Ui.Text(brightnessMultiSelect ? owner.GetCombinedBrightness(display) + "%" : active ? "✓" : linked.Contains(display.Id) ? "↔" : "", 12);
+                    if (brightnessMultiSelect) multiLevelLabels[display.Id] = status;
+                    button.Content = Ui.Row(name, status);
+                    button.HorizontalContentAlignment = HorizontalAlignment.Stretch;
+                    button.Padding = new Thickness(8, 6, 8, 6); button.Margin = new Thickness(0, 0, 0, 4);
+                }
+                else if (brightnessMultiSelect)
                 {
                     var face = new Grid();
                     var level = Ui.Text(owner.GetCombinedBrightness(display) + "%", 11, active ? "#303846" : "#7A8699");
@@ -149,7 +174,7 @@ internal sealed partial class QuickWindow
                 else if (active) button.Content = Ui.Icon("\uE73E", 16);
                 else if (linked.Contains(display.Id)) button.Content = Ui.Icon("\uE71B", 13);
                 AutomationProperties.SetAutomationId(button, "quick-display-select-" + display.Number);
-                AutomationProperties.SetName(button, display.Name);
+                AutomationProperties.SetName(button, listView ? display.Number + " · " + display.Name : display.Name);
                 AutomationProperties.SetItemStatus(button, active ? L.T("quick.selected") : linked.Contains(display.Id) ? L.T("quick.linked") : "");
                 var updateHdr = AddHdrBadge(button, tile.Bounds);
                 hdrUpdates[display.Id] = updateHdr; updateHdr(hdrStates.Contains(display.Id));
@@ -163,11 +188,16 @@ internal sealed partial class QuickWindow
                     else SelectDisplay(nextId);
                     e.Handled = true;
                 };
-                Canvas.SetLeft(button, tile.Bounds.Left); Canvas.SetTop(button, tile.Bounds.Top); canvas.Children.Add(button);
+                if (!listView) { Canvas.SetLeft(button, tile.Bounds.Left); Canvas.SetTop(button, tile.Bounds.Top); }
+                canvas.Children.Add(button);
             }
             if (focusedId != null) canvas.Children.OfType<Button>().FirstOrDefault(b => b.Tag as string == focusedId)?.Focus();
         }
-        canvas.SizeChanged += (_, _) => Draw(); Draw(); picker.Children.Add(canvas);
+        if (!listView) canvas.SizeChanged += (_, _) => Draw();
+        Draw();
+        if (listView) picker.Children.Add(new ScrollViewer { Content = canvas, MaxHeight = 150,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        else picker.Children.Add(canvas);
         ObserveHdrBadges(canvas, displays, hdrStates, hdrUpdates);
         if (!brightnessMultiSelect)
         {

@@ -154,6 +154,7 @@ public sealed class Preferences
     public HashSet<string> QuickCollapsedDisplays { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public string? QuickMoreDisplayId { get; set; }
     public string? QuickSelectedDisplayId { get; set; }
+    public bool QuickDisplayList { get; set; }
     public List<Preset> Presets { get; set; } = new();
     public List<DisplayGroup> Groups { get; set; } = new();
     public Dictionary<string, DisplayPreference> DisplayOptions { get; set; } = new(StringComparer.OrdinalIgnoreCase);

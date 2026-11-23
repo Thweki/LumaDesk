@@ -653,5 +653,7 @@
   "scene.previewHelp": "檢查將還原的螢幕與設定。已符合的值可能保持不變。按下「套用」之前不會寫入螢幕設定。",
   "scene.previewBrightness": "亮度 / 調暗",
   "scene.previewLayout": "套用時，若所有已儲存的螢幕、模式及排列驗證皆符合，還會還原螢幕排列。",
-  "scene.previewChanged": "螢幕連線已變更。請重新開啟預覽後再套用。"
+  "scene.previewChanged": "螢幕連線已變更。請重新開啟預覽後再套用。",
+  "quick.showList": "顯示螢幕清單",
+  "quick.showMap": "顯示螢幕配置圖"
 }
