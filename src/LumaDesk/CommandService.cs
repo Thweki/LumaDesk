@@ -93,15 +93,16 @@ internal sealed class CommandService : IDisposable
         }).ToArray());
     }
 
-    internal static bool IsCommand(string[] args) => args.Length > 0 && args[0] is "--list" or "--list-presets" or "--brightness" or "--apply-preset" or "--apply-preset-id";
+    internal static bool IsCommand(string[] args) => args.Length > 0 && args[0] is "--list" or "--list-presets" or "--inventory" or "--brightness" or "--apply-preset" or "--apply-preset-id";
     internal static (ControlCommand Command, string Output) Parse(string[] args)
     {
         int index = Array.IndexOf(args, "--output");
-        if (index < 1 || index != args.Length - 2 || string.IsNullOrWhiteSpace(args[index + 1])) throw new ArgumentException("Use --list | --list-presets | --brightness <display> <0-100> | --apply-preset <name> | --apply-preset-id <id>, followed by --output <result.json>.");
+        if (index < 1 || index != args.Length - 2 || string.IsNullOrWhiteSpace(args[index + 1])) throw new ArgumentException("Use --list | --list-presets | --inventory | --brightness <display> <0-100> | --apply-preset <name> | --apply-preset-id <id>, followed by --output <result.json>.");
         ControlCommand command = args[0] switch
         {
             "--list" when index == 1 => new("list"),
             "--list-presets" when index == 1 => new("list-presets"),
+            "--inventory" when index == 1 => new("inventory"),
             "--brightness" when index == 3 && int.TryParse(args[2], out int value) && value >= 0 && value <= 100 => new("brightness", args[1], value),
             "--apply-preset" when index == 2 => new("preset", args[1]),
             "--apply-preset-id" when index == 2 && IsUsablePresetId(args[1]) => new("preset-id", args[1]),
@@ -117,6 +118,12 @@ internal sealed class CommandService : IDisposable
             int outputIndex = Array.IndexOf(args, "--output");
             if (outputIndex >= 0 && outputIndex == args.Length - 2) output = Path.GetFullPath(args[outputIndex + 1]);
             var parsed = Parse(args); output = parsed.Output;
+            if (parsed.Command.Action == "inventory")
+            {
+                var report = await DisplayInventory.CaptureAsync(new DisplayService().ScanAsync, AdvancedColorService.Read);
+                File.WriteAllText(output, JsonSerializer.Serialize(new ControlReply(true, report), Storage.Json));
+                return 0;
+            }
             using var pipe = new NamedPipeClientStream(".", pipeName ?? PipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
             try { await pipe.ConnectAsync(700); }
             // An explicit endpoint is isolated: never scan hardware or launch the app for it.

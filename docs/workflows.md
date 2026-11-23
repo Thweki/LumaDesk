@@ -76,6 +76,7 @@ Import creates a separate preset and adds a number if its name is already used. 
 ```powershell
 $app = '.\LumaDesk.exe'
 & $app --list --output .\screens.json
+& $app --inventory --output .\inventory.json
 & $app --brightness '1' 60 --output .\brightness-result.json
 & $app --apply-preset '办公' --output .\preset-result.json
 ```
@@ -126,6 +127,14 @@ $process.ExitCode
 The exit code is 0 on success or 1 for invalid arguments, no available logs, an invalid log entry, an existing destination or a read/write failure. The destination's parent directory must exist. The command finishes the ZIP before moving it to the requested name and never overwrites an existing destination. Export failures are not appended to the source logs. Unlike the automation commands above, this command takes no `--output` option and does not return JSON.
 
 此命令将现有的当前和上一份日志导出为新的 ZIP，不探测或更改显示器，也不启动托盘窗口。拒绝重解析点（含符号链接）、有多个硬链接或无法验证为普通文件的日志。请使用可信的日志目录和输出目录。命令不会另外收集设置、预设或恢复文件，但会原样复制日志；分享前请检查其中的设备名称、路径和异常详情。ZIP 写完后才移动到指定位置，不覆盖已有文件。成功返回 0；参数无效、无日志、日志不合规、目标已存在或读写失败时返回 1。
+
+### Connected-display inventory
+
+`--inventory --output inventory.json` exports a fresh, read-only report of active desktop displays, including HDR support/enabled/active state, signal bit depth, and default SDR/HDR ICC profile names alongside identity, adapter, geometry, rotation (degrees), current/preferred pixel sizes, scaling and hardware control readings. Unlike `--list`, it includes color status and always queries locally, even when the tray app is running; it never starts the tray app or applies display settings.
+
+The JSON uses the usual `Success` / `Data` / `Error` envelope. `Data` contains `SchemaVersion` (currently `1`), `CapturedAtUtc` (UTC scan start) and `Displays`. Unknown capability values are `null`, known unsupported/disabled HDR values are `false`, and a readable but unassigned ICC profile is `""`. Optional color-query failures retain the display with an unavailable reason; successful enumeration still exits with `0`. A scan or output-file failure exits with `1`. No active displays produces an empty array.
+
+`HardwareBrightnessPercent` is the queried backlight level, not the combined software-dimming slider. Software dimming and user aliases are not included. Preferred pixel dimensions are `0` when unavailable. Device IDs identify the current connections and may change after moving ports. The report includes device IDs and profile names but excludes registry/WMI paths, settings, logs and ICC file contents. It covers active desktop displays, not disconnected or disabled outputs; mirrored outputs follow Windows monitor enumeration. Capture is sequential, so a hot-plug during capture can leave a display with unavailable color details. Like other JSON commands, the output file is overwritten if it exists.
 
 ## 硬件与性能边界
 
