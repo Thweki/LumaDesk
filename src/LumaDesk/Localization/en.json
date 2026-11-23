@@ -556,5 +556,9 @@
   "scene.export": "Export preset…",
   "scene.importHelp": "Import adds a preset with automation off. Apply it when ready.",
   "scene.imported": "Preset imported. Display settings have not changed.",
-  "scene.fileInvalid": "Invalid preset file. Expected a LumaDesk scene (version 1), up to 1 MiB, with valid display settings."
+  "scene.fileInvalid": "Invalid preset file. Expected a LumaDesk scene (version 1), up to 1 MiB, with valid display settings.",
+  "idle.title": "Idle dimming (experimental)",
+  "idle.help": "Off by default. Temporarily shades all screens to at least 60% dimming after inactivity. Keyboard or mouse activity restores your brightness.",
+  "idle.delay": "Dim after inactivity",
+  "idle.minutes": "{0} min"
 }

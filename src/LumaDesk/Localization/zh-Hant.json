@@ -556,5 +556,9 @@
   "scene.export": "匯出預設…",
   "scene.importHelp": "匯入將新增預設並關閉自動化。準備好後再套用。",
   "scene.imported": "預設已匯入，顯示設定未變更。",
-  "scene.fileInvalid": "預設檔案無效。需要不超過 1 MiB 的 LumaDesk 場景（版本 1），且顯示設定有效。"
+  "scene.fileInvalid": "預設檔案無效。需要不超過 1 MiB 的 LumaDesk 場景（版本 1），且顯示設定有效。",
+  "idle.title": "閒置調暗（實驗性）",
+  "idle.help": "預設關閉。閒置後暫時將所有螢幕的軟體調暗程度提高至至少 60%。使用鍵盤或滑鼠即可恢復原有亮度。",
+  "idle.delay": "閒置多久後調暗",
+  "idle.minutes": "{0} 分鐘"
 }

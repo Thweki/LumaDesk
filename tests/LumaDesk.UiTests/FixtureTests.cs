@@ -56,6 +56,7 @@ internal static partial class Program
                     // without invoking the real window lifecycle.
                     var owner = new MainWindow(() => true);
                     TestSceneRenameFixture(owner);
+                    TestIdleDimmingOptions(owner);
                     TestSceneDuplicateFixture(owner);
                     await TestSceneDraftFixtureAsync(owner);
                     TestSceneOrderFixture(owner);

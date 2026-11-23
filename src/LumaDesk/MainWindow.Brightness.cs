@@ -85,6 +85,7 @@ public partial class MainWindow
 
     private async Task WriteBrightnessAsync(string id, Func<DisplayInfo, CombinedLevel> plan, CancellationToken cancellation = default)
     {
+        ResetIdleDimming();
         // Slider, keyboard, restore and reset operations can overlap at a slow DDC write.
         // Plan from the last completed pair while holding this display's gate.
         if (!brightnessGates.TryGetValue(id, out var gate)) brightnessGates[id] = gate = new(1, 1);

@@ -556,5 +556,9 @@
   "scene.export": "导出预设…",
   "scene.importHelp": "导入将添加预设并关闭自动化。准备好后再应用。",
   "scene.imported": "预设已导入，显示设置未更改。",
-  "scene.fileInvalid": "预设文件无效。需要不超过 1 MiB 的 LumaDesk 场景（版本 1），且显示设置有效。"
+  "scene.fileInvalid": "预设文件无效。需要不超过 1 MiB 的 LumaDesk 场景（版本 1），且显示设置有效。",
+  "idle.title": "空闲调暗（实验性）",
+  "idle.help": "默认关闭。空闲后临时将所有屏幕的软件调暗程度提高到至少 60%。使用键盘或鼠标即可恢复原有亮度。",
+  "idle.delay": "空闲多久后调暗",
+  "idle.minutes": "{0} 分钟"
 }
